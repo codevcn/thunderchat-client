@@ -1,0 +1,1 @@
+tsc --noEmit --noUnusedLocals false --noUnusedParameters false --project tsconfig.json

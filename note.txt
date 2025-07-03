@@ -1,0 +1,20 @@
+login 1: {
+    - email: exam@mail.ru
+    - pass: asd123X
+}
+login 2: {
+    - email: ghandover5@comcast.net
+    - pass: asd123X
+}
+login 3: {
+    - email: person@gmail.com
+    - pass: asd123X
+}
+login 4: {
+    - email: zbatman2@moonfruit.com
+    - pass: asd123X
+}
+login 5: {
+    - email: exam2@mail.ru
+    - pass: asd123XX
+}

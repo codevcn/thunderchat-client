@@ -69,7 +69,10 @@ const CustomAvatar = ({
             style={{ width: imgSize, height: imgSize }}
             className={imageClassName}
          />
-         <AvatarFallback style={{ width: imgSize, height: imgSize }} className={fallbackClassName}>
+         <AvatarFallback
+            style={{ width: imgSize, height: imgSize }}
+            className={cn(fallbackClassName)}
+         >
             {fallback}
          </AvatarFallback>
       </Avatar>

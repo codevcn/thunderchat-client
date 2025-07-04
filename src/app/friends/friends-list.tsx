@@ -42,7 +42,7 @@ const FriendCard = ({ friend }: TFriendCardProps) => {
             </div>
          </div>
          <div className="text-regular-placeholder-cl">
-            {`Be friend ${displayTimeDifference(createdAt)}`}
+            {`Be friend since ${displayTimeDifference(createdAt)}`}
          </div>
       </div>
    )

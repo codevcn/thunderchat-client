@@ -16,13 +16,13 @@ export type TProfile = {
    id: number
    createdAt: string
    fullName: string
-   birthday: string | null
-   about: string | null
-   avatar: string | null
+   birthday?: string
+   about?: string
+   avatar?: string
    userId: number
 }
 
-export type TUserWithProfile = TUser & { Profile: Omit<TProfile, "id" | "userId"> | null }
+export type TUserWithProfile = TUser & { Profile?: Omit<TProfile, "id" | "userId"> }
 
 export type TUserWithoutPassword = Omit<TUser, "password">
 
@@ -41,7 +41,7 @@ export type TDirectMessage = {
    authorId: number
    directChatId: number
    status: EMessageStatus
-   stickerUrl: string | null
+   stickerUrl?: string
    type: EMessageTypes
 }
 
@@ -91,19 +91,18 @@ export type TDirectChatData = TDirectChat & {
 export type TRegisterUserParams = {
    email: string
    password: string
-   firstName: string
-   lastName: string
+   fullName: string
    birthday: string
 }
 
 export type TSearchUsersData = {
    id: number
    email: string
-   Profile: {
+   Profile?: {
       id: number
       fullName: string
-      avatar: string | null
-   } | null
+      avatar?: string
+   }
 }
 
 export type TGetFriendRequestsData = {
@@ -171,4 +170,10 @@ export type TGlobalSearchData = {
       conversationName: string
       messageContent: string
    }[]
+}
+
+export type TFetchDirectChatsData = TDirectChat & {
+   LastSentMessage: TDirectMessage
+   Recipient: TUserWithProfile
+   Creator: TUserWithProfile
 }

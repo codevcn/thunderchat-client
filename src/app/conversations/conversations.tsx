@@ -1,22 +1,25 @@
 "use client"
 
-import { CustomAvatar, CustomTooltip, toast } from "@/components/materials"
-import { Search as SearchIcon, ArrowLeft, X } from "lucide-react"
+import { CustomAvatar, CustomTooltip, Skeleton, toast } from "@/components/materials"
+import { Search as SearchIcon, ArrowLeft, X, Pin } from "lucide-react"
 import dayjs from "dayjs"
 import { useDebounce } from "@/hooks/debounce"
 import type { TGlobalSearchData } from "@/utils/types/be-api"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { ChangeEvent, Dispatch, SetStateAction, useRef, useState } from "react"
+import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
 import { Spinner } from "@/components/materials/spinner"
 import { IconButton } from "@/components/materials/icon-button"
 import { useRouter } from "next/navigation"
 import { sortDirectChatsByPinned } from "@/redux/conversations/conversations-selectors"
 import { unwrapResult } from "@reduxjs/toolkit"
-import Image from "next/image"
 import { searchService } from "@/services/search.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { createPathWithParams } from "@/utils/helpers"
 import { fetchDirectChatThunk } from "@/redux/conversations/conversations-thunks"
+import { directChatService } from "@/services/direct-chat.service"
+import { EMessageTypes, EPaginations } from "@/utils/enums"
+import { addConversations } from "@/redux/conversations/conversations-slice"
+import { toaster } from "@/utils/toaster"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 
@@ -103,7 +106,11 @@ const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
 }
 
 const ConversationCards = () => {
+   const dispatch = useAppDispatch()
    const directChats = useAppSelector(sortDirectChatsByPinned)
+   const tempFlagUseEffectRef = useRef<boolean>(true)
+   const router = useRouter()
+   const [loading, setLoading] = useState<boolean>(false)
 
    const getPinIndexClass = (pinIndex: number): string => {
       switch (pinIndex) {
@@ -118,43 +125,105 @@ const ConversationCards = () => {
       }
    }
 
-   return (
-      directChats &&
-      directChats.length > 0 &&
-      directChats.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title }) => (
-         <div
-            className={`flex gap-x-2 items-center px-3 py-3 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-xl ${getPinIndexClass(pinIndex)}`}
-            key={id}
-         >
-            <div>
-               <CustomAvatar className="mt-auto" src={avatar} imgSize={50} />
+   const fetchDirectChats = async () => {
+      let lastId: number | undefined = undefined
+      if (directChats && directChats.length > 0) {
+         lastId = directChats.at(-1)?.id
+      }
+      setLoading(true)
+      directChatService
+         .fetchDirectChats(EPaginations.DIRECT_MESSAGES_PAGE_SIZE, lastId)
+         .then((res) => {
+            dispatch(addConversations(res))
+         })
+         .catch((err) => {
+            toaster.error(axiosErrorHandler.handleHttpError(err).message)
+         })
+         .finally(() => {
+            setLoading(false)
+         })
+   }
+
+   const navToDirectChat = (id: number) => {
+      router.push(createPathWithParams("/conversations", { cid: id.toString() }))
+   }
+
+   useEffect(() => {
+      if (tempFlagUseEffectRef.current) {
+         tempFlagUseEffectRef.current = false
+         if (!directChats || directChats.length === 0) {
+            fetchDirectChats()
+         }
+      }
+   }, [directChats])
+
+   return loading ? (
+      <div className="flex flex-col gap-1 justify-center items-center">
+         {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-2 w-full px-3 py-2">
+               <Skeleton className="w-[50px] h-[50px] rounded-full bg-regular-hover-card-cl" />
+               <div className="w-[195px]">
+                  <Skeleton className="w-full h-[20px] bg-regular-hover-card-cl rounded-md" />
+                  <Skeleton className="w-1/2 h-[15px] bg-regular-hover-card-cl mt-1 rounded-md" />
+               </div>
             </div>
-            <div className="w-[195px]">
-               <div className="flex justify-between items-center w-full gap-3">
-                  <h3 className="truncate font-bold w-fit">{title}</h3>
-                  <div className="text-[10px] w-max text-regular-icon-cl">
-                     {dayjs(lastMessageTime).format("MMM D, YYYY")}
+         ))}
+      </div>
+   ) : directChats && directChats.length > 0 ? (
+      <div
+         id="codevcn-cards"
+         className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar"
+      >
+         {directChats.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type }) => (
+            <div
+               className={`flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${getPinIndexClass(pinIndex)}`}
+               key={id}
+               onClick={() => navToDirectChat(id)}
+            >
+               <div>
+                  <CustomAvatar
+                     src={avatar.src || undefined}
+                     imgSize={50}
+                     fallback={avatar.fallback.toUpperCase()}
+                     fallbackClassName="bg-regular-violet-cl text-2xl"
+                  />
+               </div>
+               <div className="w-[195px]">
+                  <div className="flex justify-between items-center w-full gap-3">
+                     <h3 className="truncate font-bold grow text-left">{title}</h3>
+                     <div className="text-[10px] w-max text-regular-icon-cl">
+                        {dayjs(lastMessageTime).format("MMM D, YYYY")}
+                     </div>
+                  </div>
+                  <div className="flex justify-between items-center mt-1 box-border gap-3">
+                     {type === EMessageTypes.STICKER ? (
+                        <p className="truncate text-regular-placeholder-cl text-sm">
+                           <span className="text-regular-icon-cl italic">Sticker</span>
+                        </p>
+                     ) : (
+                        <p className="truncate text-regular-placeholder-cl text-sm">{subtitle}</p>
+                     )}
+                     {!!pinIndex &&
+                        pinIndex !== -1 &&
+                        pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
+                           <CustomTooltip title="This directChat was pinned" placement="bottom">
+                              <Pin color="currentColor" size={21} />
+                           </CustomTooltip>
+                        )}
                   </div>
                </div>
-               <div className="flex justify-between items-center mt-1 box-border gap-3">
-                  <p className="truncate text-regular-placeholder-cl">{subtitle}</p>
-                  {pinIndex &&
-                     pinIndex !== -1 &&
-                     pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
-                        <CustomTooltip title="This directChat was pinned" placement="bottom">
-                           <Image
-                              src="/icons/pinned-conv.svg"
-                              alt="Pinned Icon"
-                              width={21}
-                              height={21}
-                              color="#766ac8"
-                           />
-                        </CustomTooltip>
-                     )}
-               </div>
             </div>
-         </div>
-      ))
+         ))}
+      </div>
+   ) : (
+      <div className="flex flex-col gap-2 justify-center items-center h-full px-3">
+         <p className="text-sm text-regular-icon-cl text-center max-w-[300px]">
+            You have no conversations yet.
+         </p>
+         <p className="text-sm text-regular-icon-cl text-center max-w-[300px]">
+            Start a new conversation by finding a friend in the search bar.
+         </p>
+      </div>
    )
 }
 
@@ -208,7 +277,6 @@ const GlobalSearchBar = ({
             <IconButton
                className="flex justify-center items-center h-[40px] w-[40px]"
                onClick={closeSearch}
-               title={{ text: "Cancel" }}
             >
                <ArrowLeft color="currentColor" size={20} />
             </IconButton>
@@ -231,7 +299,6 @@ const GlobalSearchBar = ({
             <IconButton
                className="flex justify-center items-center right-1 h-[35px] w-[35px] absolute top-1/2 -translate-y-1/2 z-20"
                onClick={clearInput}
-               title={{ text: "Clear" }}
             >
                <X color="currentColor" />
             </IconButton>
@@ -264,14 +331,14 @@ export const Conversations = () => {
                {searchResult ? (
                   <SearchResult loading={isSearching} searchResult={searchResult} />
                ) : (
-                  <div className="flex justify-center items-center pt-5">
+                  <div className="flex justify-center items-center h-full w-full">
                      <p className="text-regular-icon-cl">No results found</p>
                   </div>
                )}
             </div>
 
             <div
-               className={`${inputFocused ? "animate-zoom-fade-out" : "animate-zoom-fade-in"} !flex flex-col w-full absolute top-0 left-0 z-30 px-2 h-full overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar`}
+               className={`${inputFocused ? "animate-zoom-fade-out" : "animate-zoom-fade-in"} w-full h-full absolute top-0 left-0 z-30 px-2`}
             >
                <ConversationCards />
             </div>

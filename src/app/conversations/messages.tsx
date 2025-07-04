@@ -200,11 +200,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
       }
    }
 
-   const fetchDirectMessages = async (
-      directChatId: number,
-      msgOffset: number,
-      isFirstTime: boolean
-   ) => {
+   const fetchMessages = async (directChatId: number, msgOffset: number, isFirstTime: boolean) => {
       const msgsContainerEle = messagesContainer.current
       if (!msgsContainerEle) return
       setLoading("loading-messages")
@@ -249,7 +245,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
          eventEmitter.emit(EInternalEvents.SCROLL_OUT_OF_BOTTOM)
          // Check if the user scrolled to the top then fetch more messages
          if (messagesContainer.scrollTop < 10 && hasMoreMessages.current && !loading) {
-            fetchDirectMessages(directChatId, msgOffset.current, false)
+            fetchMessages(directChatId, msgOffset.current, false)
          }
       }
    }
@@ -395,7 +391,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
       if (tempFlagUseEffectRef.current) {
          tempFlagUseEffectRef.current = false
          if (!messages || messages.length === 0) {
-            fetchDirectMessages(directChatId, msgOffset.current, true)
+            fetchMessages(directChatId, msgOffset.current, true)
          }
       }
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)

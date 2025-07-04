@@ -1,8 +1,8 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit"
-import type { TDirectChatCard } from "@/utils/types/global"
+import type { TConversationCard } from "@/utils/types/global"
 
 type TDirectChatsState = {
-   conversations: TDirectChatCard[] | null
+   conversations: TConversationCard[] | null
    infoBarIsOpened: boolean
 }
 
@@ -18,7 +18,10 @@ export const conversationsSlice = createSlice({
       openInfoBar: (state, action: PayloadAction<boolean>) => {
          state.infoBarIsOpened = action.payload
       },
+      addConversations: (state, action: PayloadAction<TConversationCard[]>) => {
+         state.conversations = [...(state.conversations || []), ...action.payload]
+      },
    },
 })
 
-export const { openInfoBar } = conversationsSlice.actions
+export const { openInfoBar, addConversations } = conversationsSlice.actions

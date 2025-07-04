@@ -9,6 +9,8 @@ class AxiosErrorHandler {
    handleHttpError(
       originalError: unknown | Error | AxiosError<THttpErrorResBody>
    ): THandledAxiosError {
+      console.error(">>> call api error:", originalError)
+
       let statusCode: HttpStatusCode = HttpStatusCode.InternalServerError
       let message: string = "Unknown Error!"
       let isUserError: boolean = false

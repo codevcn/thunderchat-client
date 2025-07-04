@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/materials/button"
 import { Calendar } from "@/components/materials/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/materials/popover"
+import dayjs from "dayjs"
 
 type TDatePickerProps = Partial<{
    initialDate: Date
@@ -46,7 +47,7 @@ export const DatePicker = ({
                name={inputName}
                className={inputClassName}
                id={inputId}
-               value={date?.toString() || ""}
+               value={date ? dayjs(date).format("DD/MM/YYYY") : ""}
                readOnly
                hidden
             />
@@ -64,7 +65,12 @@ export const DatePicker = ({
                </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-               <Calendar mode="single" selected={date} onSelect={handleDateChange} initialFocus />
+               <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={handleDateChange}
+                  captionLayout="dropdown"
+               />
             </PopoverContent>
          </Popover>
       </>

@@ -1,5 +1,6 @@
 import type { AxiosError, HttpStatusCode } from "axios"
 import type { TDirectMessage, TDirectChat } from "@/utils/types/be-api"
+import { EMessageTypes } from "../enums"
 
 export type TStateDirectMessage = TDirectMessage & {
    isNewMsg?: boolean
@@ -28,13 +29,17 @@ export type TSuccess = {
    success: boolean // always true
 }
 
-export type TDirectChatCard = {
+export type TConversationCard = {
    id: number
-   avatar: string
+   avatar: {
+      src?: string
+      fallback: string
+   }
    title: string
    subtitle: string
    lastMessageTime: string
    pinIndex: number
+   type: EMessageTypes
 }
 
 export type TUnknownObject = {

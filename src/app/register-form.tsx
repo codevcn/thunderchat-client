@@ -10,6 +10,8 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { Eye, EyeOff, ArrowLeft } from "lucide-react"
 import { extractFormData } from "@/utils/helpers"
 import { toast } from "sonner"
+import dayjs from "dayjs"
+import { checkkIfUnder18 } from "@/utils/date-time"
 
 type TFormFields = TRegisterUserParams & {
    confirmPassword: string
@@ -29,25 +31,27 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
 
    const validateForm = (data: TFormFields): boolean => {
       let isValid = true
-      const { birthday, firstName, lastName, password, confirmPassword } = data
+      const { birthday, fullName, password, confirmPassword } = data
       if (!birthday) {
          setErrors((pre) => ({
             ...pre,
             birthday: { message: "Please select a date" },
          }))
          isValid = false
+      } else {
+         const isUnder18 = checkkIfUnder18(birthday)
+         if (isUnder18) {
+            setErrors((pre) => ({
+               ...pre,
+               birthday: { message: "You must be at least 18 years old" },
+            }))
+            isValid = false
+         }
       }
-      if (!firstName) {
+      if (!fullName) {
          setErrors((pre) => ({
             ...pre,
-            firstName: { message: "Please enter your first name" },
-         }))
-         isValid = false
-      }
-      if (!lastName) {
-         setErrors((pre) => ({
-            ...pre,
-            lastName: { message: "Please enter your last name" },
+            fullName: { message: "Please enter your full name" },
          }))
          isValid = false
       }
@@ -61,7 +65,10 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
       if (password && !PASSWORD_REGEX.test(password)) {
          setErrors((pre) => ({
             ...pre,
-            password: { message: "Password must be at least 8 characters long" },
+            password: {
+               message:
+                  "Password must be at least 6 characters long and contain at least one uppercase letter and one number",
+            },
          }))
          isValid = false
       }
@@ -80,10 +87,13 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
 
       const data = extractFormData(e.currentTarget) as TFormFields
       if (!validateForm(data)) return
+      const birthday = dayjs(data.birthday).toISOString()
+      console.log(">>> birthday:", birthday)
 
+      setErrors({})
       setLoading(true)
       userService
-         .registerUser(data)
+         .registerUser({ ...data, birthday })
          .then(() => {
             setTimeout(() => {
                authRedirect()
@@ -128,7 +138,7 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
             details. Thank you!
          </p>
 
-         <form onSubmit={registerUser} className="space-y-4 text-regular-black-cl">
+         <form onSubmit={registerUser} className="space-y-4 text-regular-black-cl max-w-md">
             {/* Email and Date of Birth row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="space-y-1">
@@ -142,14 +152,14 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
                      defaultValue={typedEmail}
                      readOnly
                      name="email"
-                     className="bg-transparent outline-none w-full p-3 border rounded-md text-white cursor-not-allowed"
+                     className="bg-transparent outline-none p-3 border rounded-md text-white cursor-not-allowed w-full"
                   />
                </div>
 
                <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-400">Date of Birth</label>
                   <DatePicker
-                     btnClassName="w-[240px] bg-transparent h-[46.2px] hover:bg-transparent hover:text-[#9ca3af] text-[#9ca3af]"
+                     btnClassName="w-full bg-transparent h-[46.2px] hover:bg-transparent hover:text-[#9ca3af] text-[#9ca3af]"
                      withAnInput
                      inputName="birthday"
                   />
@@ -160,40 +170,22 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
             </div>
 
             {/* First Name and Last Name row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
                <div className="space-y-1">
-                  <label htmlFor="first-name" className="block text-sm font-medium text-gray-400">
-                     First Name
+                  <label htmlFor="full-name" className="block text-sm font-medium text-gray-400">
+                     Full Name
                   </label>
                   <input
-                     id="first-name"
+                     id="full-name"
                      type="text"
-                     placeholder="Ex: John"
+                     placeholder="Ex: John Doe"
                      className={`w-full p-3 hover:border-regular-violet-cl outline-none focus:outline-regular-violet-cl focus:border-regular-violet-cl outline-offset-0 bg-transparent border rounded-md text-white ${
-                        errors.firstName ? "border-red-500" : "border-gray-300"
+                        errors.fullName ? "border-red-500" : "border-gray-300"
                      }`}
-                     name="firstName"
+                     name="fullName"
                   />
-                  {errors.firstName && (
-                     <p className="text-sm text-red-500">{errors.firstName.message}</p>
-                  )}
-               </div>
-
-               <div className="space-y-1">
-                  <label htmlFor="last-name" className="block text-sm font-medium text-gray-400">
-                     Last Name
-                  </label>
-                  <input
-                     id="last-name"
-                     type="text"
-                     placeholder="Ex: Doe"
-                     className={`w-full p-3 hover:border-regular-violet-cl outline-none focus:outline-regular-violet-cl focus:border-regular-violet-cl outline-offset-0 bg-transparent border rounded-md text-white ${
-                        errors.lastName ? "border-red-500" : "border-gray-300"
-                     }`}
-                     name="lastName"
-                  />
-                  {errors.lastName && (
-                     <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                  {errors.fullName && (
+                     <p className="text-sm text-red-500">{errors.fullName.message}</p>
                   )}
                </div>
             </div>
@@ -274,7 +266,7 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
             <div className="pt-4">
                <button
                   type="submit"
-                  className="w-full bg-regular-violet-cl text-white rounded-lg py-3 font-semibold hover:bg-[#8774E1] transition duration-200"
+                  className="flex justify-center items-center w-full bg-regular-violet-cl text-white rounded-lg h-[40px] font-semibold hover:bg-[#8774E1] transition duration-200"
                >
                   {loading ? <Spinner className="h-[24px]" /> : <span>Submit</span>}
                </button>

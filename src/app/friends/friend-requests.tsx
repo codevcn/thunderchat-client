@@ -23,12 +23,12 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { EPaginations } from "@/utils/enums"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import { toast } from "@/components/materials"
 import { handleEventDelegation } from "@/utils/helpers"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TFriendRequestPayload } from "@/utils/types/socket"
 import { friendRequestService } from "@/services/friend-request.service"
+import { toaster } from "@/utils/toaster"
 
 type TRequestCardProps = {
    req: TGetFriendRequestsData
@@ -149,7 +149,7 @@ const LoadMoreBtn = ({ onLoadMore, hidden }: TLoadMoreBtnProps) => {
    }, [])
 
    return (
-      <div className="flex mt-7" hidden={isLastRequest || hidden}>
+      <div id="load-more-btn-CODEVCN" className="flex mt-7" hidden={isLastRequest || hidden}>
          <button
             onClick={onLoadMore}
             className="hover:bg-regular-hover-bgcl m-auto cursor-pointer px-5 py-2 rounded-md bg-regular-button-bgcl"
@@ -239,7 +239,7 @@ export const FriendRequests = () => {
             }
          })
          .catch((error) => {
-            toast.error(axiosErrorHandler.handleHttpError(error).message)
+            toaster.error(axiosErrorHandler.handleHttpError(error).message)
          })
          .finally(() => {
             setLoading(undefined)
@@ -283,14 +283,14 @@ export const FriendRequests = () => {
          .friendRequestAction({ action, requestId, senderId })
          .then(() => {
             if (action === EFriendRequestStatus.ACCEPTED) {
-               toast.success(`The user ${friendEmail} now becomes your friend.`)
+               toaster.success(`The user ${friendEmail} now becomes your friend.`)
             } else {
-               toast.success(`You rejected invitation of the user ${friendEmail}.`)
+               toaster.success(`You rejected invitation of the user ${friendEmail}.`)
             }
             updateRequest(requestId, action)
          })
          .catch((error) => {
-            toast.error(axiosErrorHandler.handleHttpError(error).message)
+            toaster.error(axiosErrorHandler.handleHttpError(error).message)
          })
          .finally(() => {
             setLoading(undefined)
@@ -380,7 +380,7 @@ export const FriendRequests = () => {
          <div className="flex w-full justify-center mt-5" hidden={!(loading === "friend-requests")}>
             <Spinner size="medium" />
          </div>
-         {filteredRequests && filteredRequests.length > 0 && !loading && (
+         {filteredRequests && filteredRequests.length > 0 && (
             <LoadMoreBtn onLoadMore={onLoadMore} hidden={loading === "friend-requests"} />
          )}
       </div>

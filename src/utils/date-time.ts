@@ -80,3 +80,10 @@ export const displayTimeDifference = (originalTime: Date | string): string => {
    }
    return convertedTime.format(ETimeFormats.MMMM_DD_YYYY)
 }
+
+export const checkkIfUnder18 = (birthday: Date | string): boolean => {
+   const today = dayjs()
+   const birthDate = dayjs(birthday)
+   const age = today.diff(birthDate, "year")
+   return age < 18
+}

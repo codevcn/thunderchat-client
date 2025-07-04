@@ -123,24 +123,6 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar }: THeaderProps) => {
    )
 }
 
-// const TestDisconnectSocket = () => {
-//    const handleDisOrConnect = async () => {
-//       if (clientSocket.socket.connected) {
-//          clientSocket.socket.disconnect()
-//       } else {
-//          clientSocket.socket.connect()
-//       }
-//    }
-
-//    return (
-//       <div className="fixed top-0 left-1/2">
-//          <button className="px-3 py-2 bg-black text-white" onClick={handleDisOrConnect}>
-//             Dis / connect
-//          </button>
-//       </div>
-//    )
-// }
-
 export const Chat = () => {
    const { directChat } = useAppSelector(({ messages }) => messages)
    const dispatch = useAppDispatch()
@@ -159,7 +141,7 @@ export const Chat = () => {
          setDirectChatId(convId)
          dispatch(fetchDirectChatThunk(convId))
       }
-   }, [])
+   }, [searchParams])
 
    return (
       directChatId &&

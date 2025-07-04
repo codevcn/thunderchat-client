@@ -13,6 +13,7 @@ export enum EPaginations {
 
 export enum EDirectChatErrMsgs {
    CONV_NOT_FOUND = "Direct Chat not found",
+   CONVS_NOT_FOUND = "Direct Chats not found",
 }
 
 export enum EInvalidHttpErrMsgs {

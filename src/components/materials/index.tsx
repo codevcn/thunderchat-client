@@ -13,7 +13,7 @@ export { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/materials
 export { Button } from "@/components/materials/button"
 export { DatePicker } from "@/components/materials/date-picker"
 export { Calendar } from "@/components/materials/calendar"
-export { Popover } from "@/components/materials/popover"
+export { CustomPopover } from "@/components/materials/popover"
 export { Checkbox } from "@/components/materials/checkbox"
 export { AutoResizeTextField } from "@/components/materials/auto-resize-text-field"
 export { CounterBadge } from "@/components/materials/badge"

@@ -6,174 +6,174 @@ import type { EMessageStatus } from "@/utils/socket/enums"
 
 // ================================= DB entities =================================
 export type TUser = {
-   id: number
-   email: string
-   password: string
-   createdAt: string
+  id: number
+  email: string
+  password: string
+  createdAt: string
 }
 
 export type TProfile = {
-   id: number
-   createdAt: string
-   fullName: string
-   birthday?: string
-   about?: string
-   avatar?: string
-   userId: number
+  id: number
+  createdAt: string
+  fullName: string
+  birthday?: string
+  about?: string
+  avatar?: string
+  userId: number
 }
 
-export type TUserWithProfile = TUser & { Profile?: Omit<TProfile, "id" | "userId"> }
+export type TUserWithProfile = TUser & { Profile: Omit<TProfile, "id" | "userId"> }
 
 export type TUserWithoutPassword = Omit<TUser, "password">
 
 export type TDirectChat = {
-   id: number
-   createdAt: string
-   creatorId: number
-   recipientId: number
-   lastSentMessageId: number
+  id: number
+  createdAt: string
+  creatorId: number
+  recipientId: number
+  lastSentMessageId: number
 }
 
 export type TDirectMessage = {
-   id: number
-   createdAt: string
-   content: string
-   authorId: number
-   directChatId: number
-   status: EMessageStatus
-   stickerUrl?: string
-   type: EMessageTypes
+  id: number
+  createdAt: string
+  content: string
+  authorId: number
+  directChatId: number
+  status: EMessageStatus
+  stickerUrl?: string
+  type: EMessageTypes
 }
 
 export type TFriend = {
-   id: number
-   senderId: number
-   recipientId: number
-   createdAt: Date
+  id: number
+  senderId: number
+  recipientId: number
+  createdAt: Date
 }
 
 export type TFriendRequest = {
-   id: number
-   senderId: number
-   recipientId: number
-   status: EFriendRequestStatus
-   createdAt: Date
-   updatedAt: Date
+  id: number
+  senderId: number
+  recipientId: number
+  status: EFriendRequestStatus
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type TSticker = {
-   id: number
-   stickerName: string
-   imageUrl: string
-   categoryId: number
-   createdAt: string
+  id: number
+  stickerName: string
+  imageUrl: string
+  categoryId: number
+  createdAt: string
 }
 
 export type TStickerCategory = {
-   name: string
-   id: number
-   createdAt: string
-   idName: string
-   thumbnailUrl: string
+  name: string
+  id: number
+  createdAt: string
+  idName: string
+  thumbnailUrl: string
 }
 
 // ================================= API types =================================
 export type TLoginUserParams = {
-   email: string
-   password: string
-   keepSigned: boolean
+  email: string
+  password: string
+  keepSigned: boolean
 }
 
 export type TDirectChatData = TDirectChat & {
-   Recipient: TUserWithProfile
+  Recipient: TUserWithProfile
 }
 
 export type TRegisterUserParams = {
-   email: string
-   password: string
-   fullName: string
-   birthday: string
+  email: string
+  password: string
+  fullName: string
+  birthday: string
 }
 
 export type TSearchUsersData = {
-   id: number
-   email: string
-   Profile?: {
-      id: number
-      fullName: string
-      avatar?: string
-   }
+  id: number
+  email: string
+  Profile: {
+    id: number
+    fullName: string
+    avatar?: string
+  }
 }
 
 export type TGetFriendRequestsData = {
-   id: number
-   Sender: TUserWithProfile
-   Recipient: TUserWithProfile
-   createdAt: string
-   status: EFriendRequestStatus
+  id: number
+  Sender: TUserWithProfile
+  Recipient: TUserWithProfile
+  createdAt: string
+  status: EFriendRequestStatus
 }
 
 export type TGetFriendRequestsParams = {
-   userId: number
-   limit: number
-   lastFriendRequestId?: number
+  userId: number
+  limit: number
+  lastFriendRequestId?: number
 }
 
 export type TFriendRequestActionParams = {
-   requestId: number
-   action: EFriendRequestStatus
-   senderId: number
+  requestId: number
+  action: EFriendRequestStatus
+  senderId: number
 }
 
 export type TGetFriendsData = {
-   id: number
-   senderId: number
-   createdAt: string
-   Recipient: TUserWithProfile
+  id: number
+  senderId: number
+  createdAt: string
+  Recipient: TUserWithProfile
 }
 
 export type TGetFriendsParams = {
-   userId: number
-   limit: number
-   lastFriendId?: number
+  userId: number
+  limit: number
+  lastFriendId?: number
 }
 
 export type TSearchUsersParams = {
-   keyword: string
-   limit: number
-   lastUserId?: number
+  keyword: string
+  limit: number
+  lastUserId?: number
 }
 
 export type TGetDirectMsgsParams = {
-   msgOffset: number
-   directChatId: number
-   limit: number
-   sortType: ESortTypes
-   isFirstTime: boolean
+  msgOffset: number
+  directChatId: number
+  limit: number
+  sortType: ESortTypes
+  isFirstTime: boolean
 }
 
 export type TGetDirectMessagesData = {
-   hasMoreMessages: boolean
-   directMessages: TDirectMessage[]
+  hasMoreMessages: boolean
+  directMessages: TDirectMessage[]
 }
 
 export type TGlobalSearchData = {
-   users: {
-      id: number
-      avatarUrl?: string
-      fullName?: string
-      isOnline: boolean
-   }[]
-   messages: {
-      id: number
-      avatarUrl?: string
-      conversationName: string
-      messageContent: string
-   }[]
+  users: {
+    id: number
+    avatarUrl?: string
+    fullName?: string
+    isOnline: boolean
+  }[]
+  messages: {
+    id: number
+    avatarUrl?: string
+    conversationName: string
+    messageContent: string
+  }[]
 }
 
 export type TFetchDirectChatsData = TDirectChat & {
-   LastSentMessage: TDirectMessage
-   Recipient: TUserWithProfile
-   Creator: TUserWithProfile
+  LastSentMessage: TDirectMessage
+  Recipient: TUserWithProfile
+  Creator: TUserWithProfile
 }

@@ -1,18 +1,20 @@
 import { TSearchUsersData } from "@/utils/types/be-api"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Checkbox,
   CustomAvatar,
   CustomTooltip,
   IconButton,
   Skeleton,
+  Spinner,
   TextField,
 } from "@/components/materials"
 import { useDebounce } from "@/hooks/debounce"
 import { userService } from "@/services/user.service"
 import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { ArrowLeft, ArrowRight, Camera, X, Plus } from "lucide-react"
+import { ArrowLeft, ArrowRight, Camera, X, Plus, RefreshCw } from "lucide-react"
+import { groupChatService } from "@/services/group-chat.service"
 
 type TPrepareNewGroupProps = {
   pickedUsers: TSearchUsersData[]
@@ -22,10 +24,77 @@ type TPrepareNewGroupProps = {
 
 const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) => {
   const usersCount = pickedUsers.length
+  const [loading, setLoading] = useState<boolean>(false)
+  const [avatar, setAvatar] = useState<string>()
+  const isCreatedRef = useRef<boolean>(false)
+  const groupNameInputRef = useRef<HTMLInputElement>(null)
 
   const closeBoard = () => {
     onOpen(false)
   }
+
+  const handlePickGroupPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const file = input.files?.[0]
+    if (!file) return
+    if (avatar) {
+      try {
+        await handleDeleteAvatar()
+      } catch (error) {
+        toaster.error("Failed to delete the previous avatar")
+        return
+      }
+    }
+    setLoading(true)
+    try {
+      const res = await groupChatService.uploadGroupAvatar(file)
+      setAvatar(res.avatarUrl)
+    } catch (err) {
+      toaster.error(axiosErrorHandler.handleHttpError(err).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteAvatar = async () => {
+    if (!avatar || loading || !isCreatedRef.current) return
+    setLoading(true)
+    try {
+      await groupChatService.deleteGroupAvatar(avatar)
+      setAvatar(undefined)
+    } catch (err) {
+      toaster.error(axiosErrorHandler.handleHttpError(err).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateGroup = async () => {
+    const groupName = groupNameInputRef.current?.value
+    if (!groupName) {
+      toaster.error("Please enter a group name")
+      return
+    }
+    setLoading(true)
+    const memberIds = pickedUsers.map(({ id }) => id)
+    try {
+      await groupChatService.createGroup(groupName, memberIds, avatar)
+      isCreatedRef.current = true
+      closeBoard()
+    } catch (err) {
+      toaster.error(axiosErrorHandler.handleHttpError(err).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (isCreatedRef.current) {
+        handleDeleteAvatar()
+      }
+    }
+  }, [])
 
   return (
     <div
@@ -44,14 +113,49 @@ const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) =
 
           {/* Group Photo */}
           <div className="flex justify-center mt-2">
-            <div className="group w-[100px] h-[100px] bg-purple-500 rounded-full flex items-center justify-center cursor-pointer">
-              <div className="group-hover:scale-110 transition-transform duration-200 relative">
-                <Camera className="w-12 h-12 text-white" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                  <Plus className="w-4 h-4 text-purple-500" />
-                </div>
+            <CustomTooltip title="Upload group photo" placement="right" align="center" arrow>
+              <div className="group w-[100px] h-[100px] bg-regular-violet-cl rounded-full flex items-center justify-center cursor-pointer">
+                <input
+                  type="file"
+                  id="avatar-input"
+                  hidden
+                  onChange={handlePickGroupPhoto}
+                  accept="image/*"
+                />
+                {loading ? (
+                  <div className="w-full h-full bg-regular-violet-cl rounded-full flex items-center justify-center">
+                    <Spinner size="medium" />
+                  </div>
+                ) : avatar ? (
+                  <div className="w-full h-full bg-regular-violet-cl rounded-full relative transition-colors duration-200">
+                    <img
+                      src={avatar}
+                      alt="Group Avatar"
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                    <label
+                      htmlFor="avatar-input"
+                      className="hidden items-center justify-center rounded-full group-hover:flex group-hover:bg-white/20 absolute top-0 left-0 h-full w-full cursor-pointer"
+                    >
+                      <Camera className="w-12 h-12 text-white" />
+                      <span className="absolute left-[55%] top-[55%] bg-white rounded-full">
+                        <RefreshCw className="w-4 h-4 text-regular-violet-cl" />
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="avatar-input"
+                    className="flex items-center justify-center group-hover:scale-110 transition-transform duration-200 relative h-full w-full cursor-pointer"
+                  >
+                    <Camera className="w-12 h-12 text-white" />
+                    <span className="absolute left-[55%] top-[55%] bg-white rounded-full">
+                      <Plus className="w-5 h-5 text-regular-violet-cl" />
+                    </span>
+                  </label>
+                )}
               </div>
-            </div>
+            </CustomTooltip>
           </div>
 
           {/* Group Name Input */}
@@ -60,6 +164,7 @@ const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) =
               inputId="group-name"
               placeholder="Enter group name..."
               classNames={{ input: "w-full" }}
+              ref={groupNameInputRef}
             />
           </div>
         </div>
@@ -99,7 +204,10 @@ const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) =
         )}
 
         <div className="absolute bottom-6 right-6 z-20">
-          <button className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl hover:scale-110 transition duration-200">
+          <button
+            onClick={handleCreateGroup}
+            className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl hover:scale-110 transition duration-200"
+          >
             <ArrowRight color="currentColor" size={24} />
           </button>
         </div>

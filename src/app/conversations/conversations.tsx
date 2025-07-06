@@ -20,7 +20,7 @@ import { directChatService } from "@/services/direct-chat.service"
 import { EMessageTypes, EPaginations } from "@/utils/enums"
 import { addConversations } from "@/redux/conversations/conversations-slice"
 import { toaster } from "@/utils/toaster"
-import { AddMembersBoard } from "./group-chat"
+import { AddMembersBoard } from "./group/create-group-chat"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 

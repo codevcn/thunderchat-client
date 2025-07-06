@@ -6,7 +6,7 @@ import { fetchDirectMessagesThunk } from "@/redux/messages/messages.thunk"
 import type { TDirectMessage, TSticker, TUserWithoutPassword } from "@/utils/types/be-api"
 import { Spinner } from "@/components/materials/spinner"
 import { EMessageTypes, EPaginations, ESortTypes } from "@/utils/enums"
-import { ScrollToBottomMessageBtn } from "./scroll-to-bottom-msg-btn"
+import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
 import { createPortal } from "react-dom"
 import { useUser } from "@/hooks/user"
 import { pushNewMessages, updateMessages } from "@/redux/messages/messages.slice"
@@ -126,7 +126,7 @@ type TUnreadMessages = {
 
 export const Messages = memo(({ directChat }: TMessagesProps) => {
   const { id: directChatId, recipientId, creatorId, lastSentMessageId } = directChat
-  const { messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
+  const { directMessages: messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
   const [loading, setLoading] = useState<TMessagesLoadingState>()
   const user = useUser()!
   const messagesContainer = useRef<HTMLDivElement>(null) // Tham chiếu đến phần tử chứa danh sách tin nhắn

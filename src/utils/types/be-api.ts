@@ -22,7 +22,7 @@ export type TProfile = {
   userId: number
 }
 
-export type TUserWithProfile = TUser & { Profile: Omit<TProfile, "id" | "userId"> }
+export type TUserWithProfile = TUser & { Profile: Omit<TProfile, "userId"> }
 
 export type TUserWithoutPassword = Omit<TUser, "password">
 
@@ -75,6 +75,37 @@ export type TStickerCategory = {
   createdAt: string
   idName: string
   thumbnailUrl: string
+}
+
+export type TGroupChat = {
+  avatarUrl?: string
+  id: number
+  name: string
+  creatorId: number
+  createdAt: Date
+  lastSentMessageId: number
+}
+
+export type TGroupMessage = {
+  id: number
+  createdAt: Date
+  groupChatId: number
+  content: string
+  authorId: number
+  type: EMessageTypes
+  status: EMessageStatus
+  stickerUrl?: string
+}
+
+export type TGroupChatMember = {
+  id: number
+  userId: number
+  groupChatId: number
+  joinedAt: Date
+}
+
+export type TGroupChatMemberWithUser = Omit<TGroupChatMember, "userId"> & {
+  User: TUser
 }
 
 // ================================= API types =================================
@@ -176,4 +207,29 @@ export type TFetchDirectChatsData = TDirectChat & {
   LastSentMessage: TDirectMessage
   Recipient: TUserWithProfile
   Creator: TUserWithProfile
+}
+
+export type TFetchGroupChatData = TGroupChat & {
+  Members: TGroupChatMemberWithUser[]
+}
+
+export type TUploadGroupAvatarData = {
+  avatarUrl: string
+}
+
+export type TGetGroupMsgsParams = {
+  msgOffset: number
+  groupChatId: number
+  limit: number
+  sortType: ESortTypes
+  isFirstTime: boolean
+}
+
+export type TGetGroupMessagesData = {
+  hasMoreMessages: boolean
+  groupMessages: TGroupMessage[]
+}
+
+export type TGroupChatData = TGroupChat & {
+  Members: TGroupChatMemberWithUser[]
 }

@@ -1,86 +1,90 @@
 import type { AxiosError, HttpStatusCode } from "axios"
-import type { TDirectMessage, TDirectChat } from "@/utils/types/be-api"
+import type { TDirectMessage, TDirectChat, TGroupMessage } from "@/utils/types/be-api"
 import { EMessageTypes } from "../enums"
 
 export type TStateDirectMessage = TDirectMessage & {
-   isNewMsg?: boolean
+  isNewMsg?: boolean
+}
+
+export type TStateGroupMessage = TGroupMessage & {
+  isNewMsg?: boolean
 }
 
 export type TDirectChatWithMessages = TDirectChat & { messages: TDirectMessage[] }
 
 export type THttpErrorResBody =
-   | {
-        name: string
-        message: string
-        timestamp: string
-        isUserError: boolean
-     }
-   | string
+  | {
+      name: string
+      message: string
+      timestamp: string
+      isUserError: boolean
+    }
+  | string
 
 export type TAxiosError = {
-   originalError: AxiosError<THttpErrorResBody>
-   statusCode: number
-   message: string
-   isUserError: boolean
-   clientMessage: string
+  originalError: AxiosError<THttpErrorResBody>
+  statusCode: number
+  message: string
+  isUserError: boolean
+  clientMessage: string
 }
 
 export type TSuccess = {
-   success: boolean // always true
+  success: boolean // always true
 }
 
 export type TConversationCard = {
-   id: number
-   avatar: {
-      src?: string
-      fallback: string
-   }
-   title: string
-   subtitle: string
-   lastMessageTime: string
-   pinIndex: number
-   type: EMessageTypes
+  id: number
+  avatar: {
+    src?: string
+    fallback: string
+  }
+  title: string
+  subtitle: string
+  lastMessageTime: string
+  pinIndex: number
+  type: EMessageTypes
 }
 
 export type TUnknownObject = {
-   [key: number | string]: any
+  [key: number | string]: any
 }
 
 export type TUnknownFunction<P, R> = (...args: P[]) => R
 
 export type TSendDirectMessageErrorRes = {
-   isError: boolean
-   message: string
+  isError: boolean
+  message: string
 }
 
 export type TSendMessageCallback = (data: TSendDirectMessageErrorRes | TSuccess) => void
 
 export type THandledAxiosError = {
-   originalError: unknown
-   statusCode: HttpStatusCode
-   message: string
-   isUserError: boolean
+  originalError: unknown
+  statusCode: HttpStatusCode
+  message: string
+  isUserError: boolean
 }
 
 export type TFormData = {
-   [key: string]: FormDataEntryValue | FormDataEntryValue[] | TCheckboxValue | undefined
+  [key: string]: FormDataEntryValue | FormDataEntryValue[] | TCheckboxValue | undefined
 }
 
 export type TLastPageAccessed = {
-   current: string
-   previous: string
+  current: string
+  previous: string
 }
 
 export type TEmoji = {
-   src: string
-   name: string
+  src: string
+  name: string
 }
 
 export type TCheckboxValue = "on" | undefined
 
 export type TMessageStateUpdates = {
-   msgId: number
-   msgUpdates: Partial<TStateDirectMessage>
+  msgId: number
+  msgUpdates: Partial<TStateDirectMessage>
 }
 
 export type TPlacement = "top" | "right" | "bottom" | "left"

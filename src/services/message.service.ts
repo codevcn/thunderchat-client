@@ -1,11 +1,21 @@
-import { getFetchDirectMessages } from "@/apis/messages"
-import type { TGetDirectMessagesData, TGetDirectMsgsParams } from "@/utils/types/be-api"
+import { getFetchDirectMessages, getFetchGroupMessages } from "@/apis/messages"
+import type {
+  TGetDirectMessagesData,
+  TGetDirectMsgsParams,
+  TGetGroupMessagesData,
+  TGetGroupMsgsParams,
+} from "@/utils/types/be-api"
 
 class MessageService {
-   async fetchDirectMessages(params: TGetDirectMsgsParams): Promise<TGetDirectMessagesData> {
-      const { data } = await getFetchDirectMessages(params)
-      return data
-   }
+  async fetchDirectMessages(params: TGetDirectMsgsParams): Promise<TGetDirectMessagesData> {
+    const { data } = await getFetchDirectMessages(params)
+    return data
+  }
+
+  async fetchGroupMessages(params: TGetGroupMsgsParams): Promise<TGetGroupMessagesData> {
+    const { data } = await getFetchGroupMessages(params)
+    return data
+  }
 }
 
 export const messageService = new MessageService()

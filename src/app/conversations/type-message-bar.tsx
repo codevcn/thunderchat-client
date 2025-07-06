@@ -310,6 +310,34 @@ const MessageTextField = ({
    )
 }
 
+// Thêm component menu chọn loại file
+const fileOptions = [
+   { icon: "🖼️", label: "Photo or video", value: "photo" },
+   { icon: "📄", label: "Document", value: "document" },
+   { icon: "📊", label: "Create poll", value: "poll" },
+   { icon: "📍", label: "Location", value: "location" },
+];
+
+function FileTypeMenu({ onSelect, onClose }: { onSelect: (type: string) => void; onClose: () => void }) {
+   return (
+      <div className="absolute bottom-12 left-0 z-50 bg-white shadow-lg rounded-lg p-2 w-56 border border-gray-200">
+         {fileOptions.map((opt) => (
+            <button
+               key={opt.value}
+               className="flex items-center w-full px-3 py-2 hover:bg-gray-100 rounded transition text-gray-800"
+               onClick={() => {
+                  onSelect(opt.value);
+                  onClose();
+               }}
+            >
+               <span className="text-xl mr-3">{opt.icon}</span>
+               <span>{opt.label}</span>
+            </button>
+         ))}
+      </div>
+   );
+}
+
 type TTypeMessageBarProps = {
    directChat: TDirectChat
 }
@@ -323,6 +351,16 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
    const fileInputRef = useRef<HTMLInputElement>(null)
    const user = useUser()!
    const { recipientId, creatorId, id } = directChat
+   const [isUploading, setIsUploading] = useState(false)
+   const [showFileMenu, setShowFileMenu] = useState(false);
+   const [showPoll, setShowPoll] = useState(false);
+   const [showLocation, setShowLocation] = useState(false);
+   const [fileAccept, setFileAccept] = useState<string>(
+      "image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+   );
+   const [fileMode, setFileMode] = useState<'all' | 'media' | 'document'>('all');
+   const [fileInputKey, setFileInputKey] = useState(0);
+   const menuRef = useRef<HTMLDivElement>(null);
 
    const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
       const textField = textFieldRef.current
@@ -343,59 +381,143 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
    }
 
    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
 
-      // Kiểm tra loại file
-      const isImage = file.type.startsWith('image/')
-      const isVideo = file.type.startsWith('video/')
+      // Kiểm tra loại file hợp lệ theo mode
+      const validFiles = files.filter(file => {
+         if (fileMode === 'media') {
+            return file.type.startsWith('image/') || file.type.startsWith('video/');
+         }
+         if (fileMode === 'document') {
+            return (
+               file.type === "application/pdf" ||
+               file.type === "application/msword" ||
+               file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+               file.type === "application/vnd.ms-excel" ||
+               file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+               file.type === "application/vnd.ms-powerpoint" ||
+               file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+               file.type === "text/plain" ||
+               [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some(ext => file.name.endsWith(ext))
+            );
+         }
+         // fallback: cho phép cả hai
+         return (
+            file.type.startsWith('image/') ||
+            file.type.startsWith('video/') ||
+            file.type === "application/pdf" ||
+            file.type === "application/msword" ||
+            file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+            file.type === "application/vnd.ms-excel" ||
+            file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+            file.type === "application/vnd.ms-powerpoint" ||
+            file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+            file.type === "text/plain" ||
+            [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some(ext => file.name.endsWith(ext))
+         );
+      });
 
-      if (!isImage && !isVideo) {
-         toast.error('Chỉ hỗ trợ file ảnh hoặc video')
+      if (validFiles.length === 0) {
+         toast.error('Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT)')
          return
       }
 
+      if (validFiles.length !== files.length) {
+         toast.error(`${files.length - validFiles.length} file không được hỗ trợ`)
+      }
+
+      setIsUploading(true)
       try {
-         // Upload file lên server
-         const { url } = await uploadFile(file)
+         for (const file of validFiles) {
+            if (file.size > 50 * 1024 * 1024) {
+               toast.error(`File ${file.name} vượt quá 50MB!`)
+               continue
+            }
+            // Upload file lên server
+            const { url, fileName, fileType } = await uploadFile(file)
+            let messageType = EMessageTypes.IMAGE
+            if (file.type.startsWith('image/')) messageType = EMessageTypes.IMAGE
+            else if (file.type.startsWith('video/')) messageType = EMessageTypes.VIDEO
+            else messageType = EMessageTypes.DOCUMENT
 
-         // Xác định type message
-         const messageType = isImage ? EMessageTypes.IMAGE : EMessageTypes.VIDEO
-
-         // Gửi tin nhắn chứa URL
-         chattingService.sendMessage(
-            messageType,
-            {
-               content: "",
+            const msgPayload: any = {
+               content: "", // hoặc caption nếu có
                mediaUrl: url,
+               fileName,
+               fileType,
                receiverId: user.id === recipientId ? creatorId : recipientId,
                directChatId: id,
                token: chattingService.getMessageToken(),
                timestamp: new Date(),
-            },
-            (data) => {
-               if ("success" in data && data.success) {
-                  chattingService.setAcknowledgmentFlag(true)
-                  chattingService.recursiveSendingQueueMessages()
-                  toast.success('Đã gửi file thành công')
-               } else if ("isError" in data && data.isError) {
-                  console.log(">>> error sending file:", data)
-                  toast.error("Lỗi khi gửi file")
-               }
             }
-         )
+            if (messageType === EMessageTypes.DOCUMENT) {
+               msgPayload.fileSize = file.size
+            }
+
+            chattingService.sendMessage(
+               messageType,
+               msgPayload,
+               (data) => {
+                  if ("success" in data && data.success) {
+                     chattingService.setAcknowledgmentFlag(true)
+                     chattingService.recursiveSendingQueueMessages()
+                  } else if ("isError" in data && data.isError) {
+                     toast.error(`Lỗi khi gửi file ${file.name}`)
+                  }
+               }
+            )
+         }
+         toast.success(`Đã gửi ${validFiles.length} file thành công`)
       } catch (error) {
          console.error('Upload file error:', error)
          toast.error('Lỗi khi upload file')
+      } finally {
+         setIsUploading(false)
       }
-
-      // Reset input
       e.target.value = ''
    }
 
+   const handleFileMenuSelect = (type: string) => {
+      if (type === "photo") {
+         setFileAccept("image/*,video/*");
+         setFileMode('media');
+         setFileInputKey(prev => prev + 1);
+         setTimeout(() => {
+            fileInputRef.current?.click();
+         }, 0);
+      } else if (type === "document") {
+         setFileAccept(
+            ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+         );
+         setFileMode('document');
+         setFileInputKey(prev => prev + 1);
+         setTimeout(() => {
+            fileInputRef.current?.click();
+         }, 0);
+      } else if (type === "poll") {
+         setShowPoll(true);
+      } else if (type === "location") {
+         setShowLocation(true);
+      }
+   };
+
+   useEffect(() => {
+      if (!showFileMenu) return;
+      function handleClickOutside(event: MouseEvent) {
+         if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            setShowFileMenu(false);
+         }
+      }
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+         document.removeEventListener("mousedown", handleClickOutside);
+      };
+   }, [showFileMenu]);
+
    return (
       fetchedMsgs && (
-         <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar">
+         <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar relative">
             <div
                onClick={handleClickOnTextFieldContainer}
                ref={textFieldContainerRef}
@@ -414,15 +536,32 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
                   textFieldContainerRef={textFieldContainerRef}
                   expressionPopoverRef={expressionPopoverRef}
                />
-               <button
-                  className="text-gray-500 hover:text-regular-violet-cl cursor-pointer relative bottom-0 right-0"
-                  onClick={() => fileInputRef.current?.click()}
+               <span
+                  className={`${isUploading ? 'text-gray-400 cursor-not-allowed' : 'text-gray-500 hover:text-regular-violet-cl cursor-pointer'} relative bottom-0 right-0`}
+                  onClick={() => !isUploading && setShowFileMenu((v) => !v)}
+                  role="button"
+                  tabIndex={0}
+                  style={{ outline: 'none' }}
                >
-                  <Paperclip />
-               </button>
+                  {isUploading ? (
+                     <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+                  ) : (
+                     <Paperclip />
+                  )}
+                  {showFileMenu && (
+                     <div ref={menuRef}>
+                        <FileTypeMenu
+                           onSelect={handleFileMenuSelect}
+                           onClose={() => setShowFileMenu(false)}
+                        />
+                     </div>
+                  )}
+               </span>
                <input
+                  key={fileInputKey}
                   type="file"
-                  accept="image/*,video/*"
+                  accept={fileAccept}
+                  multiple
                   style={{ display: "none" }}
                   ref={fileInputRef}
                   onChange={handleFileSelect}

@@ -66,4 +66,5 @@ export enum EMessageTypes {
    STICKER = "STICKER",
    IMAGE = "IMAGE",
    VIDEO = "VIDEO",
+   DOCUMENT = "DOCUMENT",
 }

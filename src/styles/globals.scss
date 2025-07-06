@@ -126,6 +126,7 @@ svg {
       --chart-5: 27 87% 67%;
       --radius: 0.5rem;
    }
+
    .dark {
       --background: 0 0% 3.9%;
       --foreground: 0 0% 98%;
@@ -158,6 +159,7 @@ svg {
    * {
       @apply border-border;
    }
+
    body {
       @apply bg-background text-foreground;
    }
@@ -167,16 +169,18 @@ svg {
    .DatePicker-input-button {
       @apply cursor-text text-gray-400;
    }
+
    .DatePicker-input-button[data-state="open"] {
       @apply text-white outline-regular-violet-cl outline-2 outline border-regular-violet-cl;
    }
+
    .DatePicker-input-button:hover {
       @apply text-[#9ca3af] border-regular-violet-cl;
    }
 
    .checkbox-input {
       &:checked {
-         & + label {
+         &+label {
             @apply bg-regular-violet-cl;
 
             .checkbox-checked-icon {
@@ -192,6 +196,53 @@ svg {
 
       &::-webkit-scrollbar {
          display: none;
+      }
+   }
+
+   // Global input field styling
+   input[type="text"],
+   input[type="number"],
+   input[type="email"],
+   input[type="password"],
+   input[type="date"],
+   input[type="time"],
+   input[type="datetime-local"],
+   input[type="search"],
+   input[type="tel"],
+   input[type="url"],
+   textarea,
+   select {
+      @apply bg-white text-gray-900;
+
+      &::placeholder {
+         @apply text-gray-500;
+      }
+
+      &:focus {
+         @apply outline-none ring-2 ring-blue-500;
+      }
+   }
+
+   // Dark mode support for input fields
+   .dark {
+
+      input[type="text"],
+      input[type="number"],
+      input[type="email"],
+      input[type="password"],
+      input[type="date"],
+      input[type="time"],
+      input[type="datetime-local"],
+      input[type="search"],
+      input[type="tel"],
+      input[type="url"],
+      textarea,
+      select {
+         @apply bg-gray-800 text-gray-100;
+
+         &::placeholder {
+            @apply text-gray-400;
+         }
       }
    }
 }
@@ -240,26 +291,32 @@ svg {
          }
       }
    }
+
    .toast[data-type="success"] {
       [data-content] {
          color: var(--tdc-regular-green-cl);
       }
+
       button[data-close-button] {
          border-color: var(--tdc-regular-green-cl) !important;
       }
    }
+
    .toast[data-type="error"] {
       [data-content] {
          color: var(--tdc-regular-red-cl);
       }
+
       button[data-close-button] {
          border-color: var(--tdc-regular-red-cl) !important;
       }
    }
+
    .toast[data-type="warning"] {
       [data-content] {
          color: var(--tdc-regular-orange-cl);
       }
+
       button[data-close-button] {
          border-color: var(--tdc-regular-orange-cl) !important;
       }

@@ -37,6 +37,7 @@ type TCustomTooltipProps = {
    placement?: TPlacement
    align?: "center" | "start" | "end"
    arrow?: boolean
+   asChild?: boolean
 }
 
 const CustomTooltip = ({
@@ -45,11 +46,14 @@ const CustomTooltip = ({
    placement = "bottom",
    align = "center",
    arrow = true,
+   asChild = false,
 }: TCustomTooltipProps) => {
    return (
       <TooltipProvider delayDuration={300}>
          <Tooltip>
-            <TooltipTrigger className="h-fit cursor-auto">{children}</TooltipTrigger>
+            <TooltipTrigger asChild={asChild} className={!asChild ? "h-fit cursor-auto" : undefined}>
+               {children}
+            </TooltipTrigger>
             <TooltipContent side={placement} align={align}>
                {title}
                {arrow && (

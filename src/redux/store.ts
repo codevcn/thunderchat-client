@@ -4,6 +4,7 @@ import { userSlice } from "./user/user.slice"
 import { conversationsSlice } from "./conversations/conversations-slice"
 import { messagesSlice } from "./messages/messages.slice"
 import { settingsSlice } from "./settings/settings.slice"
+import statisticsReducer from "./statistics/statistics.slice"
 
 const store = configureStore({
    reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
       [conversationsSlice.name]: conversationsSlice.reducer,
       [messagesSlice.name]: messagesSlice.reducer,
       [settingsSlice.name]: settingsSlice.reducer,
+      statistics: statisticsReducer,
    },
 })
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Bell, Settings, MessageCircle, Users, User } from "lucide-react"
+import { Home, Bell, Settings, MessageCircle, Users, User, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
@@ -30,6 +30,11 @@ const navs: TNav[] = [
       label: "Friends",
       href: "/friends",
       icon: <Users size={20} color="white" />,
+   },
+   {
+      label: "Statistics",
+      href: "/statistics",
+      icon: <BarChart3 size={20} color="white" />,
    },
 ]
 

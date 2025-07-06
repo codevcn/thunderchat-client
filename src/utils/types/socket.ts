@@ -17,6 +17,8 @@ export type TChattingPayload = {
       token: string
       timestamp: Date
       mediaUrl?: string
+      fileName?: string
+      fileType?: string
    }
 }
 

@@ -43,6 +43,9 @@ export type TDirectMessage = {
   status: EMessageStatus
   stickerUrl?: string
   type: EMessageTypes
+  fileName?: string
+  fileType?: string
+  fileSize?: number
 }
 
 export type TFriend = {

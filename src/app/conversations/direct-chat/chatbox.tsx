@@ -16,6 +16,7 @@ import { fetchDirectChatThunk } from "@/redux/conversations/conversations-thunks
 import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
+import { VoiceMessagePlayer } from "../(voice-chat)/VoiceMessagePlayerProps"
 
 const TypingIndicator = () => {
   return (
@@ -127,7 +128,17 @@ export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
   const { directChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
+  const [showPlayer, setShowPlayer] = useState<boolean>(true)
+  const [currentVoiceIndex, setCurrentVoiceIndex] = useState<number>(0)
+  const [voiceMessages, setVoiceMessages] = useState<any[]>([])
 
+  const handlePrevVoice = () => {
+    setCurrentVoiceIndex((prev) => Math.max(prev - 1, 0))
+  }
+
+  const handleNextVoice = () => {
+    setCurrentVoiceIndex((prev) => Math.min(prev + 1, voiceMessages.length - 1))
+  }
   const hanldeOpenInfoBar = async (open: boolean) => {
     dispatch(openInfoBar(open))
   }
@@ -142,6 +153,23 @@ export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
       <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative">
         <div className="flex flex-col items-center w-full box-border h-screen bg-no-repeat bg-transparent bg-cover bg-center relative">
           <Header infoBarIsOpened={infoBarIsOpened} onOpenInfoBar={hanldeOpenInfoBar} />
+          {/* Voice Player floating layer */}
+          {showPlayer && (
+            <div
+              className="absolute top-[60px] left-0 z-30 w-full max-w-none sm:max-w-[480px] sm:left-1/2 sm:-translate-x-1/2 px-0"
+              style={{ pointerEvents: "auto" }}
+            >
+              <VoiceMessagePlayer
+                senderName="Trung Nguyễn"
+                audioUrl="/test1.mp3"
+                sentTime="Today at 10:10"
+                onClose={() => setShowPlayer(false)}
+                onPrev={handlePrevVoice}
+                onNext={handleNextVoice}
+              />
+            </div>
+          )}
+
           <div
             className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
           >

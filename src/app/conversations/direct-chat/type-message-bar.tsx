@@ -1,7 +1,7 @@
 "use client"
 
 import { CustomTooltip, IconButton } from "@/components/materials"
-import { Mic, Paperclip, Send, Smile, Sticker } from "lucide-react"
+import { Download, Mic, Paperclip, Send, Smile, Sticker, Trash } from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { AutoResizeTextField } from "@/components/materials"
@@ -319,6 +319,84 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
   const [hasContent, setHasContent] = useState<boolean>(false)
   const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
   const expressionPopoverRef = useRef<HTMLDivElement>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordTime, setRecordTime] = useState(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const isCancelledRef = useRef(false)
+
+  // Bắt đầu ghi âm
+  const startRecording = async () => {
+    setIsRecording(true)
+    setRecordTime(0)
+    setAudioUrl(null)
+    isCancelledRef.current = false
+    audioChunksRef.current = []
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = recorder
+
+      recorder.ondataavailable = (e) => {
+        audioChunksRef.current.push(e.data)
+      }
+
+      recorder.onstop = () => {
+        if (isCancelledRef.current) return
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        setAudioUrl(URL.createObjectURL(blob))
+        stream.getTracks().forEach((track) => track.stop())
+      }
+
+      recorder.start()
+    } catch (err) {
+      setIsRecording(false)
+      if (timerRef.current) clearInterval(timerRef.current)
+      alert("Không thể truy cập microphone!")
+    }
+  }
+
+  const stopRecording = () => {
+    setIsRecording(false)
+    setRecordTime(0)
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop()
+    }
+  }
+  const sendVoice = stopRecording
+  const cancelRecording = () => {
+    isCancelledRef.current = true
+    setAudioUrl(null) // clear audioUrl nếu hủy
+    stopRecording()
+  }
+
+  // Format mm:ss,ms
+  const formatTime = (ms: number) => {
+    const minutes = Math.floor(ms / 60000)
+    const seconds = Math.floor((ms % 60000) / 1000)
+    const msPart = Math.floor((ms % 1000) / 10) // lấy 2 số
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")},${msPart.toString().padStart(2, "0")}`
+  }
+
+  useEffect(() => {
+    if (isRecording) {
+      timerRef.current = setInterval(() => {
+        setRecordTime((prev) => prev + 10)
+      }, 10)
+    } else {
+      setRecordTime(0) // reset time khi stop
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+    // Cleanup khi component unmount hoặc isRecording false
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [isRecording])
 
   const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
     const textField = textFieldRef.current
@@ -359,23 +437,100 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
             textFieldContainerRef={textFieldContainerRef}
             expressionPopoverRef={expressionPopoverRef}
           />
-          <button className="text-gray-500 hover:text-regular-violet-cl cursor-pointer relative bottom-0 right-0">
-            <Paperclip />
-          </button>
+          {!isRecording ? (
+            <button className="text-gray-500 hover:text-regular-violet-cl cursor-pointer relative bottom-0 right-0">
+              <Paperclip />
+            </button>
+          ) : (
+            <div className="flex items-center justify-center min-w-[68px] relative bottom-0 right-0">
+              <span className="text-lg text-white font-semibold select-none">
+                {formatTime(recordTime)}
+                <span className="ml-2 w-3 h-3 rounded-full bg-red-500 inline-block animate-pulse"></span>
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="relative flex items-center">
+          {/* Nút huỷ ghi âm - KHÔNG nằm trong Tooltip */}
+          {isRecording && (
+            <button
+              onClick={cancelRecording}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-full p-3 mr-2"
+              type="button"
+            >
+              <Trash />
+            </button>
+          )}
+
+          {/* Nút record/send được bọc CustomTooltip riêng */}
+          <CustomTooltip
+            title={
+              hasContent ? "Send message" : isRecording ? "Send voice" : "Record voice message"
+            }
+            placement="top"
+          >
+            <div
+              onClick={() => {
+                if (hasContent) {
+                  // sendMessage
+                } else if (isRecording) {
+                  sendVoice()
+                } else {
+                  startRecording()
+                }
+              }}
+              className={`${
+                hasContent || isRecording ? "text-regular-violet-cl" : "text-gray-500"
+              } bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
+              tabIndex={0}
+              role="button"
+              aria-label={
+                hasContent ? "Send message" : isRecording ? "Send voice" : "Record voice message"
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  if (hasContent) {
+                    // sendMessage
+                  } else if (isRecording) {
+                    sendVoice()
+                  } else {
+                    startRecording()
+                  }
+                }
+              }}
+            >
+              <div
+                className={`${hasContent || isRecording ? "animate-hide-icon" : "animate-grow-icon"} absolute`}
+              >
+                <Mic />
+              </div>
+              <div
+                className={`${hasContent || isRecording ? "animate-grow-icon" : "animate-hide-icon"} absolute`}
+              >
+                <Send />
+              </div>
+            </div>
+          </CustomTooltip>
         </div>
 
-        <CustomTooltip title={hasContent ? "Send message" : "Record voice message"} placement="top">
-          <div
-            className={`${hasContent ? "text-regular-violet-cl" : "text-gray-500"} bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
-          >
-            <div className={`${hasContent ? "animate-hide-icon" : "animate-grow-icon"} absolute`}>
-              <Mic />
-            </div>
-            <div className={`${hasContent ? "animate-grow-icon" : "animate-hide-icon"} absolute`}>
-              <Send />
-            </div>
+        {audioUrl && (
+          <div className="mt-2 flex items-center gap-2">
+            <audio controls src={audioUrl} className="h-8" />
+            <button
+              onClick={() => {
+                const a = document.createElement("a")
+                a.href = audioUrl
+                a.download = `record-${Date.now()}.webm`
+                a.click()
+              }}
+              className="flex items-center gap-1 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition"
+            >
+              <Download className="w-4 h-4" />
+              Tải về
+            </button>
           </div>
-        </CustomTooltip>
+        )}
       </div>
     )
   )

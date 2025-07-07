@@ -25,6 +25,7 @@ import { expressionService } from "@/services/expression.service"
 import Image from "next/image"
 import { chattingService } from "@/services/chatting.service"
 import { CustomTooltip } from "@/components/materials"
+import VoiceMessage from "../(voice-chat)/VoiceMessage"
 
 const SCROLL_ON_MESSAGES_THRESHOLD: number = 100
 const SHOW_SCROLL_BTN_THRESHOLD: number = 250
@@ -431,6 +432,13 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
                 </div>
               )}
               <MappedMessages messages={messages} user={user} />
+              <VoiceMessage
+                audioUrl="/test1.mp3"
+                duration={10}
+                sentAt="10:10"
+                status="sent"
+                isMine={true}
+              />
             </div>
           ) : (
             <NoMessagesYet directChat={directChat} user={user} />

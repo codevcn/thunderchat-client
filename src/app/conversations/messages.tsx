@@ -126,7 +126,7 @@ type TUnreadMessages = {
 
 export const Messages = memo(({ directChat }: TMessagesProps) => {
   const { id: directChatId, recipientId, creatorId, lastSentMessageId } = directChat
-  const { messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
+  const { directMessages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
   const [loading, setLoading] = useState<TMessagesLoadingState>()
   const user = useUser()!
   const messagesContainer = useRef<HTMLDivElement>(null) // Tham chiếu đến phần tử chứa danh sách tin nhắn
@@ -156,7 +156,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
 
   // Xử lý cuộn xuống dưới khi danh sách tin nhắn thay đổi
   const scrollToBottomOnMessages = () => {
-    if (messages && messages.length > 0) {
+    if (directMessages && directMessages.length > 0) {
       const msgsContainerEle = messagesContainer.current
       if (msgsContainerEle) {
         if (firstScrollToBottom.current) {
@@ -168,7 +168,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
           })
           // Lưu ID của tin nhắn cuối cùng
         }
-        const finalMessageData = messages[messages.length - 1]
+        const finalMessageData = directMessages[directMessages.length - 1]
         if (finalMessageId.current !== finalMessageData.id) {
           // Chỉ cuộn xuống dưới khi có tin nhắn mới từ user hoặc friend
           finalMessageId.current = finalMessageData.id
@@ -195,8 +195,8 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
 
   // Thiết lập mốc thời gian để lấy tin nhắn, nếu không có tin nhắn nào thì lấy thời gian hiện tại
   const initMessageOffset = () => {
-    if (messages && messages.length > 0) {
-      msgOffset.current = messages[0].id
+    if (directMessages && directMessages.length > 0) {
+      msgOffset.current = directMessages[0].id
     }
   }
 
@@ -306,9 +306,9 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
     const msgsContainerEle = messagesContainer.current
     if (
       msgsContainerEle &&
-      messages &&
-      messages.length > 0 &&
-      messages.length > messagesPreCount.current
+      directMessages &&
+      directMessages.length > 0 &&
+      directMessages.length > messagesPreCount.current
     ) {
       const unreadMessageEles =
         msgsContainerEle.querySelectorAll<HTMLElement>(".QUERY-unread-message")
@@ -374,7 +374,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
 
   // Cập nhật số lượng tin nhắn sau khi dữ liệu danh sách tin nhắn thay đổi
   const updateMessagesCount = () => {
-    messagesPreCount.current = messages?.length || 0
+    messagesPreCount.current = directMessages?.length || 0
   }
 
   // Xử lý sự kiện đã đọc tin nhắn từ đối phương
@@ -389,12 +389,12 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
       checkUnreadMessage()
       updateMessagesCount()
     })
-  }, [messages])
+  }, [directMessages])
 
   useEffect(() => {
     if (tempFlagUseEffectRef.current) {
       tempFlagUseEffectRef.current = false
-      if (!messages || messages.length === 0) {
+      if (!directMessages || directMessages.length === 0) {
         fetchDirectMessages(directChatId, msgOffset.current, true)
       }
     }
@@ -424,7 +424,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
         ref={messagesContainer}
       >
         {fetchedMsgs ? (
-          messages && messages.length > 0 ? (
+          directMessages && directMessages.length > 0 ? (
             <div
               id="STYLE-user-messages"
               className="flex flex-col justify-end items-center py-3 box-border w-messages-list gap-y-2"
@@ -434,7 +434,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
                   <Spinner size="small" />
                 </div>
               )}
-              <MappedMessages messages={messages} user={user} />
+              <MappedMessages messages={directMessages} user={user} />
             </div>
           ) : (
             <NoMessagesYet directChat={directChat} user={user} />

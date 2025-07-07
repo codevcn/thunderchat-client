@@ -1,5 +1,5 @@
 "use client"
-
+console.log("====HEHE FILE direct-chat/type-message-bar.tsx LOADED ====")
 import { CustomTooltip, IconButton } from "@/components/materials"
 import { Mic, Paperclip, Send, Smile, Sticker } from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
@@ -18,6 +18,7 @@ import type { TDirectChat, TSticker } from "@/utils/types/be-api"
 import type { TEmoji } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
+import { uploadFile } from "@/apis/upload"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -309,16 +310,57 @@ const MessageTextField = ({
   )
 }
 
+const fileOptions = [
+  { icon: "🖼️", label: "Photo or video", value: "photo" },
+  { icon: "📄", label: "Document", value: "document" },
+  { icon: "📊", label: "Create poll", value: "poll" },
+  { icon: "📍", label: "Location", value: "location" },
+]
+
+function FileTypeMenu({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (type: string) => void
+  onClose: () => void
+}) {
+  return (
+    <div className="absolute bottom-12 left-0 z-50 bg-white shadow-lg rounded-lg p-2 w-56 border border-gray-200">
+      {fileOptions.map((opt) => (
+        <button
+          key={opt.value}
+          className="flex items-center w-full px-3 py-2 hover:bg-gray-100 rounded transition text-gray-800"
+          onClick={() => {
+            onSelect(opt.value)
+            onClose()
+          }}
+        >
+          <span className="text-xl mr-3">{opt.icon}</span>
+          <span>{opt.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 type TTypeMessageBarProps = {
   directChat: TDirectChat
 }
 
 export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
+  const user = useUser()
   const { fetchedMsgs } = useAppSelector(({ messages }) => messages)
   const textFieldRef = useRef<HTMLDivElement | null>(null)
   const [hasContent, setHasContent] = useState<boolean>(false)
   const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
   const expressionPopoverRef = useRef<HTMLDivElement>(null)
+  const [showFileMenu, setShowFileMenu] = useState<boolean>(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [fileAccept, setFileAccept] = useState<string>("")
+  const [fileMode, setFileMode] = useState<string>("")
+  const [fileInputKey, setFileInputKey] = useState<number>(0)
 
   const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
     const textField = textFieldRef.current
@@ -338,45 +380,213 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
     }
   }
 
-  return (
-    fetchedMsgs && (
-      <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar">
-        <div
-          onClick={handleClickOnTextFieldContainer}
-          ref={textFieldContainerRef}
-          className="flex cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
-        >
-          <ExpressionPicker
-            textFieldRef={textFieldRef}
-            expressionPopoverRef={expressionPopoverRef}
-            directChat={directChat}
-          />
-          <MessageTextField
-            hasContent={hasContent}
-            directChat={directChat}
-            setHasContent={setHasContent}
-            textFieldRef={textFieldRef}
-            textFieldContainerRef={textFieldContainerRef}
-            expressionPopoverRef={expressionPopoverRef}
-          />
-          <button className="text-gray-500 hover:text-regular-violet-cl cursor-pointer relative bottom-0 right-0">
-            <Paperclip />
-          </button>
-        </div>
+  const handleFileMenuSelect = (type: string) => {
+    console.log("FileTypeMenu selected:", type, fileInputRef.current)
+    if (type === "photo") {
+      setFileAccept("image/*,video/*")
+      setFileMode("media")
+      setFileInputKey((prev) => prev + 1)
+      setTimeout(() => {
+        console.log("Try to click file input:", fileInputRef.current)
+        fileInputRef.current?.click()
+      }, 0)
+    } else if (type === "document") {
+      setFileAccept(
+        ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+      )
+      setFileMode("document")
+      setFileInputKey((prev) => prev + 1)
+      setTimeout(() => {
+        console.log("Try to click file input:", fileInputRef.current)
+        fileInputRef.current?.click()
+      }, 0)
+    }
+    // ... các case khác
+  }
 
-        <CustomTooltip title={hasContent ? "Send message" : "Record voice message"} placement="top">
-          <div
-            className={`${hasContent ? "text-regular-violet-cl" : "text-gray-500"} bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
-          >
-            <div className={`${hasContent ? "animate-hide-icon" : "animate-grow-icon"} absolute`}>
-              <Mic />
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return
+    const { recipientId, creatorId, id } = directChat
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Kiểm tra loại file hợp lệ theo mode
+    const validFiles = files.filter((file) => {
+      if (fileMode === "media") {
+        return file.type.startsWith("image/") || file.type.startsWith("video/")
+      }
+      if (fileMode === "document") {
+        return (
+          file.type === "application/pdf" ||
+          file.type === "application/msword" ||
+          file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+          file.type === "application/vnd.ms-excel" ||
+          file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+          file.type === "application/vnd.ms-powerpoint" ||
+          file.type ===
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+          file.type === "text/plain" ||
+          [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
+            file.name.endsWith(ext)
+          )
+        )
+      }
+      // fallback: cho phép cả hai
+      return (
+        file.type.startsWith("image/") ||
+        file.type.startsWith("video/") ||
+        file.type === "application/pdf" ||
+        file.type === "application/msword" ||
+        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        file.type === "application/vnd.ms-excel" ||
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.ms-powerpoint" ||
+        file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+        file.type === "text/plain" ||
+        [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
+          file.name.endsWith(ext)
+        )
+      )
+    })
+
+    if (validFiles.length === 0) {
+      toast.error("Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT)")
+      return
+    }
+
+    if (validFiles.length !== files.length) {
+      toast.error(`${files.length - validFiles.length} file không được hỗ trợ`)
+    }
+
+    setIsUploading(true)
+    try {
+      for (const file of validFiles) {
+        if (file.size > 50 * 1024 * 1024) {
+          toast.error(`File ${file.name} vượt quá 50MB!`)
+          continue
+        }
+        // Upload file lên server
+        const { url, fileName, fileType } = await uploadFile(file)
+        let messageType = EMessageTypes.IMAGE
+        if (file.type.startsWith("image/")) messageType = EMessageTypes.IMAGE
+        else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
+        else messageType = EMessageTypes.DOCUMENT
+
+        const msgPayload: any = {
+          content: "", // hoặc caption nếu có
+          mediaUrl: url,
+          fileName,
+          fileType,
+          receiverId: user.id === recipientId ? creatorId : recipientId,
+          directChatId: id,
+          token: chattingService.getMessageToken(),
+          timestamp: new Date(),
+        }
+        if (messageType === EMessageTypes.DOCUMENT) {
+          msgPayload.fileSize = file.size
+        }
+
+        chattingService.sendMessage(messageType, msgPayload, (data) => {
+          if ("success" in data && data.success) {
+            chattingService.setAcknowledgmentFlag(true)
+            chattingService.recursiveSendingQueueMessages()
+          } else if ("isError" in data && data.isError) {
+            toast.error(`Lỗi khi gửi file ${file.name}`)
+          }
+        })
+      }
+      toast.success(`Đã gửi ${validFiles.length} file thành công`)
+    } catch (error) {
+      console.error("Upload file error:", error)
+      toast.error("Lỗi khi upload file")
+    } finally {
+      setIsUploading(false)
+    }
+    e.target.value = ""
+  }
+
+  // Thêm useEffect để đóng menu khi click outside
+  useEffect(() => {
+    if (!showFileMenu) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowFileMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showFileMenu])
+
+  return (
+    <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar relative">
+      <div
+        onClick={handleClickOnTextFieldContainer}
+        ref={textFieldContainerRef}
+        className="flex cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
+      >
+        <ExpressionPicker
+          textFieldRef={textFieldRef}
+          expressionPopoverRef={expressionPopoverRef}
+          directChat={directChat}
+        />
+        <MessageTextField
+          hasContent={hasContent}
+          directChat={directChat}
+          setHasContent={setHasContent}
+          textFieldRef={textFieldRef}
+          textFieldContainerRef={textFieldContainerRef}
+          expressionPopoverRef={expressionPopoverRef}
+        />
+        <span
+          className={`${isUploading ? "text-gray-400 cursor-not-allowed" : "text-gray-500 hover:text-regular-violet-cl cursor-pointer"} relative bottom-0 right-0`}
+          onClick={() => {
+            console.log("Paperclip clicked", { isUploading, showFileMenu })
+            if (!isUploading) setShowFileMenu((v) => !v)
+          }}
+          role="button"
+          tabIndex={0}
+          style={{ outline: "none" }}
+        >
+          {isUploading ? (
+            <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+          ) : (
+            <Paperclip />
+          )}
+          {showFileMenu && (
+            <div ref={menuRef}>
+              <FileTypeMenu
+                onSelect={handleFileMenuSelect}
+                onClose={() => setShowFileMenu(false)}
+              />
             </div>
-            <div className={`${hasContent ? "animate-grow-icon" : "animate-hide-icon"} absolute`}>
-              <Send />
-            </div>
-          </div>
-        </CustomTooltip>
+          )}
+        </span>
+        <input
+          key={fileInputKey}
+          type="file"
+          accept={fileAccept}
+          multiple
+          style={{ display: "none" }}
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          onClick={() => console.log("Input file clicked")}
+        />
       </div>
-    )
+
+      <CustomTooltip title={hasContent ? "Send message" : "Record voice message"} placement="top">
+        <div
+          className={`${hasContent ? "text-regular-violet-cl" : "text-gray-500"} bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
+        >
+          <div className={`${hasContent ? "animate-hide-icon" : "animate-grow-icon"} absolute`}>
+            <Mic />
+          </div>
+          <div className={`${hasContent ? "animate-grow-icon" : "animate-hide-icon"} absolute`}>
+            <Send />
+          </div>
+        </div>
+      </CustomTooltip>
+    </div>
   )
 })

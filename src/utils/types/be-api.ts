@@ -41,7 +41,8 @@ export type TDirectMessage = {
   authorId: number
   directChatId: number
   status: EMessageStatus
-  stickerUrl?: string
+  stickerUrl?: string | null
+  mediaUrl: string | null
   type: EMessageTypes
   fileName?: string
   fileType?: string

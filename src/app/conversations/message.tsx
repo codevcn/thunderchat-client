@@ -188,7 +188,7 @@ export const Message = ({ message, user, stickyTime }: TMessageProps) => {
             >
               <Content
                 content={content}
-                stickerUrl={stickerUrl}
+                stickerUrl={stickerUrl ?? null}
                 mediaUrl={mediaUrl}
                 type={type}
                 fileName={fileName}
@@ -219,7 +219,7 @@ export const Message = ({ message, user, stickyTime }: TMessageProps) => {
             >
               <Content
                 content={content}
-                stickerUrl={stickerUrl}
+                stickerUrl={stickerUrl ?? null}
                 mediaUrl={mediaUrl}
                 type={type}
                 fileName={fileName}

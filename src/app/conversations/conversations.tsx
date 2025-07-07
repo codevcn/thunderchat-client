@@ -10,17 +10,20 @@ import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } fr
 import { Spinner } from "@/components/materials/spinner"
 import { IconButton } from "@/components/materials/icon-button"
 import { useRouter } from "next/navigation"
-import { sortDirectChatsByPinned } from "@/redux/conversations/conversations-selectors"
+import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.selectors"
 import { unwrapResult } from "@reduxjs/toolkit"
 import { searchService } from "@/services/search.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { createPathWithParams } from "@/utils/helpers"
-import { fetchDirectChatThunk } from "@/redux/conversations/conversations-thunks"
+import { createPathWithParams, santizeMsgContent } from "@/utils/helpers"
+import { fetchDirectChatThunk } from "@/redux/conversations/conversations.thunks"
 import { directChatService } from "@/services/direct-chat.service"
 import { EMessageTypes, EPaginations } from "@/utils/enums"
-import { addConversations } from "@/redux/conversations/conversations-slice"
+import { addConversations } from "@/redux/conversations/conversations.slice"
 import { toaster } from "@/utils/toaster"
 import { AddMembersBoard } from "./group/create-group-chat"
+import { groupChatService } from "@/services/group-chat.service"
+import { TChatType, TConversationCard } from "@/utils/types/global"
+import { useUser } from "@/hooks/user"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 
@@ -108,10 +111,13 @@ const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
 
 const ConversationCards = () => {
   const dispatch = useAppDispatch()
-  const directChats = useAppSelector(sortDirectChatsByPinned)
+  const conversations = useAppSelector(sortDirectChatsByPinned)
+  const directChatLastId = useRef<number | undefined>(undefined)
+  const groupChatLastId = useRef<number | undefined>(undefined)
   const tempFlagUseEffectRef = useRef<boolean>(true)
   const router = useRouter()
   const [loading, setLoading] = useState<boolean>(false)
+  const user = useUser()!
 
   const getPinIndexClass = (pinIndex: number): string => {
     switch (pinIndex) {
@@ -126,37 +132,84 @@ const ConversationCards = () => {
     }
   }
 
-  const fetchDirectChats = async () => {
-    let lastId: number | undefined = undefined
-    if (directChats && directChats.length > 0) {
-      lastId = directChats.at(-1)?.id
+  const setLastId = () => {
+    if (conversations && conversations.length > 0) {
+      for (const conversation of conversations) {
+        // Tìm id cuối cùng theo loại chat trong mảng
+        if (conversation.type === "direct") {
+          directChatLastId.current = conversation.id
+        }
+        if (conversation.type === "group") {
+          groupChatLastId.current = conversation.id
+        }
+      }
     }
-    setLoading(true)
-    directChatService
-      .fetchDirectChats(EPaginations.DIRECT_MESSAGES_PAGE_SIZE, lastId)
-      .then((res) => {
-        dispatch(addConversations(res))
-      })
-      .catch((err) => {
-        toaster.error(axiosErrorHandler.handleHttpError(err).message)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
   }
 
-  const navToDirectChat = (id: number) => {
-    router.push(createPathWithParams("/conversations", { cid: id.toString() }))
+  const fetchDirectChats = async (): Promise<TConversationCard[]> => {
+    setLastId()
+    setLoading(true)
+    try {
+      return await directChatService.fetchDirectChats(
+        user,
+        EPaginations.DIRECT_MESSAGES_PAGE_SIZE,
+        directChatLastId.current
+      )
+    } catch (err) {
+      toaster.error(axiosErrorHandler.handleHttpError(err).message)
+    } finally {
+      setLoading(false)
+    }
+    return []
+  }
+
+  const fetchGroupChats = async (): Promise<TConversationCard[]> => {
+    setLastId()
+    setLoading(true)
+    try {
+      return await groupChatService.fetchGroupChats(
+        EPaginations.DIRECT_MESSAGES_PAGE_SIZE,
+        groupChatLastId.current
+      )
+    } catch (err) {
+      toaster.error(axiosErrorHandler.handleHttpError(err).message)
+    } finally {
+      setLoading(false)
+    }
+    return []
+  }
+
+  const sortConversations = (conversations: TConversationCard[]) => {
+    // sort by lastMessageTime, if not have lastMessageTime, sort by createdAt
+    conversations.sort((a, b) => {
+      const getTimestamp = (chat: TConversationCard) => {
+        return new Date(chat.lastMessageTime ?? chat.createdAt).getTime()
+      }
+      return getTimestamp(b) - getTimestamp(a) // Mới nhất lên đầu
+    })
+    return conversations
+  }
+
+  const fetchConversations = async () => {
+    const [directChats, groupChats] = await Promise.all([fetchDirectChats(), fetchGroupChats()])
+    const sortedChats = sortConversations([...directChats, ...groupChats])
+    dispatch(addConversations(sortedChats))
+  }
+
+  const navToDirectChat = (id: number, type: TChatType) => {
+    router.push(
+      createPathWithParams("/conversations", { [type === "direct" ? "cid" : "gid"]: id.toString() })
+    )
   }
 
   useEffect(() => {
     if (tempFlagUseEffectRef.current) {
       tempFlagUseEffectRef.current = false
-      if (!directChats || directChats.length === 0) {
-        fetchDirectChats()
+      if (!conversations || conversations.length === 0) {
+        fetchConversations()
       }
     }
-  }, [directChats])
+  }, [conversations])
 
   return loading ? (
     <div className="flex flex-col gap-1 justify-center items-center">
@@ -170,16 +223,13 @@ const ConversationCards = () => {
         </div>
       ))}
     </div>
-  ) : directChats && directChats.length > 0 ? (
-    <div
-      id="codevcn-cards"
-      className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar"
-    >
-      {directChats.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type }) => (
+  ) : conversations && conversations.length > 0 ? (
+    <div className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar">
+      {conversations.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type }) => (
         <div
           className={`flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${getPinIndexClass(pinIndex)}`}
-          key={id}
-          onClick={() => navToDirectChat(id)}
+          key={`${type}-${id}`}
+          onClick={() => navToDirectChat(id, type)}
         >
           <div>
             <CustomAvatar
@@ -197,12 +247,14 @@ const ConversationCards = () => {
               </div>
             </div>
             <div className="flex justify-between items-center mt-1 box-border gap-3">
-              {type === EMessageTypes.STICKER ? (
+              {subtitle.type === EMessageTypes.STICKER ? (
                 <p className="truncate text-regular-placeholder-cl text-sm">
                   <span className="text-regular-icon-cl italic">Sticker</span>
                 </p>
               ) : (
-                <p className="truncate text-regular-placeholder-cl text-sm">{subtitle}</p>
+                <p className="truncate text-regular-placeholder-cl text-sm">
+                  {santizeMsgContent(subtitle.content)}
+                </p>
               )}
               {!!pinIndex && pinIndex !== -1 && pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
                 <CustomTooltip title="This directChat was pinned" placement="bottom">

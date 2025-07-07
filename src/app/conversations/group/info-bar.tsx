@@ -2,7 +2,7 @@
 import { dev_test_values } from "../../../../temp/test"
 
 import { X, Info, AtSign } from "lucide-react"
-import { openInfoBar } from "@/redux/conversations/conversations-slice"
+import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
 import { ProgressiveImage } from "@/components/materials/progressive-image"

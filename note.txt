@@ -18,3 +18,11 @@ login 5: {
     - email: exam2@mail.ru
     - pass: asd123XX
 }
+
+================================ thut le =================================
+direct-chat.service.ts
+user.slice.ts
+account/page.tsx
+auth.service.ts
+auth.ts (api)
+auth-provider.tsx

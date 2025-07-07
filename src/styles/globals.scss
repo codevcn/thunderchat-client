@@ -196,28 +196,28 @@ svg {
   }
 
   // Global input field styling
-  input[type="text"],
-  input[type="number"],
-  input[type="email"],
-  input[type="password"],
-  input[type="date"],
-  input[type="time"],
-  input[type="datetime-local"],
-  input[type="search"],
-  input[type="tel"],
-  input[type="url"],
-  textarea,
-  select {
-    @apply bg-white text-gray-900;
+  // input[type="text"],
+  // input[type="number"],
+  // input[type="email"],
+  // input[type="password"],
+  // input[type="date"],
+  // input[type="time"],
+  // input[type="datetime-local"],
+  // input[type="search"],
+  // input[type="tel"],
+  // input[type="url"],
+  // textarea,
+  // select {
+  //   @apply bg-white text-gray-900;
 
-    &::placeholder {
-      @apply text-gray-500;
-    }
+  //   &::placeholder {
+  //     @apply text-gray-500;
+  //   }
 
-    &:focus {
-      @apply outline-none ring-2 ring-blue-500;
-    }
-  }
+  //   &:focus {
+  //     @apply outline-none ring-2 ring-blue-500;
+  //   }
+  // }
 
   // Dark mode support for input fields
   .dark {

@@ -11,7 +11,7 @@ import type {
   TGetGroupMessagesData,
   TGroupChatData,
 } from "@/utils/types/be-api"
-import { fetchDirectChatThunk, fetchGroupChatThunk } from "../conversations/conversations-thunks"
+import { fetchDirectChatThunk, fetchGroupChatThunk } from "../conversations/conversations.thunks"
 
 type TMessagesState = {
   directChat: TDirectChatData | null

@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit"
 import { authSlice } from "@/redux/auth/auth.slice"
 import { userSlice } from "./user/user.slice"
-import { conversationsSlice } from "./conversations/conversations-slice"
+import { conversationsSlice } from "./conversations/conversations.slice"
 import { messagesSlice } from "./messages/messages.slice"
 import { settingsSlice } from "./settings/settings.slice"
 

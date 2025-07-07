@@ -40,10 +40,14 @@ export type TConversationCard = {
     fallback: string
   }
   title: string
-  subtitle: string
-  lastMessageTime: string
+  subtitle: {
+    content: string
+    type: EMessageTypes
+  }
+  lastMessageTime?: string
   pinIndex: number
-  type: EMessageTypes
+  type: "direct" | "group"
+  createdAt: string
 }
 
 export type TUnknownObject = {
@@ -90,3 +94,5 @@ export type TMessageStateUpdates = {
 export type TPlacement = "top" | "right" | "bottom" | "left"
 
 export type TAlign = "center" | "start" | "end"
+
+export type TChatType = "direct" | "group"

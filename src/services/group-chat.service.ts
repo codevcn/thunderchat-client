@@ -1,11 +1,13 @@
 import {
   deleteDeleteGroupAvatar,
   getFetchGroupChat,
-  postCreateGroup,
+  getFetchGroupChats,
+  postCreateGroupChat,
   postUploadGroupAvatar,
 } from "@/apis/group-chat"
-import type { TFetchGroupChatData, TUploadGroupAvatarData } from "@/utils/types/be-api"
-import type { TSuccess } from "@/utils/types/global"
+import type { TFetchGroupChatData, TGroupChat, TUploadGroupAvatarData } from "@/utils/types/be-api"
+import type { TConversationCard, TSuccess } from "@/utils/types/global"
+import { convertToGroupChatsUIData } from "@/utils/data-convertors/conversations-convertor"
 
 class GroupChatService {
   async uploadGroupAvatar(avatar: File): Promise<TUploadGroupAvatarData> {
@@ -20,14 +22,23 @@ class GroupChatService {
     return data
   }
 
-  async createGroup(groupName: string, memberIds: number[], avatarUrl?: string): Promise<TSuccess> {
-    const { data } = await postCreateGroup(groupName, memberIds, avatarUrl)
+  async createGroupChat(
+    groupName: string,
+    memberIds: number[],
+    avatarUrl?: string
+  ): Promise<TGroupChat> {
+    const { data } = await postCreateGroupChat(groupName, memberIds, avatarUrl)
     return data
   }
 
   async fetchGroupChat(groupChatId: number): Promise<TFetchGroupChatData> {
     const { data } = await getFetchGroupChat(groupChatId)
     return data
+  }
+
+  async fetchGroupChats(limit: number, lastId?: number): Promise<TConversationCard[]> {
+    const { data } = await getFetchGroupChats(limit, lastId)
+    return convertToGroupChatsUIData(data)
   }
 }
 

@@ -52,7 +52,7 @@ export type TFriend = {
   id: number
   senderId: number
   recipientId: number
-  createdAt: Date
+  createdAt: string
 }
 
 export type TFriendRequest = {
@@ -60,8 +60,8 @@ export type TFriendRequest = {
   senderId: number
   recipientId: number
   status: EFriendRequestStatus
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
 }
 
 export type TSticker = {
@@ -85,13 +85,13 @@ export type TGroupChat = {
   id: number
   name: string
   creatorId: number
-  createdAt: Date
+  createdAt: string
   lastSentMessageId: number
 }
 
 export type TGroupMessage = {
   id: number
-  createdAt: Date
+  createdAt: string
   groupChatId: number
   content: string
   authorId: number
@@ -104,7 +104,7 @@ export type TGroupChatMember = {
   id: number
   userId: number
   groupChatId: number
-  joinedAt: Date
+  joinedAt: string
 }
 
 export type TGroupChatMemberWithUser = Omit<TGroupChatMember, "userId"> & {
@@ -120,6 +120,7 @@ export type TLoginUserParams = {
 
 export type TDirectChatData = TDirectChat & {
   Recipient: TUserWithProfile
+  Creator: TUserWithProfile
 }
 
 export type TRegisterUserParams = {
@@ -207,7 +208,7 @@ export type TGlobalSearchData = {
 }
 
 export type TFetchDirectChatsData = TDirectChat & {
-  LastSentMessage: TDirectMessage
+  LastSentMessage?: TDirectMessage
   Recipient: TUserWithProfile
   Creator: TUserWithProfile
 }
@@ -235,4 +236,9 @@ export type TGetGroupMessagesData = {
 
 export type TGroupChatData = TGroupChat & {
   Members: TGroupChatMemberWithUser[]
+}
+
+export type TFetchGroupChatsData = TGroupChat & {
+  LastSentMessage?: TGroupMessage
+  Creator: TUserWithProfile
 }

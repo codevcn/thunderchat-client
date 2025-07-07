@@ -15,19 +15,31 @@ import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { ArrowLeft, ArrowRight, Camera, X, Plus, RefreshCw } from "lucide-react"
 import { groupChatService } from "@/services/group-chat.service"
+import { useAppDispatch } from "@/hooks/redux"
+import { addConversations } from "@/redux/conversations/conversations.slice"
+import { EMessageTypes } from "@/utils/enums"
 
 type TPrepareNewGroupProps = {
   pickedUsers: TSearchUsersData[]
   open: boolean
   onOpen: (open: boolean) => void
+  closeCreateGroupChat: () => void
 }
 
-const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) => {
+type TLoading = "upload-avatar" | "delete-avatar" | "create-group"
+
+const PrepareNewGroup = ({
+  pickedUsers,
+  open,
+  onOpen,
+  closeCreateGroupChat,
+}: TPrepareNewGroupProps) => {
   const usersCount = pickedUsers.length
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<TLoading>()
   const [avatar, setAvatar] = useState<string>()
   const isCreatedRef = useRef<boolean>(false)
   const groupNameInputRef = useRef<HTMLInputElement>(null)
+  const dispatch = useAppDispatch()
 
   const closeBoard = () => {
     onOpen(false)
@@ -45,28 +57,45 @@ const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) =
         return
       }
     }
-    setLoading(true)
+    setLoading("upload-avatar")
     try {
       const res = await groupChatService.uploadGroupAvatar(file)
       setAvatar(res.avatarUrl)
     } catch (err) {
       toaster.error(axiosErrorHandler.handleHttpError(err).message)
     } finally {
-      setLoading(false)
+      setLoading(undefined)
     }
   }
 
   const handleDeleteAvatar = async () => {
-    if (!avatar || loading || !isCreatedRef.current) return
-    setLoading(true)
+    if (!avatar || loading === "delete-avatar" || isCreatedRef.current) return
+    setLoading("delete-avatar")
     try {
       await groupChatService.deleteGroupAvatar(avatar)
       setAvatar(undefined)
     } catch (err) {
       toaster.error(axiosErrorHandler.handleHttpError(err).message)
     } finally {
-      setLoading(false)
+      setLoading(undefined)
     }
+  }
+
+  const addGroupChatToList = (groupName: string, groupChatId: number, avatarUrl?: string) => {
+    dispatch(
+      addConversations([
+        {
+          avatar: { src: avatarUrl, fallback: groupName[0] },
+          title: groupName,
+          subtitle: { content: "You created this group chat", type: EMessageTypes.TEXT },
+          lastMessageTime: new Date().toISOString(),
+          pinIndex: 0,
+          id: groupChatId,
+          type: "group",
+          createdAt: new Date().toISOString(),
+        },
+      ])
+    )
   }
 
   const handleCreateGroup = async () => {
@@ -75,16 +104,17 @@ const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) =
       toaster.error("Please enter a group name")
       return
     }
-    setLoading(true)
+    setLoading("create-group")
     const memberIds = pickedUsers.map(({ id }) => id)
     try {
-      await groupChatService.createGroup(groupName, memberIds, avatar)
+      const groupChat = await groupChatService.createGroupChat(groupName, memberIds, avatar)
       isCreatedRef.current = true
-      closeBoard()
+      addGroupChatToList(groupName, groupChat.id, avatar)
+      closeCreateGroupChat()
     } catch (err) {
       toaster.error(axiosErrorHandler.handleHttpError(err).message)
     } finally {
-      setLoading(false)
+      setLoading(undefined)
     }
   }
 
@@ -122,7 +152,7 @@ const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) =
                   onChange={handlePickGroupPhoto}
                   accept="image/*"
                 />
-                {loading ? (
+                {loading === "upload-avatar" ? (
                   <div className="w-full h-full bg-regular-violet-cl rounded-full flex items-center justify-center">
                     <Spinner size="medium" />
                   </div>
@@ -204,12 +234,18 @@ const PrepareNewGroup = ({ pickedUsers, open, onOpen }: TPrepareNewGroupProps) =
         )}
 
         <div className="absolute bottom-6 right-6 z-20">
-          <button
-            onClick={handleCreateGroup}
-            className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl hover:scale-110 transition duration-200"
-          >
-            <ArrowRight color="currentColor" size={24} />
-          </button>
+          {loading === "create-group" ? (
+            <div className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl hover:scale-110 transition duration-200">
+              <Spinner size="medium" />
+            </div>
+          ) : (
+            <button
+              onClick={handleCreateGroup}
+              className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl hover:scale-110 transition duration-200"
+            >
+              <ArrowRight color="currentColor" size={24} />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -366,7 +402,7 @@ export const AddMembersBoard = ({ open, onOpen }: TAddMembersBoardProps) => {
                     title={Profile.fullName}
                     className="font-medium text-base text-white truncate"
                   >
-                    {Profile.fullName + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+                    {Profile.fullName}
                   </h3>
                   <p className="text-[13px] text-gray-400">Last seen Jan 20, 2025 at 16:23</p>
                 </div>
@@ -391,6 +427,7 @@ export const AddMembersBoard = ({ open, onOpen }: TAddMembersBoardProps) => {
         pickedUsers={pickedUsers}
         open={openPrepareNewGroup}
         onOpen={setOpenPrepareNewGroup}
+        closeCreateGroupChat={closeBoard}
       />
     </div>
   )

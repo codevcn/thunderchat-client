@@ -68,4 +68,5 @@ export enum EMessageTypes {
   IMAGE = "IMAGE",
   VIDEO = "VIDEO",
   DOCUMENT = "DOCUMENT",
+  AUDIO = "AUDIO",
 }

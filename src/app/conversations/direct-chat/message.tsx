@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
+import VoiceMessage from "../(voice-chat)/VoiceMessage"
 
 type TContentProps = {
   content: string
@@ -24,6 +25,7 @@ type TContentProps = {
   fileName?: string
   fileType?: string
   fileSize?: number
+  message?: TStateDirectMessage
 }
 
 const Content = ({
@@ -34,6 +36,7 @@ const Content = ({
   fileName,
   fileType,
   fileSize,
+  message,
 }: TContentProps) => {
   // Hiển thị ảnh
   if (type === "IMAGE" && mediaUrl) {
@@ -112,6 +115,10 @@ const Content = ({
         </a>
       </div>
     )
+  }
+
+  if (type === "AUDIO" && mediaUrl && message) {
+    return <VoiceMessage audioUrl={mediaUrl} message={message} />
   }
 
   // Hiển thị sticker
@@ -194,6 +201,7 @@ export const Message = ({ message, user, stickyTime }: TMessageProps) => {
                 fileName={fileName}
                 fileType={fileType}
                 fileSize={fileSize}
+                message={message}
               />
               <div className="flex justify-end items-center gap-x-1 mt-1.5 w-full">
                 <span className="text-xs text-regular-creator-msg-time-cl leading-none">
@@ -225,6 +233,7 @@ export const Message = ({ message, user, stickyTime }: TMessageProps) => {
                 fileName={fileName}
                 fileType={fileType}
                 fileSize={fileSize}
+                message={message}
               />
               <div className="flex justify-end items-center mt-1.5">
                 <span className="text-xs text-regular-creator-msg-time-cl">{msgTime}</span>

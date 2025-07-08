@@ -1,101 +1,72 @@
-import React, { useRef, useState, useEffect } from "react"
+import React from "react"
 import { StepBack, StepForward, Play, Pause, Volume2, X } from "lucide-react"
+import { useVoicePlayer } from "@/contexts/voice-player.context"
+import { useUser } from "@/hooks/user"
+import dayjs from "dayjs"
 
-type VoiceMessagePlayerProps = {
-  senderName: string
-  audioUrl: string
-  sentTime: string // eg: "Today at 10:10"
-  onClose?: () => void
-  onPrev?: () => void
-  onNext?: () => void
-}
+export const VoiceMessagePlayer: React.FC = () => {
+  const {
+    isPlaying,
+    currentTime,
+    duration,
+    currentMessage,
+    showPlayer,
+    playbackRate,
+    audioMessages,
+    currentAudioIndex,
+    playAudio,
+    pauseAudio,
+    seekAudio,
+    stopAudio,
+    setPlaybackRate,
+    playNext,
+    playPrevious,
+    setShowPlayer,
+  } = useVoicePlayer()
 
-export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
-  senderName,
-  audioUrl,
-  sentTime,
-  onClose,
-  onPrev,
-  onNext,
-}) => {
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const [playing, setPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [playbackRate, setPlaybackRate] = useState(1)
+  const currentUser = useUser()
 
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    const onLoadedMetadata = () => setDuration(audio.duration)
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime)
-    audio.addEventListener("loadedmetadata", onLoadedMetadata)
-    audio.addEventListener("timeupdate", onTimeUpdate)
-    return () => {
-      audio.removeEventListener("loadedmetadata", onLoadedMetadata)
-      audio.removeEventListener("timeupdate", onTimeUpdate)
-    }
-  }, [audioUrl])
-
-  useEffect(() => {
-    setPlaying(false)
-    setCurrentTime(0)
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-    }
-  }, [audioUrl])
+  if (!showPlayer || !currentMessage) return null
 
   const handlePlayPause = () => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (playing) {
-      audio.pause()
+    if (isPlaying) {
+      pauseAudio()
     } else {
-      audio.play()
+      playAudio(currentMessage)
     }
-    setPlaying(!playing)
   }
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current
-    if (!audio) return
     const time = Number(e.target.value)
-    audio.currentTime = time
-    setCurrentTime(time)
+    seekAudio(time)
   }
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value)
-    setVolume(v)
-    if (audioRef.current) {
-      audioRef.current.volume = v
-    }
+  const handleClose = () => {
+    stopAudio()
+    setShowPlayer(false)
   }
 
   const handlePlaybackRateChange = () => {
-    const newRate = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1
+    const newRate =
+      playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : playbackRate === 2 ? 0.5 : 1
     setPlaybackRate(newRate)
-    if (audioRef.current) {
-      audioRef.current.playbackRate = newRate
-    }
-  }
-
-  const handleEnded = () => {
-    setPlaying(false)
-    setCurrentTime(0)
   }
 
   const formatTime = (time: number) => {
-    const min = Math.floor(time / 60)
-      .toString()
-      .padStart(2, "0")
-    const sec = Math.floor(time % 60)
-      .toString()
-      .padStart(2, "0")
-    return `${min}:${sec}`
+    if (!isFinite(time) || isNaN(time) || time < 0) return "00:00"
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
   }
+
+  // Xác định người gửi
+  const isCurrentUser = currentMessage.authorId === currentUser?.id
+  const senderName = isCurrentUser ? "Bạn" : "Người dùng"
+  const sentTime = dayjs(currentMessage.createdAt).format("MMM D [at] HH:mm")
+
+  // Kiểm tra có thể next/previous không
+  const canGoNext = currentAudioIndex < audioMessages.length - 1
+  const canGoPrevious = currentAudioIndex > 0
 
   return (
     <div className="bg-[#232328] text-white rounded-lg shadow-lg p-2 flex flex-col w-full max-w-xl">
@@ -103,24 +74,26 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
         {/* Previous button */}
         <button
           className="text-[#766AC8] mr-1 flex items-center justify-center w-8 h-8 hover:bg-[#282837] rounded-full"
-          onClick={onPrev}
-          disabled={!onPrev}
+          disabled={!canGoPrevious}
+          onClick={playPrevious}
           aria-label="Previous"
         >
           <StepBack size={20} />
         </button>
+
         {/* Play/Pause button */}
         <button
           className="text-[#766AC8] mx-1 flex items-center justify-center w-8 h-8 hover:bg-[#282837] rounded-full border-2 border-[#766AC8]"
           onClick={handlePlayPause}
         >
-          {playing ? <Pause size={20} /> : <Play size={20} />}
+          {isPlaying ? <Pause size={20} /> : <Play size={20} />}
         </button>
+
         {/* Next button */}
         <button
           className="text-[#766AC8] ml-1 flex items-center justify-center w-8 h-8 hover:bg-[#282837] rounded-full"
-          onClick={onNext}
-          disabled={!onNext}
+          disabled={!canGoNext}
+          onClick={playNext}
           aria-label="Next"
         >
           <StepForward size={20} />
@@ -144,38 +117,44 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
             min={0}
             max={1}
             step={0.01}
-            value={volume}
-            onChange={handleVolumeChange}
+            defaultValue={1}
             className="w-14 accent-[#766AC8]"
           />
         </div>
+
         {/* Playback speed */}
         <button
-          onClick={handlePlaybackRateChange}
           className="text-[#766AC8] mx-1 text-xs w-8 h-8 flex items-center justify-center hover:bg-[#282837] rounded-full"
+          onClick={handlePlaybackRateChange}
         >
-          {playbackRate}x
+          {playbackRate === 1
+            ? "1x"
+            : playbackRate === 1.5
+              ? "1.5x"
+              : playbackRate === 2
+                ? "2x"
+                : "0.5x"}
         </button>
+
         {/* Close */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="text-gray-400 hover:text-red-400 ml-2 w-8 h-8 flex items-center justify-center"
         >
           <X size={20} />
         </button>
       </div>
+
       {/* Progress Bar */}
       <input
         type="range"
         min={0}
-        max={duration}
+        max={isFinite(duration) && duration > 0 ? duration : 100}
         step={0.01}
         value={currentTime}
         onChange={handleSeek}
         className="w-full mt-2 accent-[#766AC8]"
       />
-      {/* Ẩn audio element */}
-      <audio ref={audioRef} src={audioUrl} onEnded={handleEnded} preload="metadata" />
     </div>
   )
 }

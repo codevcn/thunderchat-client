@@ -432,13 +432,6 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
                 </div>
               )}
               <MappedMessages messages={messages} user={user} />
-              <VoiceMessage
-                audioUrl="/test1.mp3"
-                duration={10}
-                sentAt="10:10"
-                status="sent"
-                isMine={true}
-              />
             </div>
           ) : (
             <NoMessagesYet directChat={directChat} user={user} />

@@ -1,90 +1,147 @@
-import { Play, Pause, Check } from "lucide-react"
+import { Play, Pause } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import WaveformData from "waveform-data"
+import { useVoicePlayer } from "@/contexts/voice-player.context"
+import type { TStateDirectMessage } from "@/utils/types/global"
+import dayjs from "dayjs"
 
-// Đọc waveform từ file audio (giống như hàm trên)
 export async function getWaveformFromAudio(url: string, columns = 36): Promise<number[]> {
   const res = await fetch(url)
   const arrayBuffer = await res.arrayBuffer()
   const audioContext = new window.AudioContext()
-
   return new Promise<number[]>((resolve, reject) => {
     WaveformData.createFromAudio(
-      {
-        audio_context: audioContext,
-        array_buffer: arrayBuffer,
-        // scale: columns, // BỎ HOẶC ĐỂ 512/1024 cho dữ liệu chi tiết hơn
-      },
+      { audio_context: audioContext, array_buffer: arrayBuffer },
       (err, waveform) => {
         if (err) return reject(err)
-
         const channel = waveform.channel(0)
         const peaks: number[] = []
         for (let i = 0; i < waveform.length; i++) {
           peaks.push(Math.abs(channel.max_sample(i)))
         }
-
-        // CHỈ LẤY columns cột đều nhau để hiển thị
         const downsampled: number[] = []
         for (let i = 0; i < columns; i++) {
           const idx = Math.floor((i * peaks.length) / columns)
           downsampled.push(peaks[idx])
         }
-
         const max = Math.max(...downsampled) || 1
         const normalized = downsampled.map((v) => (v / max) * 32 + 8)
-
         resolve(normalized)
       }
     )
   })
 }
 
-export default function VoiceMessage({
-  audioUrl,
-  duration,
-  sentAt,
-  status,
-  isMine,
-}: {
-  audioUrl: string
-  duration: number
-  sentAt: string
-  status: string
-  isMine: boolean
-}) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [current, setCurrent] = useState(0)
-  const [waveform, setWaveform] = useState<number[]>([])
-  const audioRef = useRef<HTMLAudioElement>(null)
+// Hàm preload metadata của audio
+const preloadAudioMetadata = (url: string): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio()
 
-  // Blinking red dot
-  const [blink, setBlink] = useState(true)
-  useEffect(() => {
-    if (isPlaying) {
-      const interval = setInterval(() => setBlink((b) => !b), 600)
-      return () => clearInterval(interval)
-    } else {
-      setBlink(true)
+    const handleLoadedMetadata = () => {
+      const duration = audio.duration
+      if (isFinite(duration) && duration > 0) {
+        resolve(duration)
+      } else {
+        // Fallback: thử seek để trigger metadata loading
+        audio.currentTime = 24 * 60 * 60 // Seek to 24 hours
+        audio.addEventListener(
+          "canplaythrough",
+          () => {
+            resolve(audio.duration)
+          },
+          { once: true }
+        )
+        audio.addEventListener(
+          "error",
+          () => {
+            reject(new Error("Failed to load audio metadata"))
+          },
+          { once: true }
+        )
+      }
     }
-  }, [isPlaying])
 
-  // Lấy waveform thật từ audio
+    const handleError = () => {
+      reject(new Error("Failed to load audio"))
+    }
+
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true })
+    audio.addEventListener("error", handleError, { once: true })
+
+    audio.src = url
+    audio.load()
+
+    // Timeout fallback
+    setTimeout(() => {
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        resolve(audio.duration)
+      } else {
+        reject(new Error("Audio metadata loading timeout"))
+      }
+    }, 5000)
+  })
+}
+
+type VoiceMessageProps = {
+  message: TStateDirectMessage
+  audioUrl: string
+}
+
+export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
+  const [waveform, setWaveform] = useState<number[]>([])
+  const [iconColor, setIconColor] = useState("#8F62FF")
+  const [localDuration, setLocalDuration] = useState<number>(0)
+  const [isLoadingDuration, setIsLoadingDuration] = useState(true)
+  const loadedDurationRef = useRef<number>(0) // Lưu duration đã load để tránh bị reset
+
+  // Sử dụng voice player context
+  const { isPlaying, currentTime, duration, currentAudioUrl, playAudio, pauseAudio } =
+    useVoicePlayer()
+
+  // Kiểm tra xem audio này có đang được phát không
+  const isThisAudioPlaying = currentAudioUrl === audioUrl && isPlaying
+
+  useEffect(() => {
+    // Lấy màu từ biến CSS
+    const color = getComputedStyle(document.documentElement)
+      .getPropertyValue("--tdc-regular-violet-cl")
+      .trim()
+    if (color) setIconColor(color)
+  }, [])
+
   useEffect(() => {
     if (audioUrl) {
+      // Preload waveform
       getWaveformFromAudio(audioUrl, 36)
-        .then((data) => {
-          console.log("Waveform result:", data)
-          setWaveform(data)
+        .then((data) => setWaveform(data))
+        .catch(() => setWaveform(Array(36).fill(12)))
+
+      // Preload audio metadata
+      setIsLoadingDuration(true)
+      preloadAudioMetadata(audioUrl)
+        .then((duration) => {
+          setLocalDuration(duration)
+          setIsLoadingDuration(false)
+          loadedDurationRef.current = duration
         })
-        .catch((e) => {
-          console.error("Waveform error:", e)
+        .catch((error) => {
+          console.error("Failed to load audio duration:", error)
+          setLocalDuration(0)
+          setIsLoadingDuration(false)
         })
     }
   }, [audioUrl])
 
-  // format mm:ss
+  const handlePlayPause = () => {
+    if (isThisAudioPlaying) {
+      pauseAudio()
+    } else {
+      playAudio(message)
+    }
+  }
+
   const format = (s: number) => {
+    if (!isFinite(s) || isNaN(s) || s < 0) return "00:00"
     const mm = Math.floor(s / 60)
       .toString()
       .padStart(2, "0")
@@ -94,99 +151,82 @@ export default function VoiceMessage({
     return `${mm}:${ss}`
   }
 
-  const onPlay = () => {
-    setIsPlaying(true)
-    audioRef.current?.play()
-  }
-  const onPause = () => {
-    setIsPlaying(false)
-    audioRef.current?.pause()
-  }
-
-  // Khi stop thì reset về 0
-  useEffect(() => {
-    if (!isPlaying) setCurrent(0)
-  }, [isPlaying, audioUrl])
+  // Sử dụng duration từ context nếu audio đang được quản lý, hoặc localDuration nếu không
+  const displayDuration =
+    currentAudioUrl === audioUrl
+      ? duration || loadedDurationRef.current
+      : localDuration || loadedDurationRef.current
+  // Luôn lấy currentTime từ context nếu đây là audio đang được quản lý
+  const displayCurrentTime = currentAudioUrl === audioUrl ? currentTime : 0
 
   return (
-    <div
-      className={`
-        bg-[#8f62ff] max-w-[370px] rounded-2xl px-4 py-2 flex shadow-lg
-        ${isMine ? "ml-auto items-end" : ""}
-      `}
-      style={{ minWidth: 230 }}
-    >
-      {/* === CỘT 1: Nút phát/dừng === */}
+    <div className="max-w-[370px] rounded-2xl flex min-w-[230px]">
+      {/* Nút phát/dừng */}
       <div className="flex items-center justify-center mr-3 shrink-0" style={{ height: 56 }}>
         <button
-          className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center"
-          onClick={isPlaying ? onPause : onPlay}
-          aria-label={isPlaying ? "Pause" : "Play"}
+          className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow"
+          onClick={handlePlayPause}
+          aria-label={isThisAudioPlaying ? "Pause" : "Play"}
+          style={{
+            boxShadow: "0 2px 8px 0 rgba(0,0,0,0.07)",
+          }}
         >
-          {isPlaying ? (
-            <Pause className="text-white" size={28} />
+          {isThisAudioPlaying ? (
+            <Pause color={iconColor} size={28} />
           ) : (
-            <Play className="text-white" size={28} />
+            <Play color={iconColor} size={28} />
           )}
         </button>
       </div>
 
-      {/* === CỘT 2: Nội dung sóng âm & thông tin === */}
+      {/* Nội dung sóng âm & info */}
       <div className="flex-1 flex flex-col justify-center">
-        {/* --- HÀNG 1 --- */}
+        {/* Hàng 1: Sóng + nút tốc độ */}
         <div className="flex items-center mb-1">
           <div className="flex-1 flex items-center h-8 overflow-hidden relative">
             <Waveform
               data={waveform.length ? waveform : Array(36).fill(12)}
-              progress={duration > 0 ? current / duration : 0}
+              progress={displayDuration > 0 ? displayCurrentTime / displayDuration : 0}
               color="#fff"
               progressColor="#f1d0ff"
             />
           </div>
-          <button className="ml-2 text-white/70 text-xl w-8 h-8 flex items-center justify-center">
+          <button
+            className="ml-2 text-white/70 text-xl w-8 h-8 flex items-center justify-center"
+            tabIndex={-1}
+          >
             &rarr;A
           </button>
         </div>
-        {/* --- HÀNG 2 --- */}
+
+        {/* Hàng 2: Thời gian & trạng thái */}
         <div className="flex items-center justify-between w-full mt-0.5">
-          {/* Thời gian hiện tại / tổng thời gian */}
+          {/* Thời gian */}
           <span className="text-white text-[15px] flex items-center font-bold">
-            {isPlaying ? (
+            {isLoadingDuration ? (
+              <span>Loading...</span>
+            ) : currentAudioUrl === audioUrl && displayDuration > 0 ? (
               <>
-                <span>{format(current)}</span>
+                <span>{format(displayCurrentTime)}</span>
                 <span className="mx-1">/</span>
-                <span>{format(duration)}</span>
-                {/* Chấm đỏ nhấp nháy */}
-                <span
-                  className={`ml-1 w-2 h-2 rounded-full bg-red-500 inline-block
-                    ${isPlaying && blink ? "opacity-100" : "opacity-30"} transition-opacity`}
-                ></span>
+                <span>{format(displayDuration)}</span>
+                {/* Chấm đỏ nhấp nháy chỉ khi đang phát */}
+                {isThisAudioPlaying && (
+                  <span className="ml-1 w-2 h-2 rounded-full bg-red-500 inline-block opacity-100 transition-opacity animate-pulse"></span>
+                )}
               </>
+            ) : displayDuration > 0 ? (
+              <span>{format(displayDuration)}</span>
             ) : (
-              <span>{format(duration)}</span>
+              <span>--:--</span>
             )}
-          </span>
-          {/* Thời gian gửi và icon */}
-          <span className="text-white/80 text-xs flex items-center">
-            {sentAt}
-            <Check className="w-4 h-4 ml-1" />
           </span>
         </div>
       </div>
-      {/* === audio tag ẩn === */}
-      <audio
-        ref={audioRef}
-        src={audioUrl}
-        onTimeUpdate={() => setCurrent(audioRef.current?.currentTime || 0)}
-        onEnded={() => setIsPlaying(false)}
-        onPause={() => setIsPlaying(false)}
-        hidden
-      />
     </div>
   )
 }
 
-// Sóng âm dạng cột từ mảng số thật
 function Waveform({
   data,
   progress,

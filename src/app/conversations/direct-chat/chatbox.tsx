@@ -17,16 +17,25 @@ import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import { VoiceMessagePlayer } from "../(voice-chat)/VoiceMessagePlayerProps"
+import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
+import { useAudioMessages } from "@/hooks/audio-messages"
+import { useUser } from "@/hooks/user"
 
 const TypingIndicator = () => {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1 grow pt-1">
-        <span className="w-1 h-1 bg-regular-placeholder-cl rounded-full animate-typing-message delay-0"></span>
-        <span className="w-1 h-1 bg-regular-placeholder-cl rounded-full animate-typing-message delay-150"></span>
-        <span className="w-1 h-1 bg-regular-placeholder-cl rounded-full animate-typing-message delay-300"></span>
+    <div className="flex items-center gap-2 text-xs text-gray-300 px-4 py-2">
+      <div className="flex gap-1">
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+        <div
+          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+          style={{ animationDelay: "0.1s" }}
+        ></div>
+        <div
+          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+          style={{ animationDelay: "0.2s" }}
+        ></div>
       </div>
-      <p className="text-xs text-regular-placeholder-cl font-semibold">The user is typing...</p>
+      <span>Đang nhập...</span>
     </div>
   )
 }
@@ -120,25 +129,15 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar }: THeaderProps) => {
   )
 }
 
-type TDirectChatboxProps = {
-  directChatId: number
-}
-
-export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
+const ChatContent = ({ directChatId }: { directChatId: number }) => {
   const { directChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
-  const [showPlayer, setShowPlayer] = useState<boolean>(true)
-  const [currentVoiceIndex, setCurrentVoiceIndex] = useState<number>(0)
-  const [voiceMessages, setVoiceMessages] = useState<any[]>([])
+  const { showPlayer } = useVoicePlayer()
 
-  const handlePrevVoice = () => {
-    setCurrentVoiceIndex((prev) => Math.max(prev - 1, 0))
-  }
+  // Hook để quản lý danh sách audio messages
+  useAudioMessages()
 
-  const handleNextVoice = () => {
-    setCurrentVoiceIndex((prev) => Math.min(prev + 1, voiceMessages.length - 1))
-  }
   const hanldeOpenInfoBar = async (open: boolean) => {
     dispatch(openInfoBar(open))
   }
@@ -153,20 +152,16 @@ export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
       <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative">
         <div className="flex flex-col items-center w-full box-border h-screen bg-no-repeat bg-transparent bg-cover bg-center relative">
           <Header infoBarIsOpened={infoBarIsOpened} onOpenInfoBar={hanldeOpenInfoBar} />
+
           {/* Voice Player floating layer */}
           {showPlayer && (
             <div
               className="absolute top-[60px] left-0 z-30 w-full max-w-none sm:max-w-[480px] sm:left-1/2 sm:-translate-x-1/2 px-0"
-              style={{ pointerEvents: "auto" }}
+              style={{ pointerEvents: "none" }}
             >
-              <VoiceMessagePlayer
-                senderName="Trung Nguyễn"
-                audioUrl="/test1.mp3"
-                sentTime="Today at 10:10"
-                onClose={() => setShowPlayer(false)}
-                onPrev={handlePrevVoice}
-                onNext={handleNextVoice}
-              />
+              <div className="px-4" style={{ pointerEvents: "auto" }}>
+                <VoiceMessagePlayer />
+              </div>
             </div>
           )}
 
@@ -174,12 +169,24 @@ export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
             className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
           >
             <Messages directChat={directChat} />
-
             <TypeMessageBar directChat={directChat} />
           </div>
+
+          {infoBarIsOpened && <InfoBar />}
         </div>
-        <InfoBar />
       </div>
     )
+  )
+}
+
+type TDirectChatboxProps = {
+  directChatId: number
+}
+
+export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
+  return (
+    <VoicePlayerProvider>
+      <ChatContent directChatId={directChatId} />
+    </VoicePlayerProvider>
   )
 }

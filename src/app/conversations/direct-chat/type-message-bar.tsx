@@ -565,7 +565,60 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
       mediaRecorderRef.current.stop()
     }
   }
-  const sendVoice = stopRecording
+  const sendVoice = async () => {
+    if (!audioUrl) {
+      toast.error("Chưa có dữ liệu ghi âm")
+      return
+    }
+    setIsUploading(true)
+    try {
+      // Lấy Blob webm từ audioUrl
+      const webmBlob = await fetch(audioUrl).then((r) => r.blob())
+
+      // Tạo file object webm
+      const webmFile = new File([webmBlob], `voice-userId${user?.id}-${Date.now()}.webm`, {
+        type: "audio/webm",
+      })
+
+      // Upload lên AWS S3, lấy url về (dùng hàm uploadFile của bạn)
+      const { url, fileName, fileType } = await uploadFile(webmFile)
+
+      // Gửi message (BE sẽ nhận type là AUDIO, mediaUrl là link S3 .webm)
+      const { recipientId, creatorId, id } = directChat
+      const msgPayload = {
+        content: "", // hoặc chú thích
+        mediaUrl: url,
+        fileName,
+        fileType,
+        receiverId: user!.id === recipientId ? creatorId : recipientId,
+        directChatId: id,
+        token: chattingService.getMessageToken(),
+        timestamp: new Date(),
+      }
+
+      console.log("msgPayload", msgPayload)
+
+      chattingService.sendMessage(EMessageTypes.AUDIO, msgPayload, (data) => {
+        console.log("data", data)
+        if ("success" in data && data.success) {
+          chattingService.setAcknowledgmentFlag(true)
+          chattingService.recursiveSendingQueueMessages()
+          setAudioUrl(null) // reset state
+          toast.success("Đã gửi file ghi âm thành công")
+        } else if ("isError" in data && data.isError) {
+          toast.error(`Lỗi khi gửi file ghi âm`)
+        }
+      })
+    } catch (error) {
+      console.error("Upload voice error:", error)
+      toast.error("Lỗi khi gửi file ghi âm")
+    } finally {
+      setIsUploading(false)
+      setIsRecording(false)
+      setRecordTime(0)
+    }
+  }
+
   const cancelRecording = () => {
     isCancelledRef.current = true
     setAudioUrl(null) // clear audioUrl nếu hủy
@@ -596,6 +649,13 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
   }, [isRecording])
+  useEffect(() => {
+    if (audioUrl && !isRecording) {
+      // Không chạy khi đang ghi, chỉ chạy khi vừa dừng ghi và có file
+      sendVoice()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioUrl, isRecording])
 
   return (
     <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar relative">
@@ -680,11 +740,11 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
           placement="top"
         >
           <div
-            onClick={() => {
+            onClick={async () => {
               if (hasContent) {
                 // sendMessage
               } else if (isRecording) {
-                sendVoice()
+                stopRecording() // Dừng ghi âm TRƯỚC
               } else {
                 startRecording()
               }
@@ -697,13 +757,13 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
             aria-label={
               hasContent ? "Send message" : isRecording ? "Send voice" : "Record voice message"
             }
-            onKeyDown={(e) => {
+            onKeyDown={async (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault()
                 if (hasContent) {
                   // sendMessage
                 } else if (isRecording) {
-                  sendVoice()
+                  stopRecording() // Dừng ghi âm TRƯỚC
                 } else {
                   startRecording()
                 }

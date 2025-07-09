@@ -483,14 +483,6 @@ function keepOnlyImgTags(html: string) {
   return result
 }
 
-// Hàm loại bỏ HTML, chỉ lấy text thuần
-function stripHtml(html: string): string {
-  if (!html) return ""
-  const div = document.createElement("div")
-  div.innerHTML = html
-  return div.textContent || div.innerText || ""
-}
-
 type TMessageProps = {
   message: TStateDirectMessage
   user: TUserWithoutPassword
@@ -634,14 +626,12 @@ const getReplyPreview = (replyTo: any) => {
     )
   }
   // Nếu là text hoặc HTML khác
-  const plain = stripHtml(replyTo.content)
   return (
     <span
       className="truncate text-xs text-gray-600 cursor-pointer hover:bg-gray-100 rounded p-1 transition-colors inline-block"
       onClick={scrollToOriginalMessage}
-    >
-      {plain || "[Không có nội dung]"}
-    </span>
+      dangerouslySetInnerHTML={{ __html: santizeMsgContent(replyTo.content) }}
+    ></span>
   )
 }
 

@@ -115,47 +115,6 @@ const MappedMessages = ({ messages, user, onReply }: TMappedMessagesProps) => {
     .map((message, index, arr) => {
       const stickyTime = displayMessageStickyTime(message.createdAt, arr[index - 1]?.createdAt)
       let replyTo = message.replyTo
-
-      console.log("🔍 Processing message for reply:", {
-        messageId: message.id,
-        hasReplyToId: !!(message as any).replyToId,
-        replyToId: (message as any).replyToId,
-        hasReplyTo: !!replyTo,
-        replyTo: replyTo,
-      })
-
-      if ((message as any).replyToId && !replyTo) {
-        const originalMsg = arr.find((m) => m.id === (message as any).replyToId)
-        if (originalMsg) {
-          replyTo = {
-            id: originalMsg.id,
-            senderName: originalMsg.authorId === user.id ? "Me" : "User",
-            content: originalMsg.content,
-            type: originalMsg.type,
-            mediaUrl: originalMsg.mediaUrl,
-            fileName: originalMsg.fileName,
-            stickerUrl: originalMsg.stickerUrl,
-          }
-        } else {
-          // Nếu chưa tìm thấy message gốc, hiển thị placeholder
-          replyTo = {
-            id: (message as any).replyToId,
-            senderName: "",
-            content: '<span class="italic text-gray-400">Đang tải nội dung trả lời...</span>',
-            type: "TEXT",
-            mediaUrl: undefined,
-            fileName: undefined,
-            stickerUrl: undefined,
-          }
-        }
-      }
-
-      console.log("RENDER MSG:", {
-        id: message.id,
-        content: message.content,
-        replyToId: (message as any).replyToId,
-        replyTo,
-      })
       return (
         <Message
           message={{ ...message, replyTo }}

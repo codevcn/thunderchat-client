@@ -68,10 +68,23 @@ export const messagesSlice = createSlice({
       fetchDirectMessagesThunk.fulfilled,
       (state, action: PayloadAction<TGetDirectMessagesData>) => {
         const currentMessages = state.directMessages
+        const newMessages =
+          action.payload.directMessages?.map((msg) => ({
+            ...msg,
+            replyTo: {
+              id: msg.ReplyTo?.id,
+              senderName: msg.ReplyTo?.authorId.toString() || "",
+              content: msg.ReplyTo?.content || "",
+              type: msg.ReplyTo?.type,
+              mediaUrl: msg.ReplyTo?.mediaUrl,
+              fileName: msg.ReplyTo?.fileName,
+              stickerUrl: msg.ReplyTo?.stickerUrl,
+            },
+          })) || []
         state.directMessages =
           currentMessages && currentMessages.length > 0
-            ? [...action.payload.directMessages, ...currentMessages]
-            : action.payload.directMessages
+            ? [...newMessages, ...currentMessages]
+            : newMessages
         state.fetchedMsgs = true
       }
     )

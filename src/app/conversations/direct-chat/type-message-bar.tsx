@@ -15,10 +15,11 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TDirectChat, TSticker } from "@/utils/types/be-api"
-import type { TEmoji } from "@/utils/types/global"
+import type { TEmoji, TStateDirectMessage } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
 import { uploadFile } from "@/apis/upload"
+import { santizeMsgContent } from "@/utils/helpers"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -235,12 +236,6 @@ const MessageTextField = ({
   }
 
   const sendMessage = (msgToSend: string) => {
-    console.log("=== REPLY DEBUG START ===")
-    console.log("replyMessage received:", replyMessage)
-    console.log("replyMessage type:", typeof replyMessage)
-    console.log("replyMessage.id:", replyMessage?.id)
-    console.log("replyMessage content:", replyMessage?.content)
-
     const payload: any = {
       content: msgToSend,
       receiverId: user.id === recipientId ? creatorId : recipientId,
@@ -251,15 +246,9 @@ const MessageTextField = ({
 
     if (replyMessage && replyMessage.id) {
       payload.replyToId = replyMessage.id
-      console.log("✅ replyToId SET to:", replyMessage.id)
     } else {
-      console.log("❌ replyToId NOT SET - replyMessage is null or has no id")
-      console.log("replyMessage exists:", !!replyMessage)
-      console.log("replyMessage.id exists:", !!replyMessage?.id)
     }
 
-    console.log("FINAL PAYLOAD:", payload)
-    console.log("=== REPLY DEBUG END ===")
     chattingService.sendMessage(EMessageTypes.TEXT, payload, (data) => {
       if ("success" in data && data.success) {
         chattingService.setAcknowledgmentFlag(true)
@@ -269,7 +258,6 @@ const MessageTextField = ({
         toast.error("Error when sending message")
       }
     })
-    console.log("🔄 Clearing replyMessage after sending")
     setReplyMessage(null)
   }
 
@@ -359,7 +347,7 @@ function FileTypeMenu({
 
 type TTypeMessageBarProps = {
   directChat: TDirectChat
-  replyMessage: any | null
+  replyMessage: TStateDirectMessage | null
   setReplyMessage: (msg: any | null) => void
 }
 
@@ -548,6 +536,7 @@ export const TypeMessageBar = memo(
     }
 
     function renderReplyPreview(msg: any) {
+      console.log(">>> msg:", msg)
       if (!msg) return "[Không có nội dung]"
       const type = (msg.type || "").toUpperCase()
       switch (type) {
@@ -596,7 +585,14 @@ export const TypeMessageBar = memo(
           }
           return "[Emoji]"
         case "TEXT":
-          return msg.content || "[Không có nội dung]"
+          return (
+            <span
+              className="w-full break-words whitespace-pre-wrap text-sm"
+              dangerouslySetInnerHTML={{
+                __html: santizeMsgContent(msg.content) || "[Không có nội dung]",
+              }}
+            />
+          )
         default:
           if (
             msg.content &&
@@ -604,7 +600,7 @@ export const TypeMessageBar = memo(
             (msg.content.includes("<img") || msg.content.includes("<svg"))
           ) {
             const cleanContent = keepOnlyImgAndSvgTags(msg.content)
-            return <span dangerouslySetInnerHTML={{ __html: cleanContent }} />
+            return <span className="" dangerouslySetInnerHTML={{ __html: cleanContent }} />
           }
           return "[Không có nội dung]"
       }
@@ -617,7 +613,10 @@ export const TypeMessageBar = memo(
           {replyMessage && (
             <>
               {console.log("DEBUG replyMessage:", replyMessage)}
-              <div className="flex items-center bg-blue-50 border-l-4 border-blue-400 rounded-t px-3 py-2 mb-1 text-xs text-gray-700">
+              <div
+                id="STYLE-message-reply-preview"
+                className="flex items-center bg-blue-50 border-l-4 border-blue-400 rounded-t px-3 py-2 mb-1 text-xs text-gray-700"
+              >
                 <span className="font-semibold mr-2">Trả lời:</span>
                 <div className="truncate flex-1">{renderReplyPreview(replyMessage)}</div>
                 <button

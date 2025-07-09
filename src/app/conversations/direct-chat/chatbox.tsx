@@ -17,17 +17,26 @@ import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TDirectChatData, TUserWithProfile } from "@/utils/types/be-api"
+import { VoiceMessagePlayer } from "../(voice-chat)/VoiceMessagePlayerProps"
+import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
+import { useAudioMessages } from "@/hooks/audio-messages"
 import { useUser } from "@/hooks/user"
 
 const TypingIndicator = () => {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1 grow pt-1">
-        <span className="w-1 h-1 bg-regular-placeholder-cl rounded-full animate-typing-message delay-0"></span>
-        <span className="w-1 h-1 bg-regular-placeholder-cl rounded-full animate-typing-message delay-150"></span>
-        <span className="w-1 h-1 bg-regular-placeholder-cl rounded-full animate-typing-message delay-300"></span>
+    <div className="flex items-center gap-2 text-xs text-gray-300 px-4 py-2">
+      <div className="flex gap-1">
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+        <div
+          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+          style={{ animationDelay: "0.1s" }}
+        ></div>
+        <div
+          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+          style={{ animationDelay: "0.2s" }}
+        ></div>
       </div>
-      <p className="text-xs text-regular-placeholder-cl font-semibold">The user is typing...</p>
+      <span>Đang nhập...</span>
     </div>
   )
 }
@@ -116,6 +125,10 @@ const Main = ({ directChat }: TMainProps) => {
   const user = useUser()!
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
+  const { showPlayer } = useVoicePlayer()
+
+  // Hook để quản lý danh sách audio messages
+  useAudioMessages()
 
   const friendInfo = useMemo<TUserWithProfile>(() => {
     return user.id === Creator.id ? Recipient : Creator
@@ -133,6 +146,19 @@ const Main = ({ directChat }: TMainProps) => {
           onOpenInfoBar={hanldeOpenInfoBar}
           friendInfo={friendInfo}
         />
+
+        {/* Voice Player floating layer */}
+        {showPlayer && (
+          <div
+            className="absolute top-[60px] left-0 z-30 w-full max-w-none sm:max-w-[480px] sm:left-1/2 sm:-translate-x-1/2 px-0"
+            style={{ pointerEvents: "none" }}
+          >
+            <div className="px-4" style={{ pointerEvents: "auto" }}>
+              <VoiceMessagePlayer />
+            </div>
+          </div>
+        )}
+
         <div
           className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
         >
@@ -158,5 +184,12 @@ export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
     dispatch(fetchDirectChatThunk(directChatId))
   }, [])
 
-  return directChatId && directChat && <Main directChat={directChat} />
+  return (
+    directChatId &&
+    directChat && (
+      <VoicePlayerProvider>
+        <Main directChat={directChat} />
+      </VoicePlayerProvider>
+    )
+  )
 }

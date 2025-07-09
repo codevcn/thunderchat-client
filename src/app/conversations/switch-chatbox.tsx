@@ -3,7 +3,7 @@ import validator from "validator"
 import { useState, useEffect } from "react"
 import { DirectChatbox } from "./direct-chat/chatbox"
 import { GroupChatbox } from "./group/group-chatbox"
-import { TChatType } from "@/utils/types/global"
+import type { TChatType } from "@/utils/types/global"
 
 export const SwitchChatbox = () => {
   const [chatId, setChatId] = useState<number>()

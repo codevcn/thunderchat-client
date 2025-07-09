@@ -1,7 +1,7 @@
 "use client"
-
+console.log("====HEHE FILE direct-chat/type-message-bar.tsx LOADED ====")
 import { CustomTooltip, IconButton } from "@/components/materials"
-import { Mic, Paperclip, Send, Smile, Sticker } from "lucide-react"
+import { Download, Mic, Paperclip, Send, Smile, Sticker, Trash } from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { AutoResizeTextField } from "@/components/materials"
@@ -18,6 +18,7 @@ import type { TDirectChat, TSticker } from "@/utils/types/be-api"
 import type { TEmoji } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
+import { uploadFile } from "@/apis/upload"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -309,16 +310,57 @@ const MessageTextField = ({
   )
 }
 
+const fileOptions = [
+  { icon: "🖼️", label: "Photo or video", value: "photo" },
+  { icon: "📄", label: "Document", value: "document" },
+  { icon: "📊", label: "Create poll", value: "poll" },
+  { icon: "📍", label: "Location", value: "location" },
+]
+
+function FileTypeMenu({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (type: string) => void
+  onClose: () => void
+}) {
+  return (
+    <div className="absolute bottom-12 left-0 z-50 bg-white shadow-lg rounded-lg p-2 w-56 border border-gray-200">
+      {fileOptions.map((opt) => (
+        <button
+          key={opt.value}
+          className="flex items-center w-full px-3 py-2 hover:bg-gray-100 rounded transition text-gray-800"
+          onClick={() => {
+            onSelect(opt.value)
+            onClose()
+          }}
+        >
+          <span className="text-xl mr-3">{opt.icon}</span>
+          <span>{opt.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 type TTypeMessageBarProps = {
   directChat: TDirectChat
 }
 
 export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
+  const user = useUser()
   const { fetchedMsgs } = useAppSelector(({ messages }) => messages)
   const textFieldRef = useRef<HTMLDivElement | null>(null)
   const [hasContent, setHasContent] = useState<boolean>(false)
   const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
   const expressionPopoverRef = useRef<HTMLDivElement>(null)
+  const [showFileMenu, setShowFileMenu] = useState<boolean>(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [fileAccept, setFileAccept] = useState<string>("")
+  const [fileMode, setFileMode] = useState<string>("")
+  const [fileInputKey, setFileInputKey] = useState<number>(0)
 
   const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
     const textField = textFieldRef.current
@@ -338,45 +380,409 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
     }
   }
 
-  return (
-    fetchedMsgs && (
-      <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar">
-        <div
-          onClick={handleClickOnTextFieldContainer}
-          ref={textFieldContainerRef}
-          className="flex cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
-        >
-          <ExpressionPicker
-            textFieldRef={textFieldRef}
-            expressionPopoverRef={expressionPopoverRef}
-            directChat={directChat}
-          />
-          <MessageTextField
-            hasContent={hasContent}
-            directChat={directChat}
-            setHasContent={setHasContent}
-            textFieldRef={textFieldRef}
-            textFieldContainerRef={textFieldContainerRef}
-            expressionPopoverRef={expressionPopoverRef}
-          />
-          <button className="text-gray-500 hover:text-regular-violet-cl cursor-pointer relative bottom-0 right-0">
-            <Paperclip />
-          </button>
-        </div>
+  const handleFileMenuSelect = (type: string) => {
+    console.log("FileTypeMenu selected:", type, fileInputRef.current)
+    if (type === "photo") {
+      setFileAccept("image/*,video/*")
+      setFileMode("media")
+      setFileInputKey((prev) => prev + 1)
+      setTimeout(() => {
+        console.log("Try to click file input:", fileInputRef.current)
+        fileInputRef.current?.click()
+      }, 0)
+    } else if (type === "document") {
+      setFileAccept(
+        ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+      )
+      setFileMode("document")
+      setFileInputKey((prev) => prev + 1)
+      setTimeout(() => {
+        console.log("Try to click file input:", fileInputRef.current)
+        fileInputRef.current?.click()
+      }, 0)
+    }
+    // ... các case khác
+  }
 
-        <CustomTooltip title={hasContent ? "Send message" : "Record voice message"} placement="top">
-          <div
-            className={`${hasContent ? "text-regular-violet-cl" : "text-gray-500"} bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return
+    const { recipientId, creatorId, id } = directChat
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Kiểm tra loại file hợp lệ theo mode
+    const validFiles = files.filter((file) => {
+      if (fileMode === "media") {
+        return file.type.startsWith("image/") || file.type.startsWith("video/")
+      }
+      if (fileMode === "document") {
+        return (
+          file.type === "application/pdf" ||
+          file.type === "application/msword" ||
+          file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+          file.type === "application/vnd.ms-excel" ||
+          file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+          file.type === "application/vnd.ms-powerpoint" ||
+          file.type ===
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+          file.type === "text/plain" ||
+          [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
+            file.name.endsWith(ext)
+          )
+        )
+      }
+      // fallback: cho phép cả hai
+      return (
+        file.type.startsWith("image/") ||
+        file.type.startsWith("video/") ||
+        file.type === "application/pdf" ||
+        file.type === "application/msword" ||
+        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        file.type === "application/vnd.ms-excel" ||
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.ms-powerpoint" ||
+        file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+        file.type === "text/plain" ||
+        [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
+          file.name.endsWith(ext)
+        )
+      )
+    })
+
+    if (validFiles.length === 0) {
+      toast.error("Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT)")
+      return
+    }
+
+    if (validFiles.length !== files.length) {
+      toast.error(`${files.length - validFiles.length} file không được hỗ trợ`)
+    }
+
+    setIsUploading(true)
+    try {
+      for (const file of validFiles) {
+        if (file.size > 50 * 1024 * 1024) {
+          toast.error(`File ${file.name} vượt quá 50MB!`)
+          continue
+        }
+        // Upload file lên server
+        const { url, fileName, fileType } = await uploadFile(file)
+        let messageType = EMessageTypes.IMAGE
+        if (file.type.startsWith("image/")) messageType = EMessageTypes.IMAGE
+        else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
+        else messageType = EMessageTypes.DOCUMENT
+
+        const msgPayload: any = {
+          content: "", // hoặc caption nếu có
+          mediaUrl: url,
+          fileName,
+          fileType,
+          receiverId: user.id === recipientId ? creatorId : recipientId,
+          directChatId: id,
+          token: chattingService.getMessageToken(),
+          timestamp: new Date(),
+        }
+        if (messageType === EMessageTypes.DOCUMENT) {
+          msgPayload.fileSize = file.size
+        }
+
+        chattingService.sendMessage(messageType, msgPayload, (data) => {
+          if ("success" in data && data.success) {
+            chattingService.setAcknowledgmentFlag(true)
+            chattingService.recursiveSendingQueueMessages()
+          } else if ("isError" in data && data.isError) {
+            toast.error(`Lỗi khi gửi file ${file.name}`)
+          }
+        })
+      }
+      toast.success(`Đã gửi ${validFiles.length} file thành công`)
+    } catch (error) {
+      console.error("Upload file error:", error)
+      toast.error("Lỗi khi upload file")
+    } finally {
+      setIsUploading(false)
+    }
+    e.target.value = ""
+  }
+
+  // Thêm useEffect để đóng menu khi click outside
+  useEffect(() => {
+    if (!showFileMenu) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowFileMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showFileMenu])
+
+  // voice message
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordTime, setRecordTime] = useState(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const isCancelledRef = useRef(false)
+  const startRecording = async () => {
+    setIsRecording(true)
+    setRecordTime(0)
+    setAudioUrl(null)
+    isCancelledRef.current = false
+    audioChunksRef.current = []
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = recorder
+
+      recorder.ondataavailable = (e) => {
+        audioChunksRef.current.push(e.data)
+      }
+
+      recorder.onstop = () => {
+        if (isCancelledRef.current) return
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        setAudioUrl(URL.createObjectURL(blob))
+        stream.getTracks().forEach((track) => track.stop())
+      }
+
+      recorder.start()
+    } catch (err) {
+      setIsRecording(false)
+      if (timerRef.current) clearInterval(timerRef.current)
+      alert("Không thể truy cập microphone!")
+    }
+  }
+
+  const stopRecording = () => {
+    setIsRecording(false)
+    setRecordTime(0)
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop()
+    }
+  }
+  const sendVoice = async () => {
+    if (!audioUrl) {
+      toast.error("Chưa có dữ liệu ghi âm")
+      return
+    }
+    setIsUploading(true)
+    try {
+      // Lấy Blob webm từ audioUrl
+      const webmBlob = await fetch(audioUrl).then((r) => r.blob())
+
+      // Tạo file object webm
+      const webmFile = new File([webmBlob], `voice-userId${user?.id}-${Date.now()}.webm`, {
+        type: "audio/webm",
+      })
+
+      // Upload lên AWS S3, lấy url về (dùng hàm uploadFile của bạn)
+      const { url, fileName, fileType } = await uploadFile(webmFile)
+
+      // Gửi message (BE sẽ nhận type là AUDIO, mediaUrl là link S3 .webm)
+      const { recipientId, creatorId, id } = directChat
+      const msgPayload = {
+        content: "", // hoặc chú thích
+        mediaUrl: url,
+        fileName,
+        fileType,
+        receiverId: user!.id === recipientId ? creatorId : recipientId,
+        directChatId: id,
+        token: chattingService.getMessageToken(),
+        timestamp: new Date(),
+      }
+
+      console.log("msgPayload", msgPayload)
+
+      chattingService.sendMessage(EMessageTypes.AUDIO, msgPayload, (data) => {
+        console.log("data", data)
+        if ("success" in data && data.success) {
+          chattingService.setAcknowledgmentFlag(true)
+          chattingService.recursiveSendingQueueMessages()
+          setAudioUrl(null) // reset state
+          toast.success("Đã gửi file ghi âm thành công")
+        } else if ("isError" in data && data.isError) {
+          toast.error(`Lỗi khi gửi file ghi âm`)
+        }
+      })
+    } catch (error) {
+      console.error("Upload voice error:", error)
+      toast.error("Lỗi khi gửi file ghi âm")
+    } finally {
+      setIsUploading(false)
+      setIsRecording(false)
+      setRecordTime(0)
+    }
+  }
+
+  const cancelRecording = () => {
+    isCancelledRef.current = true
+    setAudioUrl(null) // clear audioUrl nếu hủy
+    stopRecording()
+  }
+
+  // Format mm:ss,ms
+  const formatTime = (ms: number) => {
+    const minutes = Math.floor(ms / 60000)
+    const seconds = Math.floor((ms % 60000) / 1000)
+    const msPart = Math.floor((ms % 1000) / 10) // lấy 2 số
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")},${msPart.toString().padStart(2, "0")}`
+  }
+
+  useEffect(() => {
+    if (isRecording) {
+      timerRef.current = setInterval(() => {
+        setRecordTime((prev) => prev + 10)
+      }, 10)
+    } else {
+      setRecordTime(0) // reset time khi stop
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+    // Cleanup khi component unmount hoặc isRecording false
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [isRecording])
+  useEffect(() => {
+    if (audioUrl && !isRecording) {
+      // Không chạy khi đang ghi, chỉ chạy khi vừa dừng ghi và có file
+      sendVoice()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioUrl, isRecording])
+
+  return (
+    <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar relative">
+      <div
+        onClick={handleClickOnTextFieldContainer}
+        ref={textFieldContainerRef}
+        className="flex cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
+      >
+        <ExpressionPicker
+          textFieldRef={textFieldRef}
+          expressionPopoverRef={expressionPopoverRef}
+          directChat={directChat}
+        />
+        <MessageTextField
+          hasContent={hasContent}
+          directChat={directChat}
+          setHasContent={setHasContent}
+          textFieldRef={textFieldRef}
+          textFieldContainerRef={textFieldContainerRef}
+          expressionPopoverRef={expressionPopoverRef}
+        />
+        {!isRecording ? (
+          <span
+            className={`${isUploading ? "text-gray-400 cursor-not-allowed" : "text-gray-500 hover:text-regular-violet-cl cursor-pointer"} relative bottom-0 right-0`}
+            onClick={() => {
+              console.log("Paperclip clicked", { isUploading, showFileMenu })
+              if (!isUploading) setShowFileMenu((v) => !v)
+            }}
+            role="button"
+            tabIndex={0}
+            style={{ outline: "none" }}
           >
-            <div className={`${hasContent ? "animate-hide-icon" : "animate-grow-icon"} absolute`}>
+            {isUploading ? (
+              <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+            ) : (
+              <Paperclip />
+            )}
+            {showFileMenu && (
+              <div ref={menuRef}>
+                <FileTypeMenu
+                  onSelect={handleFileMenuSelect}
+                  onClose={() => setShowFileMenu(false)}
+                />
+              </div>
+            )}
+          </span>
+        ) : (
+          <div className="flex items-center justify-center min-w-[68px] relative bottom-0 right-0">
+            <span className="text-lg text-white font-semibold select-none">
+              {formatTime(recordTime)}
+              <span className="ml-2 w-3 h-3 rounded-full bg-red-500 inline-block animate-pulse"></span>
+            </span>
+          </div>
+        )}
+        <input
+          key={fileInputKey}
+          type="file"
+          accept={fileAccept}
+          multiple
+          style={{ display: "none" }}
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          onClick={() => console.log("Input file clicked")}
+        />
+      </div>
+
+      {/* Nút gửi/ghi âm: merge từ cả 2 */}
+      <div className="relative flex items-center">
+        {/* Nút huỷ ghi âm - KHÔNG nằm trong Tooltip */}
+        {isRecording && (
+          <button
+            onClick={cancelRecording}
+            className="bg-red-500 hover:bg-red-600 text-white rounded-full p-3 mr-2"
+            type="button"
+          >
+            <Trash />
+          </button>
+        )}
+
+        <CustomTooltip
+          title={hasContent ? "Send message" : isRecording ? "Send voice" : "Record voice message"}
+          placement="top"
+        >
+          <div
+            onClick={async () => {
+              if (hasContent) {
+                // sendMessage
+              } else if (isRecording) {
+                stopRecording() // Dừng ghi âm TRƯỚC
+              } else {
+                startRecording()
+              }
+            }}
+            className={`${
+              hasContent || isRecording ? "text-regular-violet-cl" : "text-gray-500"
+            } bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
+            tabIndex={0}
+            role="button"
+            aria-label={
+              hasContent ? "Send message" : isRecording ? "Send voice" : "Record voice message"
+            }
+            onKeyDown={async (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                if (hasContent) {
+                  // sendMessage
+                } else if (isRecording) {
+                  stopRecording() // Dừng ghi âm TRƯỚC
+                } else {
+                  startRecording()
+                }
+              }
+            }}
+          >
+            <div
+              className={`${hasContent || isRecording ? "animate-hide-icon" : "animate-grow-icon"} absolute`}
+            >
               <Mic />
             </div>
-            <div className={`${hasContent ? "animate-grow-icon" : "animate-hide-icon"} absolute`}>
+            <div
+              className={`${hasContent || isRecording ? "animate-grow-icon" : "animate-hide-icon"} absolute`}
+            >
               <Send />
             </div>
           </div>
         </CustomTooltip>
       </div>
-    )
+    </div>
   )
 })

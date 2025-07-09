@@ -25,6 +25,7 @@ import { expressionService } from "@/services/expression.service"
 import Image from "next/image"
 import { chattingService } from "@/services/chatting.service"
 import { CustomTooltip } from "@/components/materials"
+import VoiceMessage from "../(voice-chat)/VoiceMessage"
 
 const SCROLL_ON_MESSAGES_THRESHOLD: number = 100
 const SHOW_SCROLL_BTN_THRESHOLD: number = 250

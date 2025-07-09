@@ -199,6 +199,8 @@ type TMessageTextFieldProps = {
   textFieldRef: React.RefObject<HTMLDivElement | null>
   textFieldContainerRef: React.RefObject<HTMLDivElement | null>
   expressionPopoverRef: React.RefObject<HTMLDivElement | null>
+  replyMessage: any | null
+  setReplyMessage: (msg: any | null) => void
 }
 
 const MessageTextField = ({
@@ -208,6 +210,8 @@ const MessageTextField = ({
   textFieldRef,
   textFieldContainerRef,
   expressionPopoverRef,
+  replyMessage,
+  setReplyMessage,
 }: TMessageTextFieldProps) => {
   const { recipientId, creatorId, id } = directChat
   const user = useUser()!
@@ -231,32 +235,42 @@ const MessageTextField = ({
   }
 
   const sendMessage = (msgToSend: string) => {
-    if (
-      !msgToSend ||
-      msgToSend.length === 0 ||
-      textFieldRef.current?.querySelector(".QUERY-empty-placeholder")
-    ) {
-      return
+    console.log("=== REPLY DEBUG START ===")
+    console.log("replyMessage received:", replyMessage)
+    console.log("replyMessage type:", typeof replyMessage)
+    console.log("replyMessage.id:", replyMessage?.id)
+    console.log("replyMessage content:", replyMessage?.content)
+
+    const payload: any = {
+      content: msgToSend,
+      receiverId: user.id === recipientId ? creatorId : recipientId,
+      directChatId: id,
+      token: chattingService.getMessageToken(),
+      timestamp: new Date(),
     }
-    chattingService.sendMessage(
-      EMessageTypes.TEXT,
-      {
-        content: msgToSend,
-        receiverId: user.id === recipientId ? creatorId : recipientId,
-        directChatId: id,
-        token: crypto.randomUUID(),
-        timestamp: new Date(),
-      },
-      (data) => {
-        if ("success" in data && data.success) {
-          chattingService.setAcknowledgmentFlag(true)
-          chattingService.recursiveSendingQueueMessages()
-        } else if ("isError" in data && data.isError) {
-          console.log(">>> error in data 123:", data)
-          toast.error("Error when sending message")
-        }
+
+    if (replyMessage && replyMessage.id) {
+      payload.replyToId = replyMessage.id
+      console.log("✅ replyToId SET to:", replyMessage.id)
+    } else {
+      console.log("❌ replyToId NOT SET - replyMessage is null or has no id")
+      console.log("replyMessage exists:", !!replyMessage)
+      console.log("replyMessage.id exists:", !!replyMessage?.id)
+    }
+
+    console.log("FINAL PAYLOAD:", payload)
+    console.log("=== REPLY DEBUG END ===")
+    chattingService.sendMessage(EMessageTypes.TEXT, payload, (data) => {
+      if ("success" in data && data.success) {
+        chattingService.setAcknowledgmentFlag(true)
+        chattingService.recursiveSendingQueueMessages()
+      } else if ("isError" in data && data.isError) {
+        console.log(">>> data err:", data)
+        toast.error("Error when sending message")
       }
-    )
+    })
+    console.log("🔄 Clearing replyMessage after sending")
+    setReplyMessage(null)
   }
 
   const handleCatchEnter = (msg: string) => {
@@ -345,78 +359,101 @@ function FileTypeMenu({
 
 type TTypeMessageBarProps = {
   directChat: TDirectChat
+  replyMessage: any | null
+  setReplyMessage: (msg: any | null) => void
 }
 
-export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
-  const user = useUser()
-  const { fetchedMsgs } = useAppSelector(({ messages }) => messages)
-  const textFieldRef = useRef<HTMLDivElement | null>(null)
-  const [hasContent, setHasContent] = useState<boolean>(false)
-  const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
-  const expressionPopoverRef = useRef<HTMLDivElement>(null)
-  const [showFileMenu, setShowFileMenu] = useState<boolean>(false)
-  const menuRef = useRef<HTMLDivElement | null>(null)
-  const [isUploading, setIsUploading] = useState<boolean>(false)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [fileAccept, setFileAccept] = useState<string>("")
-  const [fileMode, setFileMode] = useState<string>("")
-  const [fileInputKey, setFileInputKey] = useState<number>(0)
+export const TypeMessageBar = memo(
+  ({ directChat, replyMessage, setReplyMessage }: TTypeMessageBarProps) => {
+    console.log("🔍 TypeMessageBar rendered with replyMessage:", replyMessage)
+    const user = useUser()
+    const { fetchedMsgs } = useAppSelector(({ messages }) => messages)
+    const textFieldRef = useRef<HTMLDivElement | null>(null)
+    const [hasContent, setHasContent] = useState<boolean>(false)
+    const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
+    const expressionPopoverRef = useRef<HTMLDivElement>(null)
+    const [showFileMenu, setShowFileMenu] = useState<boolean>(false)
+    const menuRef = useRef<HTMLDivElement | null>(null)
+    const [isUploading, setIsUploading] = useState<boolean>(false)
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
+    const [fileAccept, setFileAccept] = useState<string>("")
+    const [fileMode, setFileMode] = useState<string>("")
+    const [fileInputKey, setFileInputKey] = useState<number>(0)
 
-  const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
-    const textField = textFieldRef.current
-    textFieldContainerRef.current?.classList.add("outline-regular-violet-cl")
-    if (textField) {
-      if (e.target === textField) return
-      textField.focus()
-      // Đặt con trỏ ở cuối nội dung
-      const range = document.createRange()
-      const selection = window.getSelection()
-      range.selectNodeContents(textField)
-      range.collapse(false) // false để đặt con trỏ ở cuối, true để đặt ở đầu
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
+    const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
+      const textField = textFieldRef.current
+      textFieldContainerRef.current?.classList.add("outline-regular-violet-cl")
+      if (textField) {
+        if (e.target === textField) return
+        textField.focus()
+        // Đặt con trỏ ở cuối nội dung
+        const range = document.createRange()
+        const selection = window.getSelection()
+        range.selectNodeContents(textField)
+        range.collapse(false) // false để đặt con trỏ ở cuối, true để đặt ở đầu
+        if (selection) {
+          selection.removeAllRanges()
+          selection.addRange(range)
+        }
       }
     }
-  }
 
-  const handleFileMenuSelect = (type: string) => {
-    console.log("FileTypeMenu selected:", type, fileInputRef.current)
-    if (type === "photo") {
-      setFileAccept("image/*,video/*")
-      setFileMode("media")
-      setFileInputKey((prev) => prev + 1)
-      setTimeout(() => {
-        console.log("Try to click file input:", fileInputRef.current)
-        fileInputRef.current?.click()
-      }, 0)
-    } else if (type === "document") {
-      setFileAccept(
-        ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
-      )
-      setFileMode("document")
-      setFileInputKey((prev) => prev + 1)
-      setTimeout(() => {
-        console.log("Try to click file input:", fileInputRef.current)
-        fileInputRef.current?.click()
-      }, 0)
-    }
-    // ... các case khác
-  }
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user) return
-    const { recipientId, creatorId, id } = directChat
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-
-    // Kiểm tra loại file hợp lệ theo mode
-    const validFiles = files.filter((file) => {
-      if (fileMode === "media") {
-        return file.type.startsWith("image/") || file.type.startsWith("video/")
+    const handleFileMenuSelect = (type: string) => {
+      console.log("FileTypeMenu selected:", type, fileInputRef.current)
+      if (type === "photo") {
+        setFileAccept("image/*,video/*")
+        setFileMode("media")
+        setFileInputKey((prev) => prev + 1)
+        setTimeout(() => {
+          console.log("Try to click file input:", fileInputRef.current)
+          fileInputRef.current?.click()
+        }, 0)
+      } else if (type === "document") {
+        setFileAccept(
+          ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+        )
+        setFileMode("document")
+        setFileInputKey((prev) => prev + 1)
+        setTimeout(() => {
+          console.log("Try to click file input:", fileInputRef.current)
+          fileInputRef.current?.click()
+        }, 0)
       }
-      if (fileMode === "document") {
+      // ... các case khác
+    }
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!user) return
+      const { recipientId, creatorId, id } = directChat
+      const files = Array.from(e.target.files || [])
+      if (files.length === 0) return
+
+      // Kiểm tra loại file hợp lệ theo mode
+      const validFiles = files.filter((file) => {
+        if (fileMode === "media") {
+          return file.type.startsWith("image/") || file.type.startsWith("video/")
+        }
+        if (fileMode === "document") {
+          return (
+            file.type === "application/pdf" ||
+            file.type === "application/msword" ||
+            file.type ===
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+            file.type === "application/vnd.ms-excel" ||
+            file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+            file.type === "application/vnd.ms-powerpoint" ||
+            file.type ===
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+            file.type === "text/plain" ||
+            [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
+              file.name.endsWith(ext)
+            )
+          )
+        }
+        // fallback: cho phép cả hai
         return (
+          file.type.startsWith("image/") ||
+          file.type.startsWith("video/") ||
           file.type === "application/pdf" ||
           file.type === "application/msword" ||
           file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
@@ -430,163 +467,237 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
             file.name.endsWith(ext)
           )
         )
+      })
+
+      if (validFiles.length === 0) {
+        toast.error("Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT)")
+        return
       }
-      // fallback: cho phép cả hai
-      return (
-        file.type.startsWith("image/") ||
-        file.type.startsWith("video/") ||
-        file.type === "application/pdf" ||
-        file.type === "application/msword" ||
-        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-        file.type === "application/vnd.ms-excel" ||
-        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-        file.type === "application/vnd.ms-powerpoint" ||
-        file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-        file.type === "text/plain" ||
-        [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
-          file.name.endsWith(ext)
-        )
-      )
-    })
 
-    if (validFiles.length === 0) {
-      toast.error("Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT)")
-      return
-    }
+      if (validFiles.length !== files.length) {
+        toast.error(`${files.length - validFiles.length} file không được hỗ trợ`)
+      }
 
-    if (validFiles.length !== files.length) {
-      toast.error(`${files.length - validFiles.length} file không được hỗ trợ`)
-    }
-
-    setIsUploading(true)
-    try {
-      for (const file of validFiles) {
-        if (file.size > 50 * 1024 * 1024) {
-          toast.error(`File ${file.name} vượt quá 50MB!`)
-          continue
-        }
-        // Upload file lên server
-        const { url, fileName, fileType } = await uploadFile(file)
-        let messageType = EMessageTypes.IMAGE
-        if (file.type.startsWith("image/")) messageType = EMessageTypes.IMAGE
-        else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
-        else messageType = EMessageTypes.DOCUMENT
-
-        const msgPayload: any = {
-          content: "", // hoặc caption nếu có
-          mediaUrl: url,
-          fileName,
-          fileType,
-          receiverId: user.id === recipientId ? creatorId : recipientId,
-          directChatId: id,
-          token: chattingService.getMessageToken(),
-          timestamp: new Date(),
-        }
-        if (messageType === EMessageTypes.DOCUMENT) {
-          msgPayload.fileSize = file.size
-        }
-
-        chattingService.sendMessage(messageType, msgPayload, (data) => {
-          if ("success" in data && data.success) {
-            chattingService.setAcknowledgmentFlag(true)
-            chattingService.recursiveSendingQueueMessages()
-          } else if ("isError" in data && data.isError) {
-            toast.error(`Lỗi khi gửi file ${file.name}`)
+      setIsUploading(true)
+      try {
+        for (const file of validFiles) {
+          if (file.size > 50 * 1024 * 1024) {
+            toast.error(`File ${file.name} vượt quá 50MB!`)
+            continue
           }
-        })
+          // Upload file lên server
+          const { url, fileName, fileType } = await uploadFile(file)
+          let messageType = EMessageTypes.IMAGE
+          if (file.type.startsWith("image/")) messageType = EMessageTypes.IMAGE
+          else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
+          else messageType = EMessageTypes.DOCUMENT
+
+          const msgPayload: any = {
+            content: "", // hoặc caption nếu có
+            mediaUrl: url,
+            fileName,
+            fileType,
+            receiverId: user.id === recipientId ? creatorId : recipientId,
+            directChatId: id,
+            token: chattingService.getMessageToken(),
+            timestamp: new Date(),
+          }
+          if (messageType === EMessageTypes.DOCUMENT) {
+            msgPayload.fileSize = file.size
+          }
+
+          chattingService.sendMessage(messageType, msgPayload, (data) => {
+            if ("success" in data && data.success) {
+              chattingService.setAcknowledgmentFlag(true)
+              chattingService.recursiveSendingQueueMessages()
+            } else if ("isError" in data && data.isError) {
+              toast.error(`Lỗi khi gửi file ${file.name}`)
+            }
+          })
+        }
+        toast.success(`Đã gửi ${validFiles.length} file thành công`)
+      } catch (error) {
+        console.error("Upload file error:", error)
+        toast.error("Lỗi khi upload file")
+      } finally {
+        setIsUploading(false)
       }
-      toast.success(`Đã gửi ${validFiles.length} file thành công`)
-    } catch (error) {
-      console.error("Upload file error:", error)
-      toast.error("Lỗi khi upload file")
-    } finally {
-      setIsUploading(false)
+      e.target.value = ""
     }
-    e.target.value = ""
-  }
 
-  // Thêm useEffect để đóng menu khi click outside
-  useEffect(() => {
-    if (!showFileMenu) return
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowFileMenu(false)
+    // Thêm useEffect để đóng menu khi click outside
+    useEffect(() => {
+      if (!showFileMenu) return
+      const handleClickOutside = (event: MouseEvent) => {
+        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+          setShowFileMenu(false)
+        }
+      }
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside)
+      }
+    }, [showFileMenu])
+
+    function keepOnlyImgAndSvgTags(html: string) {
+      // Loại bỏ mọi thẻ không phải <img>, <svg> và các thẻ SVG con
+      return html.replace(
+        /<(?!img\b|svg\b|path\b|rect\b|circle\b|g\b|line\b|ellipse\b|polygon\b|polyline\b|defs\b|linearGradient\b|stop\b|title\b|desc\b)[^>]*>/gi,
+        ""
+      )
+    }
+
+    function renderReplyPreview(msg: any) {
+      if (!msg) return "[Không có nội dung]"
+      const type = (msg.type || "").toUpperCase()
+      switch (type) {
+        case "IMAGE":
+          if (msg.imageUrl || msg.mediaUrl) {
+            return (
+              <span>
+                [Hình ảnh]
+                <img
+                  src={msg.imageUrl || msg.mediaUrl}
+                  alt="img"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    display: "inline",
+                    marginLeft: 4,
+                    borderRadius: 4,
+                  }}
+                />
+              </span>
+            )
+          }
+          return "[Hình ảnh]"
+        case "VIDEO":
+          return "[Video]"
+        case "DOCUMENT":
+          return `[Tài liệu] ${msg.fileName || ""}`
+        case "STICKER":
+          if (msg.stickerUrl) {
+            return (
+              <span>
+                [Sticker]
+                <img
+                  src={msg.stickerUrl}
+                  alt="sticker"
+                  style={{ width: 24, height: 24, display: "inline", marginLeft: 4 }}
+                />
+              </span>
+            )
+          }
+          return "[Sticker]"
+        case "EMOJI":
+          if (msg.content && (msg.content.includes("<img") || msg.content.includes("<svg"))) {
+            const cleanContent = keepOnlyImgAndSvgTags(msg.content)
+            return <span dangerouslySetInnerHTML={{ __html: cleanContent }} />
+          }
+          return "[Emoji]"
+        case "TEXT":
+          return msg.content || "[Không có nội dung]"
+        default:
+          if (
+            msg.content &&
+            typeof msg.content === "string" &&
+            (msg.content.includes("<img") || msg.content.includes("<svg"))
+          ) {
+            const cleanContent = keepOnlyImgAndSvgTags(msg.content)
+            return <span dangerouslySetInnerHTML={{ __html: cleanContent }} />
+          }
+          return "[Không có nội dung]"
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [showFileMenu])
 
-  return (
-    <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar relative">
-      <div
-        onClick={handleClickOnTextFieldContainer}
-        ref={textFieldContainerRef}
-        className="flex cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
-      >
-        <ExpressionPicker
-          textFieldRef={textFieldRef}
-          expressionPopoverRef={expressionPopoverRef}
-          directChat={directChat}
-        />
-        <MessageTextField
-          hasContent={hasContent}
-          directChat={directChat}
-          setHasContent={setHasContent}
-          textFieldRef={textFieldRef}
-          textFieldContainerRef={textFieldContainerRef}
-          expressionPopoverRef={expressionPopoverRef}
-        />
-        <span
-          className={`${isUploading ? "text-gray-400 cursor-not-allowed" : "text-gray-500 hover:text-regular-violet-cl cursor-pointer"} relative bottom-0 right-0`}
-          onClick={() => {
-            console.log("Paperclip clicked", { isUploading, showFileMenu })
-            if (!isUploading) setShowFileMenu((v) => !v)
-          }}
-          role="button"
-          tabIndex={0}
-          style={{ outline: "none" }}
-        >
-          {isUploading ? (
-            <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
-          ) : (
-            <Paperclip />
+    return (
+      <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar relative">
+        <div className="flex flex-col grow">
+          {/* Reply Preview */}
+          {replyMessage && (
+            <>
+              {console.log("DEBUG replyMessage:", replyMessage)}
+              <div className="flex items-center bg-blue-50 border-l-4 border-blue-400 rounded-t px-3 py-2 mb-1 text-xs text-gray-700">
+                <span className="font-semibold mr-2">Trả lời:</span>
+                <div className="truncate flex-1">{renderReplyPreview(replyMessage)}</div>
+                <button
+                  className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Hủy trả lời"
+                  onClick={() => setReplyMessage(null)}
+                >
+                  &times;
+                </button>
+              </div>
+            </>
           )}
-          {showFileMenu && (
-            <div ref={menuRef}>
-              <FileTypeMenu
-                onSelect={handleFileMenuSelect}
-                onClose={() => setShowFileMenu(false)}
-              />
-            </div>
-          )}
-        </span>
-        <input
-          key={fileInputKey}
-          type="file"
-          accept={fileAccept}
-          multiple
-          style={{ display: "none" }}
-          ref={fileInputRef}
-          onChange={handleFileSelect}
-          onClick={() => console.log("Input file clicked")}
-        />
-      </div>
-
-      <CustomTooltip title={hasContent ? "Send message" : "Record voice message"} placement="top">
-        <div
-          className={`${hasContent ? "text-regular-violet-cl" : "text-gray-500"} bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
-        >
-          <div className={`${hasContent ? "animate-hide-icon" : "animate-grow-icon"} absolute`}>
-            <Mic />
-          </div>
-          <div className={`${hasContent ? "animate-grow-icon" : "animate-hide-icon"} absolute`}>
-            <Send />
+          <div
+            onClick={handleClickOnTextFieldContainer}
+            ref={textFieldContainerRef}
+            className="flex cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
+          >
+            <ExpressionPicker
+              textFieldRef={textFieldRef}
+              expressionPopoverRef={expressionPopoverRef}
+              directChat={directChat}
+            />
+            <MessageTextField
+              hasContent={hasContent}
+              directChat={directChat}
+              setHasContent={setHasContent}
+              textFieldRef={textFieldRef}
+              textFieldContainerRef={textFieldContainerRef}
+              expressionPopoverRef={expressionPopoverRef}
+              replyMessage={replyMessage}
+              setReplyMessage={setReplyMessage}
+            />
+            <span
+              className={`${isUploading ? "text-gray-400 cursor-not-allowed" : "text-gray-500 hover:text-regular-violet-cl cursor-pointer"} relative bottom-0 right-0`}
+              onClick={() => {
+                if (!isUploading) setShowFileMenu((v) => !v)
+              }}
+              role="button"
+              tabIndex={0}
+              style={{ outline: "none" }}
+            >
+              {isUploading ? (
+                <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+              ) : (
+                <Paperclip />
+              )}
+              {showFileMenu && (
+                <div ref={menuRef}>
+                  <FileTypeMenu
+                    onSelect={handleFileMenuSelect}
+                    onClose={() => setShowFileMenu(false)}
+                  />
+                </div>
+              )}
+            </span>
+            <input
+              key={fileInputKey}
+              type="file"
+              accept={fileAccept}
+              multiple
+              style={{ display: "none" }}
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              onClick={() => console.log("Input file clicked")}
+            />
           </div>
         </div>
-      </CustomTooltip>
-    </div>
-  )
-})
+        <CustomTooltip title={hasContent ? "Send message" : "Record voice message"} placement="top">
+          <div
+            className={`${hasContent ? "text-regular-violet-cl" : "text-gray-500"} bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
+          >
+            <div className={`${hasContent ? "animate-hide-icon" : "animate-grow-icon"} absolute`}>
+              <Mic />
+            </div>
+            <div className={`${hasContent ? "animate-grow-icon" : "animate-hide-icon"} absolute`}>
+              <Send />
+            </div>
+          </div>
+        </CustomTooltip>
+      </div>
+    )
+  }
+)

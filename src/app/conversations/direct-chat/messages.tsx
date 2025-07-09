@@ -104,17 +104,73 @@ const NoMessagesYet = ({ directChat, user }: TNoMessagesYetProps) => {
 type TMappedMessagesProps = {
   messages: TStateDirectMessage[]
   user: TUserWithoutPassword
+  onReply: (msg: TStateDirectMessage) => void
 }
 
-const MappedMessages = ({ messages, user }: TMappedMessagesProps) =>
-  messages.map((message, index) => {
-    const stickyTime = displayMessageStickyTime(message.createdAt, messages[index - 1]?.createdAt)
+const MappedMessages = ({ messages, user, onReply }: TMappedMessagesProps) => {
+  console.log("📝 [UI] MappedMessages - messages array:", messages)
+  // Sắp xếp lại mảng messages theo id tăng dần
+  return [...messages]
+    .sort((a, b) => a.id - b.id)
+    .map((message, index, arr) => {
+      const stickyTime = displayMessageStickyTime(message.createdAt, arr[index - 1]?.createdAt)
+      let replyTo = message.replyTo
 
-    return <Message message={message} key={message.id} user={user} stickyTime={stickyTime} />
-  })
+      console.log("🔍 Processing message for reply:", {
+        messageId: message.id,
+        hasReplyToId: !!(message as any).replyToId,
+        replyToId: (message as any).replyToId,
+        hasReplyTo: !!replyTo,
+        replyTo: replyTo,
+      })
+
+      if ((message as any).replyToId && !replyTo) {
+        const originalMsg = arr.find((m) => m.id === (message as any).replyToId)
+        if (originalMsg) {
+          replyTo = {
+            id: originalMsg.id,
+            senderName: originalMsg.authorId === user.id ? "Me" : "User",
+            content: originalMsg.content,
+            type: originalMsg.type,
+            mediaUrl: originalMsg.mediaUrl,
+            fileName: originalMsg.fileName,
+            stickerUrl: originalMsg.stickerUrl,
+          }
+        } else {
+          // Nếu chưa tìm thấy message gốc, hiển thị placeholder
+          replyTo = {
+            id: (message as any).replyToId,
+            senderName: "",
+            content: '<span class="italic text-gray-400">Đang tải nội dung trả lời...</span>',
+            type: "TEXT",
+            mediaUrl: undefined,
+            fileName: undefined,
+            stickerUrl: undefined,
+          }
+        }
+      }
+
+      console.log("RENDER MSG:", {
+        id: message.id,
+        content: message.content,
+        replyToId: (message as any).replyToId,
+        replyTo,
+      })
+      return (
+        <Message
+          message={{ ...message, replyTo }}
+          key={message.id}
+          user={user}
+          stickyTime={stickyTime}
+          onReply={onReply}
+        />
+      )
+    })
+}
 
 type TMessagesProps = {
   directChat: TDirectChatData
+  onReply: (msg: TStateDirectMessage) => void
 }
 
 type TMessagesLoadingState = "loading-messages"
@@ -124,7 +180,7 @@ type TUnreadMessages = {
   firstUnreadOffsetTop: number
 }
 
-export const Messages = memo(({ directChat }: TMessagesProps) => {
+export const Messages = memo(({ directChat, onReply }: TMessagesProps) => {
   const { id: directChatId, recipientId, creatorId, lastSentMessageId } = directChat
   const { directMessages: messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
   const [loading, setLoading] = useState<TMessagesLoadingState>()
@@ -272,6 +328,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
 
   // Xử lý sự kiện gửi tin nhắn từ đối phương
   const listenSendDirectMessage = (newMessage: TDirectMessage) => {
+    console.log("📥 [Socket] Received send_message_direct:", newMessage)
     const { id } = newMessage
     dispatch(pushNewMessages([newMessage]))
     clientSocket.setMessageOffset(id, directChatId)
@@ -430,7 +487,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
                   <Spinner size="small" />
                 </div>
               )}
-              <MappedMessages messages={messages} user={user} />
+              <MappedMessages messages={messages} user={user} onReply={onReply} />
             </div>
           ) : (
             <NoMessagesYet directChat={directChat} user={user} />

@@ -4,6 +4,15 @@ import { EMessageTypes } from "../enums"
 
 export type TStateDirectMessage = TDirectMessage & {
   isNewMsg?: boolean
+  replyTo?: {
+    id?: number
+    senderName: string
+    content: string
+    type?: string
+    mediaUrl?: string | null
+    fileName?: string
+    stickerUrl?: string | null
+  }
 }
 
 export type TStateGroupMessage = TGroupMessage & {

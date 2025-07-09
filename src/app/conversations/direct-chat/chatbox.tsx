@@ -16,6 +16,7 @@ import { fetchDirectChatThunk } from "@/redux/conversations/conversations-thunks
 import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
+import type { TStateDirectMessage } from "@/utils/types/global"
 
 const TypingIndicator = () => {
   return (
@@ -127,6 +128,24 @@ export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
   const { directChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
+  const [replyMessage, setReplyMessage] = useState<TStateDirectMessage | null>(null)
+
+  // Add logging for setReplyMessage
+  const handleSetReplyMessage = (msg: TStateDirectMessage | null) => {
+    console.log("🔄 SET REPLY MESSAGE CALLED")
+    console.log("Message being set:", msg)
+    console.log("Message ID:", msg?.id)
+    console.log("Message content:", msg?.content)
+    setReplyMessage(msg)
+  }
+
+  // Log when replyMessage state changes
+  useEffect(() => {
+    console.log("🔄 REPLY MESSAGE STATE CHANGED")
+    console.log("New replyMessage state:", replyMessage)
+    console.log("replyMessage ID:", replyMessage?.id)
+    console.log("replyMessage content:", replyMessage?.content)
+  }, [replyMessage])
 
   const hanldeOpenInfoBar = async (open: boolean) => {
     dispatch(openInfoBar(open))
@@ -145,9 +164,12 @@ export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
           <div
             className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
           >
-            <Messages directChat={directChat} />
-
-            <TypeMessageBar directChat={directChat} />
+            <Messages directChat={directChat} onReply={handleSetReplyMessage} />
+            <TypeMessageBar
+              directChat={directChat}
+              replyMessage={replyMessage}
+              setReplyMessage={handleSetReplyMessage}
+            />
           </div>
         </div>
         <InfoBar />

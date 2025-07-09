@@ -10,12 +10,20 @@ import type {
   TGetDirectMessagesData,
   TGetGroupMessagesData,
   TGroupChatData,
+  TGroupChatMemberWithUser,
 } from "@/utils/types/be-api"
-import { fetchDirectChatThunk, fetchGroupChatThunk } from "../conversations/conversations.thunks"
+import {
+  fetchDirectChatThunk,
+  fetchGroupChatMembersThunk,
+  fetchGroupChatThunk,
+} from "../conversations/conversations.thunks"
+import { updateObjectByPath } from "@/utils/helpers"
+import { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
 
 type TMessagesState = {
   directChat: TDirectChatData | null
   groupChat: TGroupChatData | null
+  groupChatMembers: TGroupChatMemberWithUser[] | null
   directMessages: TStateDirectMessage[] | null
   groupMessages: TStateGroupMessage[] | null
   fetchedMsgs: boolean
@@ -24,6 +32,7 @@ type TMessagesState = {
 const initialState: TMessagesState = {
   directChat: null,
   groupChat: null,
+  groupChatMembers: null,
   directMessages: null,
   groupMessages: null,
   fetchedMsgs: false,
@@ -54,6 +63,16 @@ export const messagesSlice = createSlice({
           }
           return msg
         })
+      }
+    },
+    updateGroupChat: (
+      state,
+      action: PayloadAction<TDeepPartial<THierarchyKeyObject<TGroupChatData>>>
+    ) => {
+      const updates = action.payload
+      const groupChat = state.groupChat
+      if (groupChat) {
+        updateObjectByPath(groupChat, updates)
       }
     },
   },
@@ -92,7 +111,13 @@ export const messagesSlice = createSlice({
         state.fetchedMsgs = true
       }
     )
+    builder.addCase(
+      fetchGroupChatMembersThunk.fulfilled,
+      (state, action: PayloadAction<TGroupChatMemberWithUser[]>) => {
+        state.groupChatMembers = action.payload
+      }
+    )
   },
 })
 
-export const { pushNewMessages, updateMessages } = messagesSlice.actions
+export const { pushNewMessages, updateMessages, updateGroupChat } = messagesSlice.actions

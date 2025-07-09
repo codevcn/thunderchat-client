@@ -1,6 +1,7 @@
 import dayjs from "dayjs"
 import type { TFormData } from "./types/global"
 import DOMPurify from "dompurify"
+import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
 
 export const setLastSeen = (date: string) => {
   return dayjs(date).format("MM/DD/YYYY, h:mm A")
@@ -86,4 +87,33 @@ export const handleEventDelegation = <R extends Record<string, any>>(
 export const createPathWithParams = (path: string, params: Record<string, string>): string => {
   const queryParams = new URLSearchParams(params)
   return `${path}?${queryParams.toString()}`
+}
+
+export function updateObjectByPath<T extends Record<string, any>>(
+  target: T,
+  updates: TDeepPartial<THierarchyKeyObject<T>>
+): void {
+  for (const path in updates) {
+    const value = updates[path as keyof THierarchyKeyObject<T>]
+    if (value === undefined) continue
+    if (path.includes(".")) {
+      const keys = path.split(".")
+      const keysLength = keys.length
+
+      let current: any = target
+
+      for (let i = 0; i < keysLength; i++) {
+        const key = keys[i]
+        // Nếu là key cuối cùng => cập nhật
+        if (i === keysLength - 1) {
+          current[key] = value
+        } else {
+          current = current[key]
+        }
+      }
+    } else {
+      let current: any = target
+      current[path] = value
+    }
+  }
 }

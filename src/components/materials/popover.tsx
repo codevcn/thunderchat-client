@@ -37,6 +37,7 @@ type TCustomPopoverProps = {
     className?: string
   }
   open: boolean
+  onOpenChange: (open: boolean) => void
 }>
 
 export const CustomPopover = ({
@@ -45,9 +46,10 @@ export const CustomPopover = ({
   align,
   popoverBoard,
   open,
+  onOpenChange,
 }: TCustomPopoverProps) => {
   return (
-    <Popover open={open}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         className={cn(

@@ -26,3 +26,5 @@ account/page.tsx
 auth.service.ts
 auth.ts (api)
 auth-provider.tsx
+progressive-image.tsx
+event-emitter.ts

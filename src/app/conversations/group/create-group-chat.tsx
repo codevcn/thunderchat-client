@@ -235,7 +235,7 @@ const PrepareNewGroup = ({
 
         <div className="absolute bottom-6 right-6 z-20">
           {loading === "create-group" ? (
-            <div className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl hover:scale-110 transition duration-200">
+            <div className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl">
               <Spinner size="medium" />
             </div>
           ) : (

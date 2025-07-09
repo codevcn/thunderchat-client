@@ -2,10 +2,16 @@ import {
   deleteDeleteGroupAvatar,
   getFetchGroupChat,
   getFetchGroupChats,
+  putUpdateGroupChat,
   postCreateGroupChat,
   postUploadGroupAvatar,
 } from "@/apis/group-chat"
-import type { TFetchGroupChatData, TGroupChat, TUploadGroupAvatarData } from "@/utils/types/be-api"
+import type {
+  TGroupChat,
+  TGroupChatData,
+  TUpdateGroupChatParams,
+  TUploadGroupAvatarData,
+} from "@/utils/types/be-api"
 import type { TConversationCard, TSuccess } from "@/utils/types/global"
 import { convertToGroupChatsUIData } from "@/utils/data-convertors/conversations-convertor"
 
@@ -31,7 +37,7 @@ class GroupChatService {
     return data
   }
 
-  async fetchGroupChat(groupChatId: number): Promise<TFetchGroupChatData> {
+  async fetchGroupChat(groupChatId: number): Promise<TGroupChatData> {
     const { data } = await getFetchGroupChat(groupChatId)
     return data
   }
@@ -39,6 +45,14 @@ class GroupChatService {
   async fetchGroupChats(limit: number, lastId?: number): Promise<TConversationCard[]> {
     const { data } = await getFetchGroupChats(limit, lastId)
     return convertToGroupChatsUIData(data)
+  }
+
+  async updateGroupChat(
+    groupChatId: number,
+    updates: Partial<TUpdateGroupChatParams>
+  ): Promise<TSuccess> {
+    const { data } = await putUpdateGroupChat(groupChatId, updates)
+    return data
   }
 }
 

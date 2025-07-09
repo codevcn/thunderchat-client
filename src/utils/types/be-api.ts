@@ -1,7 +1,7 @@
 /**
  * This file contains the types for the BE API server (backend api server)
  */
-import type { EFriendRequestStatus, EMessageTypes, ESortTypes } from "@/utils/enums"
+import type { EFriendRequestStatus, EGroupChatRole, EMessageTypes, ESortTypes } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 
 // ================================= DB entities =================================
@@ -105,10 +105,13 @@ export type TGroupChatMember = {
   userId: number
   groupChatId: number
   joinedAt: string
+  role: EGroupChatRole
 }
 
 export type TGroupChatMemberWithUser = Omit<TGroupChatMember, "userId"> & {
-  User: TUser
+  User: TUser & {
+    Profile: TProfile
+  }
 }
 
 // ================================= API types =================================
@@ -213,10 +216,6 @@ export type TFetchDirectChatsData = TDirectChat & {
   Creator: TUserWithProfile
 }
 
-export type TFetchGroupChatData = TGroupChat & {
-  Members: TGroupChatMemberWithUser[]
-}
-
 export type TUploadGroupAvatarData = {
   avatarUrl: string
 }
@@ -234,11 +233,14 @@ export type TGetGroupMessagesData = {
   groupMessages: TGroupMessage[]
 }
 
-export type TGroupChatData = TGroupChat & {
-  Members: TGroupChatMemberWithUser[]
-}
+export type TGroupChatData = TGroupChat
 
 export type TFetchGroupChatsData = TGroupChat & {
   LastSentMessage?: TGroupMessage
   Creator: TUserWithProfile
+}
+
+export type TUpdateGroupChatParams = {
+  groupName?: string
+  avatarUrl?: string
 }

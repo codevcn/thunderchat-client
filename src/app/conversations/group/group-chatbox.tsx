@@ -4,9 +4,12 @@ import { CustomAvatar, CustomTooltip, Skeleton } from "@/components/materials"
 import { IconButton } from "@/components/materials/icon-button"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useEffect, useState } from "react"
-import { Search, Phone, MoreVertical, User } from "lucide-react"
+import { Search, Phone, MoreVertical } from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
-import { fetchGroupChatThunk } from "@/redux/conversations/conversations.thunks"
+import {
+  fetchGroupChatMembersThunk,
+  fetchGroupChatThunk,
+} from "@/redux/conversations/conversations.thunks"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import { GroupMessages } from "./group-messages"
@@ -36,7 +39,7 @@ type THeaderProps = {
 const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => {
   const { name, avatarUrl } = groupChat
   const [isTyping, setIsTyping] = useState<boolean>(false)
-  const chatMembersCount = groupChat.Members.length
+  const { groupChatMembers } = useAppSelector(({ messages }) => messages)
 
   const handleTypingMessage = (typing: boolean) => {
     setIsTyping(typing)
@@ -53,7 +56,10 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
     <div className="flex justify-between gap-2 px-6 py-1.5 bg-regular-dark-gray-cl w-full box-border h-header">
       {name ? (
         <CustomTooltip title="View user info" placement="bottom">
-          <div className="flex gap-2 cursor-pointer" onClick={() => onOpenInfoBar(true)}>
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => onOpenInfoBar(true)}
+          >
             <CustomAvatar
               src={avatarUrl}
               imgSize={45}
@@ -61,13 +67,19 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
               fallback={name[0]}
             />
             <div className="text-left">
-              <h3 className="text-lg font-bold w-fit text-white">{name || "Unnamed"}</h3>
+              <h3 className="text-lg leading-tight font-bold w-fit text-white">
+                {name || "Unnamed"}
+              </h3>
               {isTyping ? (
                 <TypingIndicator />
-              ) : (
-                <span className="text-xs text-regular-text-secondary-cl">
-                  {chatMembersCount + (chatMembersCount > 1 ? " members" : " member")}
+              ) : groupChatMembers && groupChatMembers.length > 0 ? (
+                <span className="text-xs leading-none text-regular-text-secondary-cl">
+                  {`${groupChatMembers.length} ${groupChatMembers.length > 1 ? "members" : "member"}`}
                 </span>
+              ) : (
+                <div className="w-10 h-4">
+                  <Skeleton className="w-full h-full" />
+                </div>
               )}
             </div>
           </div>
@@ -128,6 +140,7 @@ export const GroupChatbox = ({ groupChatId }: TGroupChatboxProps) => {
 
   useEffect(() => {
     dispatch(fetchGroupChatThunk(groupChatId))
+    dispatch(fetchGroupChatMembersThunk(groupChatId))
   }, [])
 
   return (

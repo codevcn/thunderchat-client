@@ -18,6 +18,7 @@ type TTextFieldProps = Partial<{
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onPressEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void
   onClear: () => void
+  defaultValue: string
 }>
 
 export const TextField = forwardRef<HTMLInputElement | null, TTextFieldProps>(
@@ -33,6 +34,7 @@ export const TextField = forwardRef<HTMLInputElement | null, TTextFieldProps>(
       onPressEnter,
       onChange,
       onClear,
+      defaultValue,
     }: TTextFieldProps,
     ref
   ) => {
@@ -50,7 +52,7 @@ export const TextField = forwardRef<HTMLInputElement | null, TTextFieldProps>(
         <input
           type={type || "text"}
           className={cn(
-            "peer/input placeholder:text-regular-placeholder-cl bg-transparent px-2 py-1 outline-none boder-none",
+            "peer/input placeholder:text-regular-placeholder-cl bg-transparent w-full px-2 py-1 outline-none boder-none",
             classNames?.input
           )}
           id={inputId}
@@ -59,6 +61,7 @@ export const TextField = forwardRef<HTMLInputElement | null, TTextFieldProps>(
           onKeyDown={catchEnter}
           onChange={onChange}
           ref={ref}
+          defaultValue={defaultValue}
         />
         {(suffixIcon || onClear) && (
           <div className="absolute right-1 top-1/2 -translate-y-1/2">

@@ -69,3 +69,8 @@ export enum EMessageTypes {
   VIDEO = "VIDEO",
   DOCUMENT = "DOCUMENT",
 }
+
+export enum EGroupChatRole {
+  ADMIN = "ADMIN",
+  MEMBER = "MEMBER",
+}

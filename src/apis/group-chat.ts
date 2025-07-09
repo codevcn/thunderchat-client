@@ -1,9 +1,10 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
 import type { TSuccess } from "@/utils/types/global"
 import type {
-  TFetchGroupChatData,
   TFetchGroupChatsData,
   TGroupChat,
+  TGroupChatData,
+  TUpdateGroupChatParams,
   TUploadGroupAvatarData,
 } from "@/utils/types/be-api"
 
@@ -24,7 +25,7 @@ export const postCreateGroupChat = (groupName: string, memberIds: number[], avat
   )
 
 export const getFetchGroupChat = (groupChatId: number) =>
-  clientAxios.get<TFetchGroupChatData>("/group-chat/fetch-group-chat", {
+  clientAxios.get<TGroupChatData>("/group-chat/fetch-group-chat", {
     ...requestConfig,
     params: { groupChatId },
   })
@@ -34,3 +35,10 @@ export const getFetchGroupChats = (limit: number, lastId?: number) =>
     ...requestConfig,
     params: { limit, lastId },
   })
+
+export const putUpdateGroupChat = (groupChatId: number, updates: Partial<TUpdateGroupChatParams>) =>
+  clientAxios.put<TSuccess>(
+    "/group-chat/update-group-chat",
+    { ...updates, groupChatId },
+    requestConfig
+  )

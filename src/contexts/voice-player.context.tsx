@@ -331,13 +331,11 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     showPlayer,
     setShowPlayer,
   }
-  console.log(">>> value:", value)
   return <VoicePlayerContext.Provider value={value}>{children}</VoicePlayerContext.Provider>
 }
 
 export const useVoicePlayer = () => {
   const context = useContext(VoicePlayerContext)
-  console.log(">>> context:", context)
   if (!context) {
     throw new Error("useVoicePlayer must be used within a VoicePlayerProvider")
   }

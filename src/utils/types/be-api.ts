@@ -41,12 +41,20 @@ export type TDirectMessage = {
   authorId: number
   directChatId: number
   status: EMessageStatus
-  stickerUrl?: string | null
-  mediaUrl: string | null
+  stickerUrl?: string
+  mediaUrl?: string
   type: EMessageTypes
   fileName?: string
   fileType?: string
   fileSize?: number
+}
+
+export type TDirectMessageWithAuthor = TDirectMessage & {
+  Author: TUserWithProfile
+}
+
+export type TDirectMessageWithAuthorAndReplyTo = TDirectMessageWithAuthor & {
+  ReplyTo: TDirectMessageWithAuthor | null
 }
 
 export type TFriend = {
@@ -191,9 +199,11 @@ export type TGetDirectMsgsParams = {
   isFirstTime: boolean
 }
 
+export type TGetDirectMessagesMessage = TDirectMessageWithAuthorAndReplyTo
+
 export type TGetDirectMessagesData = {
   hasMoreMessages: boolean
-  directMessages: TDirectMessage[]
+  directMessages: TGetDirectMessagesMessage[]
 }
 
 export type TGlobalSearchData = {

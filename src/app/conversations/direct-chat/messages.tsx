@@ -3,7 +3,12 @@
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useRef, useState, useEffect, memo } from "react"
 import { fetchDirectMessagesThunk } from "@/redux/messages/messages.thunk"
-import type { TDirectMessage, TSticker, TUserWithoutPassword } from "@/utils/types/be-api"
+import type {
+  TDirectMessageWithAuthor,
+  TGetDirectMessagesMessage,
+  TSticker,
+  TUserWithoutPassword,
+} from "@/utils/types/be-api"
 import { Spinner } from "@/components/materials/spinner"
 import { EMessageTypes, EPaginations, ESortTypes } from "@/utils/enums"
 import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
@@ -25,7 +30,6 @@ import { expressionService } from "@/services/expression.service"
 import Image from "next/image"
 import { chattingService } from "@/services/chatting.service"
 import { CustomTooltip } from "@/components/materials"
-import VoiceMessage from "../(voice-chat)/VoiceMessage"
 
 const SCROLL_ON_MESSAGES_THRESHOLD: number = 100
 const SHOW_SCROLL_BTN_THRESHOLD: number = 250
@@ -105,17 +109,30 @@ const NoMessagesYet = ({ directChat, user }: TNoMessagesYetProps) => {
 type TMappedMessagesProps = {
   messages: TStateDirectMessage[]
   user: TUserWithoutPassword
+  onReply: (msg: TStateDirectMessage) => void
 }
 
-const MappedMessages = ({ messages, user }: TMappedMessagesProps) =>
-  messages.map((message, index) => {
-    const stickyTime = displayMessageStickyTime(message.createdAt, messages[index - 1]?.createdAt)
-
-    return <Message message={message} key={message.id} user={user} stickyTime={stickyTime} />
-  })
+const MappedMessages = ({ messages, user, onReply }: TMappedMessagesProps) => {
+  // Sắp xếp lại mảng messages theo id tăng dần
+  return [...messages]
+    .sort((a, b) => a.id - b.id)
+    .map((message, index, arr) => {
+      const stickyTime = displayMessageStickyTime(message.createdAt, arr[index - 1]?.createdAt)
+      return (
+        <Message
+          message={message}
+          key={message.id}
+          user={user}
+          stickyTime={stickyTime}
+          onReply={onReply}
+        />
+      )
+    })
+}
 
 type TMessagesProps = {
   directChat: TDirectChatData
+  onReply: (msg: TStateDirectMessage) => void
 }
 
 type TMessagesLoadingState = "loading-messages"
@@ -125,7 +142,7 @@ type TUnreadMessages = {
   firstUnreadOffsetTop: number
 }
 
-export const Messages = memo(({ directChat }: TMessagesProps) => {
+export const Messages = memo(({ directChat, onReply }: TMessagesProps) => {
   const { id: directChatId, recipientId, creatorId, lastSentMessageId } = directChat
   const { directMessages: messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
   const [loading, setLoading] = useState<TMessagesLoadingState>()
@@ -272,14 +289,14 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
   }
 
   // Xử lý sự kiện gửi tin nhắn từ đối phương
-  const listenSendDirectMessage = (newMessage: TDirectMessage) => {
+  const listenSendDirectMessage = (newMessage: TGetDirectMessagesMessage) => {
     const { id } = newMessage
     dispatch(pushNewMessages([newMessage]))
     clientSocket.setMessageOffset(id, directChatId)
   }
 
   // Xử lý sự kiện kết nối lại từ server
-  const handleRecoverdConnection = (newMessages: TDirectMessage[]) => {
+  const handleRecoverdConnection = (newMessages: TGetDirectMessagesMessage[]) => {
     if (newMessages && newMessages.length > 0) {
       dispatch(pushNewMessages(newMessages))
       const { id } = newMessages[newMessages.length - 1]
@@ -379,6 +396,35 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
     dispatch(updateMessages([{ msgId: messageId, msgUpdates: { status } }]))
   }
 
+  // Hàm scroll đến tin nhắn gốc
+  const scrollToOriginalMessage = (e: React.MouseEvent<HTMLDivElement>) => {
+    let target = e.target as HTMLElement
+    while (!target || !target.classList.contains("QUERY-reply-preview")) {
+      target = target.parentElement as HTMLElement
+      if (target.id === "STYLE-user-messages") return
+    }
+    const originalMessageContainer = messagesContainer.current?.querySelector(
+      `.QUERY-message-container-${target.getAttribute("data-reply-to-id")}`
+    )
+    if (originalMessageContainer) {
+      originalMessageContainer.scrollIntoView({
+        behavior: "instant",
+        block: "center",
+      })
+      const overlay = originalMessageContainer.querySelector(
+        ".QUERY-message-container-overlay"
+      ) as HTMLElement
+      overlay.classList.remove("animate-highlight-message")
+      requestAnimationFrame(() => {
+        overlay.classList.add("animate-highlight-message")
+      })
+    }
+  }
+
+  const handleClickOnMessagesContainer = (e: React.MouseEvent<HTMLDivElement>) => {
+    scrollToOriginalMessage(e)
+  }
+
   useEffect(() => {
     initMessageOffset()
     requestAnimationFrame(() => {
@@ -424,6 +470,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
           messages && messages.length > 0 ? (
             <div
               id="STYLE-user-messages"
+              onClick={handleClickOnMessagesContainer}
               className="flex flex-col justify-end items-center py-3 box-border w-messages-list gap-y-2"
             >
               {hasMoreMessages.current && loading === "loading-messages" && (
@@ -431,7 +478,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
                   <Spinner size="small" />
                 </div>
               )}
-              <MappedMessages messages={messages} user={user} />
+              <MappedMessages messages={messages} user={user} onReply={onReply} />
             </div>
           ) : (
             <NoMessagesYet directChat={directChat} user={user} />

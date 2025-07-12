@@ -8,6 +8,8 @@ import { AppNavigation } from "@/components/layout/app-navigation"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { SwitchChatbox } from "./switch-chatbox"
+import AccountPage from "../(account)/page"
+import { useState } from "react"
 
 const ChatBackground = () => {
   const chatBackground = useAppSelector(({ settings }) => settings.theme.chatBackground)
@@ -26,6 +28,7 @@ const ChatBackground = () => {
 }
 
 const ConversationPage = () => {
+  const [showAccount, setShowAccount] = useState(false)
   const handleClickOnLayout = (e: MouseEvent) => {
     eventEmitter.emit(EInternalEvents.CLICK_ON_LAYOUT, e)
   }
@@ -42,11 +45,16 @@ const ConversationPage = () => {
       <ChatBackground />
 
       <div className="flex absolute h-full w-full top-0 left-0 bg-transparent z-20">
-        <AppNavigation />
+        <AppNavigation onOpenAccount={() => setShowAccount(true)} />
 
         <div className="flex grow relative z-20">
-          <Conversations />
-
+          {showAccount ? (
+            <div className="w-convs-list h-full bg-regular-dark-gray-cl border-regular-hover-card-cl border-r overflow-y-auto STYLE-styled-scrollbar">
+              <AccountPage showBackButton={true} onBack={() => setShowAccount(false)} />
+            </div>
+          ) : (
+            <Conversations />
+          )}
           <SwitchChatbox />
         </div>
       </div>

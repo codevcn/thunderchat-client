@@ -3,7 +3,7 @@ import { useUser } from "./user"
 import { userService } from "@/services/user.service"
 import type { TUserWithProfileFE } from "@/utils/types/fe-api"
 
-export const useUserProfile = (): TUserWithProfileFE | null => {
+export const useUserProfile = (refreshKey?: number): TUserWithProfileFE | null => {
   const user = useUser()
   const [userProfile, setUserProfile] = useState<TUserWithProfileFE | null>(null)
 
@@ -13,7 +13,7 @@ export const useUserProfile = (): TUserWithProfileFE | null => {
         setUserProfile({ ...user, Profile: profileData.Profile })
       })
     }
-  }, [user])
+  }, [user, refreshKey]) // Thêm refreshKey vào dependency array
 
   return userProfile
 }

@@ -1,4 +1,3 @@
-// >>> fix this: remove
 import { dev_test_values } from "../../../../temp/test"
 
 import { X, Info, AtSign, Mail } from "lucide-react"
@@ -9,6 +8,7 @@ import { ProgressiveImage } from "@/components/materials/progressive-image"
 import { setLastSeen } from "@/utils/helpers"
 import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
+import MediaPanel from "./(conversation-media)/media-panel"
 
 type TAvatarProps = {
   recipient: TUserWithProfile
@@ -59,7 +59,7 @@ const ProfileInfo = ({ recipient }: TProfileInfoProps) => {
       {about && (
         <div className="flex gap-4 items-center px-4 py-2">
           <div className="text-regular-icon-cl">
-            <Info color="inherit" />
+            <Info color="currentColor" />
           </div>
           <div className="w-info-bar">
             <p className="text-base leading-5 w-full">{about}</p>
@@ -107,15 +107,16 @@ export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
           <X />
         </IconButton>
         <div className="text-xl">
-          <h2>User Info</h2>
+          <h2>Thông tin hội thoại</h2>
         </div>
       </div>
 
-      <div className="h-chat-container w-full">
-        <div className="overflow-y-scroll STYLE-styled-scrollbar h-full bg-regular-info-bar-bgcl">
+      {/* Sửa layout cuộn, giữ custom scrollbar */}
+      <div className="flex-1 min-h-0 w-full">
+        <div className="overflow-y-auto STYLE-styled-scrollbar h-full min-h-0 bg-regular-info-bar-bgcl">
           <Avatar recipient={friendInfo} />
-
           <ProfileInfo recipient={friendInfo} />
+          <MediaPanel />
         </div>
       </div>
     </div>

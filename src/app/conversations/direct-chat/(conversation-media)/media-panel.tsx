@@ -72,7 +72,8 @@ const MediaPanel = () => {
         content: message.content,
         createdAt: message.createdAt,
         authorId: message.authorId,
-        fileSize: message.fileSize, // Thêm fileSize
+        fileSize: message.fileSize,
+        thumbnailUrl: message.thumbnailUrl,
       }
 
       switch (message.type) {
@@ -105,7 +106,17 @@ const MediaPanel = () => {
       }
     })
 
-    return { images, videos, files, audios, links }
+    // Sắp xếp theo thời gian mới nhất (createdAt giảm dần)
+    const sortByLatest = (a: any, b: any) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+
+    return {
+      images: images.sort(sortByLatest),
+      videos: videos.sort(sortByLatest),
+      files: files.sort(sortByLatest),
+      audios: audios.sort(sortByLatest),
+      links: links.sort(sortByLatest),
+    }
   }, [directMessages, isUrl])
 
   // Hàm lấy icon cho file
@@ -150,72 +161,17 @@ const MediaPanel = () => {
     }
   }
 
-  // Component Video Thumbnail với thumbnail thực từ video
-  const VideoThumbnail = ({ videoUrl, fileName }: { videoUrl: string; fileName?: string }) => {
-    const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(false)
-
-    // Tạo thumbnail từ video
-    const generateThumbnail = () => {
-      const video = document.createElement("video")
-      video.crossOrigin = "anonymous"
-      video.muted = true
-      video.playsInline = true
-      video.preload = "metadata"
-
-      video.onloadedmetadata = () => {
-        try {
-          // Tạo canvas để vẽ frame từ video
-          const canvas = document.createElement("canvas")
-          const ctx = canvas.getContext("2d")
-          if (!ctx) {
-            setError(true)
-            setLoading(false)
-            return
-          }
-
-          canvas.width = 80
-          canvas.height = 80
-
-          // Vẽ frame đầu tiên của video
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-          // Chuyển canvas thành data URL
-          const thumbnail = canvas.toDataURL("image/jpeg", 0.8)
-          setThumbnailUrl(thumbnail)
-          setLoading(false)
-        } catch (error) {
-          console.error("Error generating thumbnail:", error)
-          setError(true)
-          setLoading(false)
-        }
-      }
-
-      video.onerror = () => {
-        console.error("Error loading video for thumbnail")
-        setError(true)
-        setLoading(false)
-      }
-
-      video.src = videoUrl
-      video.load()
-    }
-
-    // Tạo thumbnail khi component mount
-    useEffect(() => {
-      generateThumbnail()
-    }, [videoUrl])
-
-    if (loading) {
-      return (
-        <div className="w-20 h-20 relative bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-        </div>
-      )
-    }
-
-    if (thumbnailUrl && !error) {
+  // Component Video Thumbnail sử dụng thumbnailUrl từ database
+  const VideoThumbnail = ({
+    videoUrl,
+    fileName,
+    thumbnailUrl,
+  }: {
+    videoUrl: string
+    fileName?: string
+    thumbnailUrl?: string | null
+  }) => {
+    if (thumbnailUrl) {
       return (
         <div className="w-20 h-20 relative bg-gray-700 rounded-lg overflow-hidden group cursor-pointer">
           <Image
@@ -242,7 +198,7 @@ const MediaPanel = () => {
       )
     }
 
-    // Fallback nếu không tạo được thumbnail
+    // Fallback nếu không có thumbnail
     return (
       <div className="w-20 h-20 relative bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg overflow-hidden flex items-center justify-center group cursor-pointer">
         {/* Gradient background */}
@@ -273,7 +229,7 @@ const MediaPanel = () => {
       {/* Ảnh/Video Section */}
       <Section title="Ảnh/Video">
         <div className="flex flex-wrap gap-2 px-2 pb-2">
-          {mediaData.images.slice(0, 6).map((item) => (
+          {mediaData.images.slice(0, 3).map((item) => (
             <div
               key={item.id}
               className="w-20 h-20 relative bg-gray-700 rounded-lg overflow-hidden"
@@ -287,14 +243,19 @@ const MediaPanel = () => {
               />
             </div>
           ))}
-          {mediaData.videos.slice(0, 6).map((item) => (
-            <VideoThumbnail key={item.id} videoUrl={item.mediaUrl!} fileName={item.fileName} />
+          {mediaData.videos.slice(0, 3).map((item) => (
+            <VideoThumbnail
+              key={item.id}
+              videoUrl={item.mediaUrl!}
+              fileName={item.fileName}
+              thumbnailUrl={item.thumbnailUrl}
+            />
           ))}
           {mediaData.images.length === 0 && mediaData.videos.length === 0 && (
             <div className="w-full text-center text-gray-400 py-4">Chưa có ảnh hoặc video</div>
           )}
         </div>
-        {(mediaData.images.length > 0 || mediaData.videos.length > 0) && (
+        {(mediaData.images.length > 3 || mediaData.videos.length > 3) && (
           <button className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg">
             Xem tất cả ({mediaData.images.length + mediaData.videos.length})
           </button>

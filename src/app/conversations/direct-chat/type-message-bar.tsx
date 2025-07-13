@@ -466,7 +466,7 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
           continue
         }
         // Upload file lên server
-        const { url, fileName, fileType } = await uploadFile(file)
+        const { url, fileName, fileType, thumbnailUrl } = await uploadFile(file)
         let messageType = EMessageTypes.IMAGE
         if (file.type.startsWith("image/")) messageType = EMessageTypes.IMAGE
         else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
@@ -484,6 +484,9 @@ export const TypeMessageBar = memo(({ directChat }: TTypeMessageBarProps) => {
         }
         if (messageType === EMessageTypes.DOCUMENT) {
           msgPayload.fileSize = file.size
+        }
+        if (messageType === EMessageTypes.VIDEO && thumbnailUrl) {
+          msgPayload.thumbnailUrl = thumbnailUrl
         }
 
         chattingService.sendMessage(messageType, msgPayload, (data) => {

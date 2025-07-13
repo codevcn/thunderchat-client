@@ -2,7 +2,7 @@ import { clientAxios } from "@/configs/axios"
 
 export const uploadFile = async (
   file: File
-): Promise<{ url: string; fileName: string; fileType: string }> => {
+): Promise<{ url: string; fileName: string; fileType: string; thumbnailUrl?: string }> => {
   const formData = new FormData()
   formData.append("file", file)
 

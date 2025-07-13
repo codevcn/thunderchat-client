@@ -47,6 +47,7 @@ export type TDirectMessage = {
   fileName?: string
   fileType?: string
   fileSize?: number
+  thumbnailUrl?: string | null
 }
 
 export type TFriend = {

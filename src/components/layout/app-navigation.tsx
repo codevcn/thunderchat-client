@@ -4,6 +4,7 @@ import { Home, Bell, Settings, MessageCircle, Users, User } from "lucide-react"
 import Link from "next/link"
 import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
+import { useAccountModal } from "@/contexts/account-modal.context"
 
 type TNav = {
   label: string
@@ -34,35 +35,23 @@ const navs: TNav[] = [
 ]
 
 type AppNavigationProps = {
-  onOpenAccount?: () => void
-  // ... các prop khác nếu có ...
+  // Có thể thêm các prop khác nếu cần
 }
 
 export const AppNavigation = memo((props: AppNavigationProps) => {
-  const { onOpenAccount } = props
+  const { openAccount } = useAccountModal()
   return (
     <div className="screen-medium-chatting:flex hidden w-[55px] h-screen relative">
       <div className="flex justify-between flex-col gap-4 bg-regular-dark-gray-cl pt-6 pb-3 w-[inherit] h-[inherit]">
         <CustomTooltip title="Account" placement="right">
-          {onOpenAccount ? (
-            <div
-              className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
-              onClick={onOpenAccount}
-            >
-              <div className="m-auto">
-                <CustomAvatar fallback={<User size={30} color="white" />} />
-              </div>
+          <div
+            className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
+            onClick={openAccount}
+          >
+            <div className="m-auto">
+              <CustomAvatar fallback={<User size={30} color="white" />} />
             </div>
-          ) : (
-            <Link
-              href="/account"
-              className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
-            >
-              <div className="m-auto">
-                <CustomAvatar fallback={<User size={30} color="white" />} />
-              </div>
-            </Link>
-          )}
+          </div>
         </CustomTooltip>
 
         <div className="flex items-center flex-col w-full">

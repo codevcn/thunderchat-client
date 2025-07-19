@@ -128,7 +128,7 @@ const Main = ({ directChat }: TMainProps) => {
   const { showPlayer } = useVoicePlayer()
 
   // Hook để quản lý danh sách audio messages
-  useAudioMessages()
+  const { loading: audioLoading } = useAudioMessages()
 
   const friendInfo = useMemo<TUserWithProfile>(() => {
     return user.id === Creator.id ? Recipient : Creator
@@ -147,21 +147,21 @@ const Main = ({ directChat }: TMainProps) => {
           friendInfo={friendInfo}
         />
 
-        {/* Voice Player floating layer */}
-        {showPlayer && (
-          <div
-            className="absolute top-[60px] left-0 z-30 w-full max-w-none sm:max-w-[480px] sm:left-1/2 sm:-translate-x-1/2 px-0"
-            style={{ pointerEvents: "none" }}
-          >
-            <div className="px-4" style={{ pointerEvents: "auto" }}>
-              <VoiceMessagePlayer />
-            </div>
-          </div>
-        )}
-
         <div
-          className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
+          className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden relative`}
         >
+          {/* Voice Player floating layer */}
+          {showPlayer && (
+            <div
+              className="absolute top-0 left-0 right-0 z-[70] flex justify-center"
+              style={{ pointerEvents: "none" }}
+            >
+              <div className="w-full max-w-[480px] px-4" style={{ pointerEvents: "auto" }}>
+                <VoiceMessagePlayer />
+              </div>
+            </div>
+          )}
+
           <Messages directChat={directChat} />
 
           <TypeMessageBar directChat={directChat} />

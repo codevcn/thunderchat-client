@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react"
 import { CustomAvatar, toast } from "@/components/materials"
-import AvatarCropperModal from "@/components/materials/AvatarCropperModal"
+import AvatarCropperModal from "@/components/materials/avatar-cropper-modal"
 import { uploadFile } from "@/apis/upload"
 import { Pencil } from "lucide-react"
 

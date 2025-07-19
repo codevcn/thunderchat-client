@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react"
+import React, { useState, useMemo } from "react"
 import {
   ChevronDown,
   ChevronUp,
@@ -8,11 +8,18 @@ import {
   Music,
   Video,
   File as FileIcon,
+  Play,
 } from "lucide-react"
 import { useAppSelector } from "@/hooks/redux"
 import { EMessageTypes } from "@/utils/enums"
 import dayjs from "dayjs"
 import Image from "next/image"
+import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
+import MediaArchivePanel from "./media-archive-panel"
+import ActionIcons from "@/components/materials/action-icons"
+import { useUser } from "@/hooks/user"
+import { useVoicePlayer } from "@/contexts/voice-player.context"
+import { useMediaMessages } from "@/hooks/use-media-messages"
 
 const Section = ({
   title,
@@ -39,7 +46,20 @@ const Section = ({
 }
 
 const MediaPanel = () => {
-  const { directMessages } = useAppSelector(({ messages }) => messages)
+  const { directChat } = useAppSelector(({ messages }) => messages)
+  const currentUser = useUser()
+  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false)
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0)
+  const [showArchive, setShowArchive] = useState(false)
+  const [archiveTab, setArchiveTab] = useState<"Ảnh/Video" | "files" | "voices" | "links">(
+    "Ảnh/Video"
+  )
+
+  // Voice player context
+  const { playAudio, setShowPlayer } = useVoicePlayer()
+
+  // Custom hook để quản lý media messages
+  const { mediaMessages, loading, error } = useMediaMessages()
 
   // Hàm kiểm tra URL
   const isUrl = (text: string) => {
@@ -53,7 +73,8 @@ const MediaPanel = () => {
 
   // Lọc các loại media từ tin nhắn
   const mediaData = useMemo(() => {
-    if (!directMessages) return { images: [], videos: [], files: [], audios: [], links: [] }
+    if (!mediaMessages || mediaMessages.length === 0)
+      return { images: [], videos: [], files: [], audios: [], links: [] }
 
     const images: any[] = []
     const videos: any[] = []
@@ -61,7 +82,7 @@ const MediaPanel = () => {
     const audios: any[] = []
     const links: any[] = []
 
-    directMessages.forEach((message) => {
+    mediaMessages.forEach((message) => {
       if (!message.mediaUrl && !message.content) return
 
       const messageData = {
@@ -117,7 +138,22 @@ const MediaPanel = () => {
       audios: audios.sort(sortByLatest),
       links: links.sort(sortByLatest),
     }
-  }, [directMessages, isUrl])
+  }, [mediaMessages, isUrl])
+
+  // Trộn ảnh và video, sort theo thời gian mới nhất
+  const mixedMedia = useMemo(() => {
+    const arr = [...mediaData.images, ...mediaData.videos]
+    arr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return arr
+  }, [mediaData.images, mediaData.videos])
+
+  // Hàm mở media viewer
+  const openMediaViewer = (mediaItem: any) => {
+    // Tìm index trong mixedMedia (danh sách đã được sort và hiển thị trong UI)
+    const index = mixedMedia.findIndex((item) => item.id === mediaItem.id)
+    setSelectedMediaIndex(index)
+    setIsMediaViewerOpen(true)
+  }
 
   // Hàm lấy icon cho file
   const getFileIcon = (fileName: string) => {
@@ -161,106 +197,139 @@ const MediaPanel = () => {
     }
   }
 
-  // Component Video Thumbnail sử dụng thumbnailUrl từ database
-  const VideoThumbnail = ({
-    videoUrl,
-    fileName,
-    thumbnailUrl,
-  }: {
-    videoUrl: string
-    fileName?: string
-    thumbnailUrl?: string | null
-  }) => {
-    if (thumbnailUrl) {
-      return (
-        <div className="w-20 h-20 relative bg-gray-700 rounded-lg overflow-hidden group cursor-pointer">
-          <Image
-            src={thumbnailUrl}
-            alt={fileName || "Video thumbnail"}
-            fill
-            className="object-cover"
-            sizes="80px"
-          />
-          {/* Play button overlay */}
-          <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-            <div className="w-6 h-6 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
-              <div className="w-0 h-0 border-l-[6px] border-l-black border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent ml-0.5"></div>
-            </div>
-          </div>
-
-          {/* File name tooltip */}
-          {fileName && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 truncate">
-              {fileName}
-            </div>
-          )}
-        </div>
-      )
+  // Hàm xử lý click vào voice message
+  const handleVoiceClick = (voiceMessage: any) => {
+    // Chuyển đổi format message để phù hợp với voice player
+    const messageForPlayer = {
+      id: voiceMessage.id,
+      authorId: voiceMessage.authorId,
+      createdAt: voiceMessage.createdAt,
+      mediaUrl: voiceMessage.mediaUrl,
+      type: EMessageTypes.AUDIO,
+      fileName: voiceMessage.fileName || "Audio message",
+      content: "",
+      directChatId: directChat?.id || 0,
+      status: "SENT" as any,
+      isNewMsg: false,
     }
 
-    // Fallback nếu không có thumbnail
-    return (
-      <div className="w-20 h-20 relative bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg overflow-hidden flex items-center justify-center group cursor-pointer">
-        {/* Gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/80 to-blue-600/80" />
-
-        {/* Video icon */}
-        <Video className="w-8 h-8 text-white z-10" />
-
-        {/* Play button overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-          <div className="w-6 h-6 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
-            <div className="w-0 h-0 border-l-[6px] border-l-black border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent ml-0.5"></div>
-          </div>
-        </div>
-
-        {/* File name tooltip */}
-        {fileName && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 truncate">
-            {fileName}
-          </div>
-        )}
-      </div>
-    )
+    // Phát audio và hiển thị player
+    playAudio(messageForPlayer)
+    setShowPlayer(true)
   }
 
   return (
     <div className="p-2">
+      {/* Loading state */}
+      {loading && (
+        <div className="flex justify-center items-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="text-red-400 text-center py-2 px-4 bg-red-900/20 rounded-lg mb-2">
+          {error}
+        </div>
+      )}
+
       {/* Ảnh/Video Section */}
       <Section title="Ảnh/Video">
-        <div className="flex flex-wrap gap-2 px-2 pb-2">
-          {mediaData.images.slice(0, 3).map((item) => (
+        <div className="grid grid-cols-3 gap-2 px-2 pb-2">
+          {mixedMedia.slice(0, 6).map((item) => (
             <div
               key={item.id}
-              className="w-20 h-20 relative bg-gray-700 rounded-lg overflow-hidden"
+              className="aspect-square bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer group relative"
+              onClick={() => openMediaViewer(item)}
             >
-              <Image
-                src={item.mediaUrl!}
-                alt={item.fileName || "Image"}
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
+              {/* Action icons on hover, top-right */}
+              <div className="absolute top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <ActionIcons
+                  onDownload={() => window.open(item.mediaUrl || item.fileUrl, "_blank")}
+                  onShare={() => {}}
+                  onMore={() => {}}
+                  showDownload={item.mediaUrl ? true : false}
+                  isSender={item.authorId === currentUser?.id}
+                  onViewOriginalMessage={() => {}}
+                  onDeleteForMe={() => console.log("Delete for me:", item.id)}
+                  onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
+                  messageId={item.id}
+                />
+              </div>
+              {item.mediaUrl &&
+                (item.type === EMessageTypes.IMAGE ? (
+                  <img
+                    src={item.mediaUrl}
+                    alt={item.fileName || "media"}
+                    className="object-cover w-full h-full"
+                    loading="lazy"
+                  />
+                ) : item.type === EMessageTypes.VIDEO ? (
+                  <div className="relative w-full h-full">
+                    {item.thumbnailUrl ? (
+                      <img
+                        src={item.thumbnailUrl}
+                        alt={item.fileName || "video"}
+                        className="object-cover w-full h-full"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center w-full h-full text-white opacity-70">
+                        <Video className="w-8 h-8" />
+                        <span className="text-xs mt-1">Video</span>
+                      </div>
+                    )}
+                    {/* Video play icon overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                        <Play className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                ) : null)}
             </div>
           ))}
-          {mediaData.videos.slice(0, 3).map((item) => (
-            <VideoThumbnail
-              key={item.id}
-              videoUrl={item.mediaUrl!}
-              fileName={item.fileName}
-              thumbnailUrl={item.thumbnailUrl}
-            />
-          ))}
-          {mediaData.images.length === 0 && mediaData.videos.length === 0 && (
+          {mixedMedia.length === 0 && (
             <div className="w-full text-center text-gray-400 py-4">Chưa có ảnh hoặc video</div>
           )}
         </div>
-        {(mediaData.images.length > 3 || mediaData.videos.length > 3) && (
-          <button className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg">
-            Xem tất cả ({mediaData.images.length + mediaData.videos.length})
+        {mixedMedia.length > 0 && (
+          <button
+            className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
+            onClick={() => {
+              setArchiveTab("Ảnh/Video")
+              setShowArchive(true)
+            }}
+          >
+            Xem tất cả ({mixedMedia.length})
           </button>
         )}
       </Section>
+
+      {/* Media Viewer Modal hoặc MediaArchivePanel */}
+      {directChat && !showArchive && (
+        <MediaViewerModal
+          isOpen={isMediaViewerOpen}
+          onClose={() => setIsMediaViewerOpen(false)}
+          mediaItems={mixedMedia}
+          initialIndex={selectedMediaIndex}
+          creator={directChat.Creator}
+          recipient={directChat.Recipient}
+        />
+      )}
+      {directChat && showArchive && (
+        <div className="absolute right-0 top-0 h-full w-info-bar-mb screen-large-chatting:w-info-bar z-[100] bg-[#181A1B]">
+          <MediaArchivePanel
+            onClose={() => setShowArchive(false)}
+            mediaData={mediaData}
+            allMediaItems={mixedMedia}
+            creator={directChat.Creator}
+            recipient={directChat.Recipient}
+            initialTab={archiveTab}
+          />
+        </div>
+      )}
 
       {/* File Section */}
       <Section title="File" defaultOpen={mediaData.files.length > 0}>
@@ -268,7 +337,7 @@ const MediaPanel = () => {
           {mediaData.files.slice(0, 3).map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-3 bg-[#232526] hover:bg-[#282A2D] rounded-lg px-3 py-2 mb-1"
+              className="flex items-center gap-3 bg-[#232526] hover:bg-[#282A2D] rounded-lg px-3 py-2 mb-1 group"
             >
               <div>{getFileIcon(item.fileName || "")}</div>
               <div className="flex-1 min-w-0">
@@ -280,26 +349,47 @@ const MediaPanel = () => {
                   <span>{formatFileSize(item.fileSize)}</span>
                 </div>
               </div>
+              {/* Action icons on hover */}
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <ActionIcons
+                  onDownload={() => window.open(item.fileUrl, "_blank")}
+                  onShare={() => {}}
+                  onMore={() => {}}
+                  showDownload={true}
+                  isSender={item.authorId === currentUser?.id}
+                  onViewOriginalMessage={() => {}}
+                  onDeleteForMe={() => console.log("Delete for me:", item.id)}
+                  onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
+                  messageId={item.id}
+                />
+              </div>
             </div>
           ))}
           {mediaData.files.length === 0 && (
             <div className="text-center text-gray-400 py-4">Chưa có file nào</div>
           )}
         </div>
-        {mediaData.files.length > 3 && (
-          <button className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg">
+        {mediaData.files.length > 0 && (
+          <button
+            className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
+            onClick={() => {
+              setArchiveTab("files")
+              setShowArchive(true)
+            }}
+          >
             Xem tất cả ({mediaData.files.length})
           </button>
         )}
       </Section>
 
-      {/* Audio Section */}
-      <Section title="Audio" defaultOpen={mediaData.audios.length > 0}>
+      {/* Voices Section */}
+      <Section title="Voices" defaultOpen={mediaData.audios.length > 0}>
         <div className="px-2 pb-2 flex flex-col gap-2">
           {mediaData.audios.slice(0, 3).map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-3 bg-[#232526] hover:bg-[#282A2D] rounded-lg px-3 py-2"
+              className="flex items-center gap-3 bg-[#232526] hover:bg-[#282A2D] rounded-lg px-3 py-2 group cursor-pointer"
+              onClick={() => handleVoiceClick(item)}
             >
               <Music className="w-7 h-7 text-green-400" />
               <div className="flex-1 min-w-0">
@@ -310,14 +400,37 @@ const MediaPanel = () => {
                   {dayjs(item.createdAt).format("DD/MM/YYYY")}
                 </div>
               </div>
+              {/* Action icons on hover */}
+              <div
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ActionIcons
+                  onDownload={() => window.open(item.fileUrl, "_blank")}
+                  onShare={() => {}}
+                  onMore={() => {}}
+                  showDownload={true}
+                  isSender={item.authorId === currentUser?.id}
+                  onViewOriginalMessage={() => {}}
+                  onDeleteForMe={() => console.log("Delete for me:", item.id)}
+                  onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
+                  messageId={item.id}
+                />
+              </div>
             </div>
           ))}
           {mediaData.audios.length === 0 && (
-            <div className="text-center text-gray-400 py-4">Chưa có tin nhắn thoại</div>
+            <div className="text-center text-gray-400 py-4">Chưa có tin nhắn voice</div>
           )}
         </div>
-        {mediaData.audios.length > 3 && (
-          <button className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg">
+        {mediaData.audios.length > 0 && (
+          <button
+            className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
+            onClick={() => {
+              setArchiveTab("voices")
+              setShowArchive(true)
+            }}
+          >
             Xem tất cả ({mediaData.audios.length})
           </button>
         )}
@@ -329,7 +442,7 @@ const MediaPanel = () => {
           {mediaData.links.slice(0, 3).map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-3 bg-[#232526] hover:bg-[#282A2D] rounded-lg px-3 py-2"
+              className="flex items-center gap-3 bg-[#232526] hover:bg-[#282A2D] rounded-lg px-3 py-2 group"
             >
               <LinkIcon className="w-6 h-6 text-blue-400" />
               <div className="flex-1 min-w-0">
@@ -338,14 +451,33 @@ const MediaPanel = () => {
                   {dayjs(item.createdAt).format("DD/MM/YYYY")}
                 </div>
               </div>
+              {/* Action icons on hover, no download */}
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <ActionIcons
+                  showDownload={false}
+                  onShare={() => {}}
+                  onMore={() => {}}
+                  isSender={item.authorId === currentUser?.id}
+                  onViewOriginalMessage={() => {}}
+                  onDeleteForMe={() => console.log("Delete for me:", item.id)}
+                  onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
+                  messageId={item.id}
+                />
+              </div>
             </div>
           ))}
           {mediaData.links.length === 0 && (
             <div className="text-center text-gray-400 py-4">Chưa có link nào</div>
           )}
         </div>
-        {mediaData.links.length > 3 && (
-          <button className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg">
+        {mediaData.links.length > 0 && (
+          <button
+            className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
+            onClick={() => {
+              setArchiveTab("links")
+              setShowArchive(true)
+            }}
+          >
             Xem tất cả ({mediaData.links.length})
           </button>
         )}

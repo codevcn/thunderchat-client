@@ -25,7 +25,7 @@ import { expressionService } from "@/services/expression.service"
 import Image from "next/image"
 import { chattingService } from "@/services/chatting.service"
 import { CustomTooltip } from "@/components/materials"
-import VoiceMessage from "../(voice-chat)/VoiceMessage"
+import { useScrollToMessage } from "@/hooks/use-scroll-to-message-media"
 
 const SCROLL_ON_MESSAGES_THRESHOLD: number = 100
 const SHOW_SCROLL_BTN_THRESHOLD: number = 250
@@ -139,6 +139,16 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
   const tempFlagUseEffectRef = useRef<boolean>(true)
   const messagesPreCount = useRef<number>(0) // Biến để lưu số lượng tin nhắn trước đó trong danh sách
   const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadOffsetTop: -1 }) // Biến để lưu thông tin về tin nhắn chưa đọc
+
+  // Sử dụng custom hook cho scroll to message (thêm tính năng mới)
+  const { handleScrollToMessage: handleScrollToMessageFromHook } = useScrollToMessage({
+    directChatId,
+    messages: messages || [],
+    hasMoreMessages,
+    msgOffset,
+    setLoading,
+    messagesContainer,
+  })
 
   // Xử lý cuộn xuống dưới khi nhấn nút
   const scrollToBottomMessage = () => {
@@ -397,12 +407,17 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
     }
     messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
     eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
+    const onScrollToMessageMedia = async (messageId: number) => {
+      await handleScrollToMessageFromHook(messageId)
+    }
+    eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, onScrollToMessageMedia)
     clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
     clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
     clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
     return () => {
       messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
+      eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, onScrollToMessageMedia)
       clientSocket.socket.removeListener(
         ESocketEvents.recovered_connection,
         handleRecoverdConnection
@@ -410,7 +425,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
       clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)
       clientSocket.socket.removeListener(ESocketEvents.message_seen_direct, handleMessageSeen)
     }
-  }, [])
+  }, [handleScrollToMessageFromHook])
 
   return (
     <>

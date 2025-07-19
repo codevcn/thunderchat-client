@@ -189,7 +189,7 @@ export const Message = ({ message, user, stickyTime }: TMessageProps) => {
 
       <div className="w-full text-regular-white-cl">
         {user.id === authorId ? (
-          <div className={`QUERY-user-message-${id} flex justify-end w-full`}>
+          <div className={`QUERY-user-message-${id} flex justify-end w-full`} data-msg-id={id}>
             <div
               className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "bg-regular-violet-cl"} max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
             >

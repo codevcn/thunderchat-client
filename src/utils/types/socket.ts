@@ -19,6 +19,7 @@ export type TChattingPayload = {
     mediaUrl?: string
     fileName?: string
     fileType?: string
+    replyToId?: number
   }
 }
 

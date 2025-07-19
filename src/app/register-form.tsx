@@ -32,21 +32,14 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
   const validateForm = (data: TFormFields): boolean => {
     let isValid = true
     const { birthday, fullName, password, confirmPassword } = data
-    if (!birthday) {
+    if (checkkIfUnder18(birthday)) {
       setErrors((pre) => ({
         ...pre,
-        birthday: { message: "Please select a date" },
+        birthday: { message: "You must be at least 18 years old" },
       }))
       isValid = false
     } else {
-      const isUnder18 = checkkIfUnder18(birthday)
-      if (isUnder18) {
-        setErrors((pre) => ({
-          ...pre,
-          birthday: { message: "You must be at least 18 years old" },
-        }))
-        isValid = false
-      }
+      setErrors((pre) => ({ ...pre, birthday: undefined }))
     }
     if (!fullName) {
       setErrors((pre) => ({
@@ -54,13 +47,8 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
         fullName: { message: "Please enter your full name" },
       }))
       isValid = false
-    }
-    if (!password) {
-      setErrors((pre) => ({
-        ...pre,
-        password: { message: "Please enter your password" },
-      }))
-      isValid = false
+    } else {
+      setErrors((pre) => ({ ...pre, fullName: undefined }))
     }
     if (password && !PASSWORD_REGEX.test(password)) {
       setErrors((pre) => ({
@@ -71,6 +59,11 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
         },
       }))
       isValid = false
+    } else {
+      setErrors((pre) => ({
+        ...pre,
+        password: undefined,
+      }))
     }
     if (!confirmPassword || (password && password !== confirmPassword)) {
       setErrors((pre) => ({
@@ -78,6 +71,8 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
         confirmPassword: { message: "Passwords do not match" },
       }))
       isValid = false
+    } else {
+      setErrors((pre) => ({ ...pre, confirmPassword: undefined }))
     }
     return isValid
   }

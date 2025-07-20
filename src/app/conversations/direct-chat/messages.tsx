@@ -425,7 +425,7 @@ export const Messages = memo(({ directChat }: TMessagesProps) => {
       clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)
       clientSocket.socket.removeListener(ESocketEvents.message_seen_direct, handleMessageSeen)
     }
-  }, [handleScrollToMessageFromHook])
+  }, [])
 
   return (
     <>

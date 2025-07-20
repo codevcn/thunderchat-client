@@ -21,7 +21,13 @@ export const conversationsSlice = createSlice({
       state.infoBarIsOpened = action.payload
     },
     addConversations: (state, action: PayloadAction<TConversationCard[]>) => {
+      state.conversations = action.payload
+    },
+    appendConversations: (state, action: PayloadAction<TConversationCard[]>) => {
       state.conversations = [...(state.conversations || []), ...action.payload]
+    },
+    clearConversations: (state) => {
+      state.conversations = null
     },
     updateSingleConversation: (
       state,
@@ -41,5 +47,10 @@ export const conversationsSlice = createSlice({
   },
 })
 
-export const { openInfoBar, addConversations, updateSingleConversation } =
-  conversationsSlice.actions
+export const {
+  openInfoBar,
+  addConversations,
+  appendConversations,
+  clearConversations,
+  updateSingleConversation,
+} = conversationsSlice.actions

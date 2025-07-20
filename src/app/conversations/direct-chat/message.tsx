@@ -16,11 +16,14 @@ import {
   FileVideo,
   Paperclip,
   Mic,
+  Pin,
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
 import VoiceMessage from "../(voice-chat)/VoiceMessage"
 import { useState } from "react"
+import { pinService } from "@/services/pin.service"
+import { toast } from "sonner"
 
 type TContentProps = {
   content: string
@@ -472,6 +475,9 @@ type TMessageProps = {
   user: TUserWithoutPassword
   stickyTime: string | null
   onReply: (msg: TStateDirectMessage) => void
+  isPinned: boolean
+  onPinChange: (newState: boolean) => void
+  pinnedCount: number
 }
 
 const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
@@ -533,7 +539,15 @@ const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
   return <></>
 }
 
-export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) => {
+export const Message = ({
+  message,
+  user,
+  stickyTime,
+  onReply,
+  isPinned,
+  onPinChange,
+  pinnedCount,
+}: TMessageProps) => {
   const {
     authorId,
     content,
@@ -551,6 +565,37 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
   } = message
 
   const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
+
+  // Giả lập trạng thái đã ghim, sau này sẽ lấy từ props hoặc state
+  const [loadingPin, setLoadingPin] = useState(false)
+
+  const handlePinClick = async () => {
+    if (loadingPin) return
+    setLoadingPin(true)
+    try {
+      const response = await pinService.togglePinMessage(
+        message.id,
+        message.directChatId,
+        !isPinned
+      )
+
+      // Xử lý response dựa trên loại response
+      if ("success" in response) {
+        // Bỏ ghim thành công
+        onPinChange(false)
+        toast.success("Đã bỏ ghim tin nhắn")
+      } else {
+        // Ghim thành công
+        onPinChange(true)
+        toast.success("Đã ghim tin nhắn")
+      }
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"
+      toast.error(errorMessage)
+    } finally {
+      setLoadingPin(false)
+    }
+  }
 
   return (
     <>
@@ -572,6 +617,28 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
                   }}
                 >
                   <Quote size={14} />
+                </button>
+                <button
+                  className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                  title={
+                    isPinned
+                      ? "Bỏ ghim tin nhắn"
+                      : pinnedCount >= 5
+                        ? "Đã đạt giới hạn 5 tin nhắn ghim"
+                        : "Ghim tin nhắn"
+                  }
+                  onClick={() => {
+                    if (!isPinned && pinnedCount >= 5) {
+                      toast.error(
+                        "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                      )
+                      return
+                    }
+                    handlePinClick()
+                  }}
+                  disabled={loadingPin}
+                >
+                  <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
                 </button>
               </div>
 
@@ -618,7 +685,7 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
             data-msg-id={id}
           >
             <div
-              className={`${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
+              className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
             >
               <div className="group-hover:flex hidden items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]">
                 <button
@@ -629,6 +696,28 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
                   }}
                 >
                   <Quote size={14} />
+                </button>
+                <button
+                  className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                  title={
+                    isPinned
+                      ? "Bỏ ghim tin nhắn"
+                      : pinnedCount >= 5
+                        ? "Đã đạt giới hạn 5 tin nhắn ghim"
+                        : "Ghim tin nhắn"
+                  }
+                  onClick={() => {
+                    if (!isPinned && pinnedCount >= 5) {
+                      toast.error(
+                        "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                      )
+                      return
+                    }
+                    handlePinClick()
+                  }}
+                  disabled={loadingPin}
+                >
+                  <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
                 </button>
               </div>
 

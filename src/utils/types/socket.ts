@@ -1,6 +1,7 @@
 import type { HttpStatusCode } from "axios"
 import type { EMessageStatus } from "../socket/enums"
 import type { EFriendRequestStatus, EMessageTypes } from "@/utils/enums"
+import type { TStateDirectMessage } from "../types/global"
 
 export type TWsErrorResponse = {
   isError: boolean
@@ -41,4 +42,18 @@ export type TTypingEmitPayload = {
 export type TFriendRequestPayload = {
   requestId: number
   action: EFriendRequestStatus
+}
+
+export type TPinMessageEventData = {
+  messageId: number
+  directChatId: number
+  isPinned: boolean
+  userId: any
+}
+
+export type TPinDirectChatEventData = {
+  directChatId: number
+  isPinned: boolean
+  userId: number
+  pinnedBy: number
 }

@@ -1,13 +1,12 @@
 "use client"
 
-// >>> fix this: remove
 import { dev_test_values } from "../../../../temp/test"
 
 import { CustomAvatar, CustomTooltip } from "@/components/materials"
 import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { Search, Phone, MoreVertical } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
@@ -22,6 +21,8 @@ import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.con
 import { useAudioMessages } from "@/hooks/audio-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TPinMessageEventData } from "@/utils/types/socket"
+import { pinService } from "@/services/pin.service"
 
 const TypingIndicator = () => {
   return (
@@ -128,6 +129,88 @@ const Main = ({ directChat }: TMainProps) => {
   const dispatch = useAppDispatch()
   const { showPlayer } = useVoicePlayer()
   const [replyMessage, setReplyMessage] = useState<TStateDirectMessage | null>(null)
+  // Thêm state quản lý pinned
+  const [showPinnedModal, setShowPinnedModal] = useState(false)
+  const [pinnedMessages, setPinnedMessages] = useState<TStateDirectMessage[]>([])
+
+  // Ref để luôn lấy directChat.id mới nhất trong handler
+  const directChatIdRef = useRef<number | undefined>(directChat?.id)
+  const fetchPinnedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    directChatIdRef.current = directChat?.id
+  }, [directChat?.id])
+
+  // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
+  useEffect(() => {
+    // Remove toàn bộ listener cũ trước khi đăng ký mới
+    clientSocket.socket.off(ESocketEvents.pin_message)
+    const handlePinMessage = (data: TPinMessageEventData) => {
+      const currentChatId = directChatIdRef.current
+
+      // Kiểm tra xem event có thuộc về chat hiện tại không
+      if (data.directChatId === currentChatId) {
+        // Clear timeout cũ nếu có
+        if (fetchPinnedTimeoutRef.current) {
+          clearTimeout(fetchPinnedTimeoutRef.current)
+        }
+
+        // Debounce fetch để tránh fetch quá nhiều lần
+        fetchPinnedTimeoutRef.current = setTimeout(() => {
+          pinService
+            .getPinnedMessages(data.directChatId)
+            .then((convertedMessages) => {
+              setPinnedMessages(convertedMessages)
+            })
+            .catch(() => {
+              setPinnedMessages([])
+            })
+        }, 500) // Delay 500ms
+      }
+    }
+    clientSocket.socket.on(ESocketEvents.pin_message, handlePinMessage)
+    return () => {
+      clientSocket.socket.off(ESocketEvents.pin_message, handlePinMessage)
+      // Cleanup timeout
+      if (fetchPinnedTimeoutRef.current) {
+        clearTimeout(fetchPinnedTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Fetch pinned messages ban đầu khi vào phòng chat
+  useEffect(() => {
+    if (directChat?.id) {
+      pinService
+        .getPinnedMessages(directChat.id)
+        .then((convertedMessages) => {
+          setPinnedMessages(convertedMessages)
+        })
+        .catch(() => setPinnedMessages([]))
+    }
+  }, [directChat?.id])
+
+  // Đảm bảo client join room mỗi khi vào hoặc chuyển phòng chat, và join lại khi reconnect
+  useEffect(() => {
+    if (!directChat?.id) return
+    const room = `direct_chat_${directChat.id}`
+    const joinRoom = () => {
+      clientSocket.socket.emit("join_room" as any, { room })
+    }
+    joinRoom()
+    // Join lại khi socket reconnect
+    clientSocket.socket.on("connect", joinRoom)
+    const handleJoinedRoom = (joinedRoom: string) => {
+      // Room joined successfully
+    }
+    clientSocket.socket.on("joined_room" as any, handleJoinedRoom)
+    return () => {
+      clientSocket.socket.off("connect", joinRoom)
+      clientSocket.socket.off("joined_room" as any, handleJoinedRoom)
+      // Rời room khi chuyển phòng chat
+      clientSocket.socket.emit("leave_room" as any, { room })
+    }
+  }, [directChat?.id])
 
   // Add logging for setReplyMessage
   const handleSetReplyMessage = (msg: TStateDirectMessage | null) => {
@@ -154,6 +237,25 @@ const Main = ({ directChat }: TMainProps) => {
           friendInfo={friendInfo}
         />
 
+        {/* Box pinned messages ngay dưới header */}
+        {pinnedMessages.length > 0 && (
+          <div className="w-full px-6 mt-1">
+            <button
+              className="flex items-center justify-between px-4 py-2 rounded bg-regular-dark-gray-cl hover:bg-gray-800 text-white font-semibold text-sm shadow-sm border border-gray-700 transition-colors"
+              onClick={() => setShowPinnedModal(true)}
+              style={{ width: "70%" }}
+            >
+              <div className="flex items-center gap-2">
+                <span>📌</span>
+                <span>Đã ghim</span>
+              </div>
+              <span className="bg-gray-700 text-white rounded-full px-2 text-xs font-bold">
+                {pinnedMessages.length}
+              </span>
+            </button>
+          </div>
+        )}
+
         {/* Voice Player floating layer */}
         {showPlayer && (
           <div
@@ -169,13 +271,25 @@ const Main = ({ directChat }: TMainProps) => {
         <div
           className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
         >
-          <Messages directChat={directChat} onReply={handleSetReplyMessage} />
-
-          <TypeMessageBar
-            directChat={directChat}
-            replyMessage={replyMessage}
-            setReplyMessage={handleSetReplyMessage}
-          />
+          <div className="flex flex-col flex-1 w-full justify-between h-0">
+            <div className="flex-1 w-full overflow-y-auto">
+              <Messages
+                directChat={directChat}
+                onReply={handleSetReplyMessage}
+                pinnedMessages={pinnedMessages}
+                setPinnedMessages={setPinnedMessages}
+                showPinnedModal={showPinnedModal}
+                setShowPinnedModal={setShowPinnedModal}
+              />
+            </div>
+            <div className="w-full flex justify-center">
+              <TypeMessageBar
+                directChat={directChat}
+                replyMessage={replyMessage}
+                setReplyMessage={handleSetReplyMessage}
+              />
+            </div>
+          </div>
         </div>
       </div>
       <InfoBar friendInfo={friendInfo} />

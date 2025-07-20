@@ -131,21 +131,30 @@ export const useScrollToMessage = ({
       }
 
       if (messageElement) {
-        // Tính toán vị trí đích
-        const containerHeight = msgsContainerEle.clientHeight
-        const messageTop = messageElement.offsetTop
-        const messageHeight = messageElement.offsetHeight
-        const targetScrollTop = messageTop - containerHeight / 2 + messageHeight / 2
+        // Kiểm tra xem tin nhắn đã có trong viewport hay chưa
+        const containerRect = msgsContainerEle.getBoundingClientRect()
+        const messageRect = messageElement.getBoundingClientRect()
 
-        // Vị trí hiện tại
-        const startScrollTop = msgsContainerEle.scrollTop
-        const distance = targetScrollTop - startScrollTop
+        // Tính toán vị trí tương đối của tin nhắn trong container
+        const messageTopInContainer = messageRect.top - containerRect.top
+        const messageBottomInContainer = messageRect.bottom - containerRect.top
+        const containerHeight = containerRect.height
 
-        // Nếu khoảng cách quá nhỏ, không cần cuộn
-        if (Math.abs(distance) < 10) {
+        // Kiểm tra xem tin nhắn có nằm trong viewport không (với margin 50px)
+        const isInViewport =
+          messageTopInContainer >= -50 && messageBottomInContainer <= containerHeight + 50
+
+        if (isInViewport) {
+          // Tin nhắn đã trong viewport, chỉ highlight
           highlightMessageMedia(messageElement)
           return
         }
+
+        // Tính toán khoảng cách cần cuộn
+        const targetScrollTop =
+          messageElement.offsetTop - containerHeight / 2 + messageElement.offsetHeight / 2
+        const startScrollTop = msgsContainerEle.scrollTop
+        const distance = targetScrollTop - startScrollTop
 
         // Nếu khoảng cách lớn (>500px), cuộn nhanh trước, sau đó mượt
         if (Math.abs(distance) > 500) {
@@ -157,26 +166,22 @@ export const useScrollToMessage = ({
 
           // Đợi render xong, sau đó cuộn mượt đến vị trí chính xác
           requestAnimationFrame(() => {
-            const remainingDistance = targetScrollTop - msgsContainerEle.scrollTop
-
-            if (Math.abs(remainingDistance) > 10) {
-              msgsContainerEle.scrollTo({
-                top: targetScrollTop,
-                behavior: "smooth",
-              })
-            }
-
+            messageElement.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+              inline: "nearest",
+            })
             // Highlight sau khi hoàn thành
             setTimeout(() => highlightMessageMedia(messageElement), 300)
           })
-
           return
         }
 
         // Khoảng cách vừa phải, cuộn mượt trực tiếp
-        msgsContainerEle.scrollTo({
-          top: targetScrollTop,
+        messageElement.scrollIntoView({
           behavior: "smooth",
+          block: "center",
+          inline: "nearest",
         })
 
         // Highlight sau khi hoàn thành

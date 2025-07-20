@@ -46,7 +46,7 @@ export const DatePicker = ({
           name={inputName}
           className={inputClassName}
           id={inputId}
-          value={date ? dayjs(date).format("DD/MM/YYYY") : ""}
+          value={date ? dayjs(date).format("YYYY-MM-DD") : ""}
           readOnly
           hidden
         />

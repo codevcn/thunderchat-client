@@ -1,8 +1,13 @@
 import type { AxiosError, HttpStatusCode } from "axios"
-import type { TDirectMessage, TDirectChat, TGroupMessage } from "@/utils/types/be-api"
-import { EMessageTypes } from "../enums"
+import type {
+  TDirectMessage,
+  TDirectChat,
+  TGroupMessage,
+  TDirectMessageWithAuthorAndReplyTo,
+} from "@/utils/types/be-api"
+import type { EMessageTypes } from "../enums"
 
-export type TStateDirectMessage = TDirectMessage & {
+export type TStateDirectMessage = TDirectMessageWithAuthorAndReplyTo & {
   isNewMsg?: boolean
 }
 

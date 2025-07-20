@@ -21,6 +21,7 @@ import { VoiceMessagePlayer } from "../(voice-chat)/VoiceMessagePlayerProps"
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
 import { useAudioMessages } from "@/hooks/audio-messages"
 import { useUser } from "@/hooks/user"
+import type { TStateDirectMessage } from "@/utils/types/global"
 
 const TypingIndicator = () => {
   return (
@@ -126,6 +127,16 @@ const Main = ({ directChat }: TMainProps) => {
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
   const { showPlayer } = useVoicePlayer()
+  const [replyMessage, setReplyMessage] = useState<TStateDirectMessage | null>(null)
+
+  // Add logging for setReplyMessage
+  const handleSetReplyMessage = (msg: TStateDirectMessage | null) => {
+    setReplyMessage(msg)
+  }
+
+  const handleOpenInfoBar = (open: boolean) => {
+    dispatch(openInfoBar(open))
+  }
 
   // Hook để quản lý danh sách audio messages
   const { loading: audioLoading } = useAudioMessages()
@@ -134,16 +145,12 @@ const Main = ({ directChat }: TMainProps) => {
     return user.id === Creator.id ? Recipient : Creator
   }, [Recipient, Creator])
 
-  const hanldeOpenInfoBar = async (open: boolean) => {
-    dispatch(openInfoBar(open))
-  }
-
   return (
     <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative">
       <div className="flex flex-col items-center w-full box-border h-screen bg-no-repeat bg-transparent bg-cover bg-center relative">
         <Header
           infoBarIsOpened={infoBarIsOpened}
-          onOpenInfoBar={hanldeOpenInfoBar}
+          onOpenInfoBar={handleOpenInfoBar}
           friendInfo={friendInfo}
         />
 
@@ -162,9 +169,13 @@ const Main = ({ directChat }: TMainProps) => {
             </div>
           )}
 
-          <Messages directChat={directChat} />
+          <Messages directChat={directChat} onReply={handleSetReplyMessage} />
 
-          <TypeMessageBar directChat={directChat} />
+          <TypeMessageBar
+            directChat={directChat}
+            replyMessage={replyMessage}
+            setReplyMessage={handleSetReplyMessage}
+          />
         </div>
       </div>
       <InfoBar friendInfo={friendInfo} />

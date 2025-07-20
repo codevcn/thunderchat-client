@@ -101,3 +101,7 @@ export type TPlacement = "top" | "right" | "bottom" | "left"
 export type TAlign = "center" | "start" | "end"
 
 export type TChatType = "direct" | "group"
+
+export type TRemoveGroupChatMemberState = {
+  memberId: number
+}

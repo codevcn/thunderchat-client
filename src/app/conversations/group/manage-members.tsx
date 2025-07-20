@@ -1,7 +1,8 @@
-import { CustomPopover, IconButton, Skeleton } from "@/components/materials"
+import { CustomDialog, CustomPopover, IconButton, Skeleton } from "@/components/materials"
 import { CustomAvatar } from "@/components/materials"
 import { useDebounce } from "@/hooks/debounce"
-import { useAppSelector } from "@/hooks/redux"
+import { removeGroupChatMember } from "@/redux/messages/messages.slice"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { groupMemberService } from "@/services/group-member.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
@@ -10,18 +11,59 @@ import { toaster } from "@/utils/toaster"
 import type { TGroupChatMemberWithUser } from "@/utils/types/be-api"
 import { ArrowLeft, UserX } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { useUser } from "@/hooks/user"
 
 type TManageMembersPopoverProps = {
-  open: boolean
-  trigger: React.ReactNode
-  onOpenChange: (open: boolean) => void
+  member: TGroupChatMemberWithUser
+  onOpenChange: (memberId: number, open: boolean) => void
+  onRemoveMember: (member: TGroupChatMemberWithUser) => void
+  activePopover?: number
 }
 
-const ManageMembersPopover = ({ trigger, onOpenChange }: TManageMembersPopoverProps) => {
+const ManageMemberPopover = ({
+  member,
+  onOpenChange,
+  onRemoveMember,
+  activePopover,
+}: TManageMembersPopoverProps) => {
+  const {
+    User: { Profile, id },
+  } = member
   return (
-    <CustomPopover trigger={trigger} onOpenChange={onOpenChange}>
+    <CustomPopover
+      trigger={
+        <div
+          onClick={() => onOpenChange(id, true)}
+          className={`${activePopover === id ? "bg-purple-200 hover:!bg-purple-200" : ""} flex items-center gap-2 hover:bg-regular-hover-card-cl w-full cursor-pointer rounded-md p-2`}
+        >
+          <CustomAvatar
+            imgSize={48}
+            src={Profile.avatar}
+            alt="User Avatar"
+            fallback={Profile.fullName[0]}
+            className="text-lg font-bold bg-regular-violet-cl"
+          />
+
+          <div
+            className={`${activePopover === id ? "text-black" : "text-white"} min-w-0 space-y-1`}
+          >
+            <h3 title={Profile.fullName} className="font-medium text-base truncate">
+              {Profile.fullName}
+            </h3>
+            <p className={`${activePopover === id ? "text-black" : "text-gray-400"} text-[13px]`}>
+              Last seen Jan 20, 2025 at 16:23
+            </p>
+          </div>
+        </div>
+      }
+      onOpenChange={(open) => onOpenChange(id, open)}
+      open={activePopover === id}
+    >
       <div className="bg-black py-2 rounded-lg text-white border border-white/30">
-        <button className="flex items-center gap-2 py-2 px-6 text-regular-red-cl font-bold hover:bg-regular-hover-card-cl">
+        <button
+          onClick={() => onRemoveMember(member)}
+          className="flex items-center gap-2 py-2 px-6 text-regular-red-cl font-bold hover:bg-regular-hover-card-cl"
+        >
           <UserX size={20} strokeWidth={3} />
           <span>Remove</span>
         </button>
@@ -40,6 +82,9 @@ export const ManageMembers = () => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [activePopover, setActivePopover] = useState<number>()
+  const [selectedMember, setSelectedMember] = useState<TGroupChatMemberWithUser>()
+  const dispatch = useAppDispatch()
+  const user = useUser()!
 
   const openManageMembers = () => {
     setOpen(true)
@@ -72,11 +117,38 @@ export const ManageMembers = () => {
     }
   }, 300)
 
-  const handleChangeOpenPopover = (id: number, open: boolean) => {
-    if (open) {
-      setActivePopover(id)
+  const handleChangeOpenPopover = (memberId: number, open: boolean) => {
+    if (open && user.id !== memberId) {
+      setActivePopover(memberId)
     } else {
       setActivePopover(undefined)
+    }
+  }
+
+  const handleShowRemoveMemberDialog = (member: TGroupChatMemberWithUser) => {
+    setSelectedMember(member)
+    setOpen(true)
+  }
+
+  const handleRemoveMember = () => {
+    if (!groupChat || !selectedMember) return
+
+    const memberId = selectedMember.User.id
+    groupMemberService
+      .removeGroupChatMember(groupChat.id, memberId)
+      .then(() => {
+        toaster.success("Member removed successfully")
+        dispatch(removeGroupChatMember({ memberId }))
+        handleHideRemoveMemberDialog(false)
+      })
+      .catch((err) => {
+        toaster.error(axiosErrorHandler.handleHttpError(err).message)
+      })
+  }
+
+  const handleHideRemoveMemberDialog = (show: boolean) => {
+    if (!show) {
+      setSelectedMember(undefined)
     }
   }
 
@@ -127,43 +199,43 @@ export const ManageMembers = () => {
               ))}
             </div>
           ) : (
-            searchResults.map(({ User: { Profile }, id }) => (
-              <ManageMembersPopover
-                key={id}
-                open={activePopover === id}
-                onOpenChange={(open) => handleChangeOpenPopover(id, open)}
-                trigger={
-                  <div
-                    onClick={() => handleChangeOpenPopover(id, true)}
-                    className={`${activePopover === id ? "bg-purple-200 hover:bg-purple-200" : ""} flex items-center gap-2 hover:bg-regular-hover-card-cl w-full cursor-pointer rounded-md p-2`}
-                  >
-                    <CustomAvatar
-                      imgSize={48}
-                      src={Profile.avatar}
-                      alt="User Avatar"
-                      fallback={Profile.fullName[0]}
-                      className="text-lg font-bold bg-regular-violet-cl"
-                    />
-
-                    <div
-                      className={`${activePopover === id ? "text-black" : "text-white"} min-w-0 space-y-1`}
-                    >
-                      <h3 title={Profile.fullName} className="font-medium text-base truncate">
-                        {Profile.fullName}
-                      </h3>
-                      <p
-                        className={`${activePopover === id ? "text-black" : "text-gray-400"} text-[13px]`}
-                      >
-                        Last seen Jan 20, 2025 at 16:23
-                      </p>
-                    </div>
-                  </div>
-                }
+            searchResults.map((member) => (
+              <ManageMemberPopover
+                key={member.id}
+                onOpenChange={handleChangeOpenPopover}
+                onRemoveMember={handleShowRemoveMemberDialog}
+                member={member}
+                activePopover={activePopover}
               />
             ))
           )}
         </div>
       </div>
+
+      <CustomDialog
+        open={!!selectedMember}
+        onHideShow={handleHideRemoveMemberDialog}
+        dialogBody={
+          <div className="flex flex-col gap-2">
+            <p className="my-4">
+              <span>Are you sure you want to remove </span>
+              <span className="font-bold">{selectedMember?.User.Profile.fullName}</span>
+              <span> from the group?</span>
+            </p>
+          </div>
+        }
+        dialogHeader={{
+          title: "Remove Member",
+        }}
+        confirmElement={
+          <button
+            className="bg-regular-red-cl border-regular-red-cl hover:text-regular-red-cl flex gap-1 items-center w-fit border-2 text-sm border-gray-500 border-solid px-5 py-1 rounded-[5px] text-regular-white-cl hover:bg-regular-icon-btn-cl"
+            onClick={handleRemoveMember}
+          >
+            <span>Remove</span>
+          </button>
+        }
+      />
     </div>
   )
 }

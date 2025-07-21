@@ -547,7 +547,8 @@ export const Message = ({
   isPinned,
   onPinChange,
   pinnedCount,
-}: TMessageProps) => {
+  onReplyPreviewClick, // <-- thêm prop này
+}: TMessageProps & { onReplyPreviewClick?: (replyToId: number) => void }) => {
   const {
     authorId,
     content,
@@ -597,6 +598,40 @@ export const Message = ({
     }
   }
 
+  // Hiển thị thông báo đặc biệt cho PIN_NOTICE
+  if (type === "PIN_NOTICE") {
+    const isUnpin = content?.toLowerCase().includes("bỏ ghim")
+    return (
+      <div className="w-full flex justify-center my-2">
+        <div className="flex items-center gap-2 bg-[#232323] border border-[#333] text-white px-4 py-2 rounded-full text-sm font-medium shadow">
+          <span className="relative inline-block w-4 h-4">
+            {isUnpin ? (
+              <Pin className="w-4 h-4 text-gray-400 opacity-70 rotate-[45deg]" />
+            ) : (
+              <Pin className="w-4 h-4" />
+            )}
+          </span>
+          <span>{content}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Hàm scroll tới message theo id và highlight
+  const scrollToMessage = (msgId: string) => {
+    const el = document.querySelector(`.QUERY-message-container-${msgId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" })
+      const overlay = el.querySelector(".QUERY-message-container-overlay")
+      if (overlay) {
+        overlay.classList.add("!opacity-100")
+        setTimeout(() => {
+          overlay.classList.remove("!opacity-100")
+        }, 1200)
+      }
+    }
+  }
+
   return (
     <>
       {stickyTime && <StickyTime stickyTime={stickyTime} />}
@@ -613,7 +648,10 @@ export const Message = ({
                   className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                   title="Reply to this message"
                   onClick={() => {
-                    onReply(message)
+                    if (message && message.type !== "PIN_NOTICE") {
+                      console.log("[DEBUG] Reply button clicked", message)
+                      onReply(message)
+                    }
                   }}
                 >
                   <Quote size={14} />
@@ -646,6 +684,11 @@ export const Message = ({
                 <div
                   data-reply-to-id={ReplyTo.id}
                   className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
+                  onClick={() => {
+                    if (ReplyTo) {
+                      if (onReplyPreviewClick) onReplyPreviewClick(ReplyTo.id)
+                    }
+                  }}
                 >
                   <div className="font-bold text-sm text-white truncate">
                     {ReplyTo.Author.Profile.fullName}
@@ -692,7 +735,10 @@ export const Message = ({
                   className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                   title="Reply to this message"
                   onClick={() => {
-                    onReply(message)
+                    if (message && message.type !== "PIN_NOTICE") {
+                      console.log("[DEBUG] Reply button clicked", message)
+                      onReply(message)
+                    }
                   }}
                 >
                   <Quote size={14} />
@@ -725,6 +771,11 @@ export const Message = ({
                 <div
                   data-reply-to-id={ReplyTo.id}
                   className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
+                  onClick={() =>
+                    onReplyPreviewClick
+                      ? onReplyPreviewClick(ReplyTo.id)
+                      : scrollToMessage(String(ReplyTo.id))
+                  }
                 >
                   <div className="font-bold text-sm text-white truncate">
                     {ReplyTo.Author.Profile.fullName}

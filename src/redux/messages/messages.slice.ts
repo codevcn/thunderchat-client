@@ -65,6 +65,15 @@ export const messagesSlice = createSlice({
         })
       }
     },
+    mergeMessages: (state, action: PayloadAction<TStateDirectMessage[]>) => {
+      const currentMessages = state.directMessages || []
+      const newMessages = action.payload
+      const ids = new Set(currentMessages.map((m) => m.id))
+      state.directMessages = [
+        ...currentMessages,
+        ...newMessages.filter((m) => !ids.has(m.id)),
+      ].sort((a, b) => a.id - b.id)
+    },
     updateGroupChat: (
       state,
       action: PayloadAction<TDeepPartial<THierarchyKeyObject<TGroupChatData>>>
@@ -121,4 +130,5 @@ export const messagesSlice = createSlice({
   },
 })
 
-export const { pushNewMessages, updateMessages, updateGroupChat } = messagesSlice.actions
+export const { pushNewMessages, updateMessages, updateGroupChat, mergeMessages } =
+  messagesSlice.actions

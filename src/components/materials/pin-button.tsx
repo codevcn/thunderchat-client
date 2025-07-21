@@ -36,9 +36,12 @@ export const PinButton: React.FC<PinButtonProps> = ({
       className={`transition-all duration-200 hover:scale-110 ${disabled || loading ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
     >
       {isPinned ? (
-        <Pin size={size} className="text-blue-500 fill-current" />
+        <Pin size={size} className="text-[var(--tdc-regular-violet-cl)] fill-current" />
       ) : (
-        <PinOff size={size} className="text-gray-400 hover:text-blue-500 transition-colors" />
+        <PinOff
+          size={size}
+          className="text-gray-400 hover:text-[var(--tdc-regular-violet-cl)] transition-colors"
+        />
       )}
     </div>
   )

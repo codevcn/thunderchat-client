@@ -14,7 +14,7 @@ import { EMessageTypes, EPaginations, ESortTypes } from "@/utils/enums"
 import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
 import { createPortal } from "react-dom"
 import { useUser } from "@/hooks/user"
-import { pushNewMessages, updateMessages } from "@/redux/messages/messages.slice"
+import { pushNewMessages, updateMessages, mergeMessages } from "@/redux/messages/messages.slice"
 import { displayMessageStickyTime } from "@/utils/date-time"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { EInternalEvents } from "@/utils/event-emitter/events"
@@ -33,6 +33,7 @@ import { CustomTooltip } from "@/components/materials"
 import { Pin } from "lucide-react"
 import { PinMessageModal } from "./pin-message"
 import { pinService } from "@/services/pin.service"
+import { directChatService } from "@/services/direct-chat.service"
 
 const SCROLL_ON_MESSAGES_THRESHOLD: number = 100
 const SHOW_SCROLL_BTN_THRESHOLD: number = 250
@@ -166,10 +167,22 @@ type TUnreadMessages = {
   firstUnreadOffsetTop: number
 }
 
+// Thêm hàm tìm đoạn id bị thiếu
+function findMissingRanges(ids: number[]): [number, number][] {
+  ids.sort((a, b) => a - b)
+  const missing: [number, number][] = []
+  for (let i = 1; i < ids.length; i++) {
+    if (ids[i] - ids[i - 1] > 1) {
+      missing.push([ids[i - 1] + 1, ids[i] - 1])
+    }
+  }
+  return missing
+}
+
 export const Messages = memo(
   ({
     directChat,
-    onReply,
+    onReply: onReplyFromProps,
     pinnedMessages,
     setPinnedMessages,
     showPinnedModal,
@@ -188,6 +201,8 @@ export const Messages = memo(
     const tempFlagUseEffectRef = useRef<boolean>(true)
     const messagesPreCount = useRef<number>(0) // Biến để lưu số lượng tin nhắn trước đó trong danh sách
     const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadOffsetTop: -1 }) // Biến để lưu thông tin về tin nhắn chưa đọc
+    const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
+
     // Xoá useState cho pinnedMessages, showPinnedModal
 
     // Xử lý cuộn xuống dưới khi nhấn nút
@@ -481,6 +496,27 @@ export const Messages = memo(
       setShowPinnedModal(false) // Đóng modal sau khi cuộn
     }
 
+    // Hàm xử lý khi click vào reply preview
+    const handleReplyPreviewClick = async (replyToId: number) => {
+      if (messages) {
+        const hasReplyTo = messages.some((m) => m.id === replyToId)
+        if (!hasReplyTo) {
+          try {
+            const contextMsgs = await directChatService.getMessageContext(replyToId)
+            dispatch(mergeMessages(contextMsgs))
+            setPendingFillContextId(replyToId)
+            setTimeout(() => {
+              scrollToMessage(replyToId)
+            }, 100)
+          } catch (err) {
+            toast.error("Không thể lấy ngữ cảnh tin nhắn gốc để reply")
+          }
+        } else {
+          scrollToMessage(replyToId)
+        }
+      }
+    }
+
     const handleUnpinMessage = async (msgId: number) => {
       try {
         const response = await pinService.togglePinMessage(msgId, directChat.id, false)
@@ -496,6 +532,108 @@ export const Messages = memo(
       }
     }
 
+    // Thêm hàm xử lý chọn tin nhắn ghim
+    const handleSelectPinnedMessage = async (messageId: number) => {
+      console.log("[DEBUG] Nhấn vào tin nhắn ghim, messageId:", messageId)
+      try {
+        const contextMsgs = await directChatService.getMessageContext(messageId)
+        console.log(
+          "[DEBUG] Kết quả trả về từ getMessageContext:",
+          contextMsgs.map((m: TStateDirectMessage) => m.id)
+        )
+        dispatch(mergeMessages(contextMsgs))
+        setPendingFillContextId(messageId) // Đánh dấu cần kiểm tra fill context
+        setTimeout(() => {
+          scrollToMessage(messageId)
+        }, 100)
+        setShowPinnedModal(false)
+      } catch (err) {
+        console.error("[DEBUG] Lỗi khi lấy context message:", err)
+        toast.error("Không thể lấy ngữ cảnh tin nhắn")
+      }
+    }
+
+    // Thay thế hàm fetchMissingMessages bằng phiên bản mới
+    const fetchMissingMessages = async (fromId: number, toId: number) => {
+      let offset = fromId - 1
+      let done = false
+      while (!done) {
+        console.log(`[DEBUG] Gọi fetchMissingMessages với offset: ${offset}, target đến: ${toId}`)
+        const newerMsgs = await directChatService.getNewerMessages(directChatId, offset)
+        if (!newerMsgs || newerMsgs.length === 0) {
+          console.log("[DEBUG] Không lấy được thêm tin nhắn nào, dừng lại.")
+          break
+        }
+        console.log(
+          "[DEBUG] Các id fetchMissingMessages trả về:",
+          newerMsgs.map((m: TStateDirectMessage) => m.id)
+        )
+        dispatch(mergeMessages(newerMsgs))
+        // Lấy id lớn nhất vừa nhận được
+        const maxId = Math.max(...newerMsgs.map((m: TStateDirectMessage) => m.id))
+        // Nếu đã vượt qua toId thì dừng
+        if (maxId >= toId) {
+          done = true
+        } else {
+          offset = maxId
+        }
+      }
+    }
+
+    // Ref cho message cuối cùng
+    const lastMsgRef = useRef<HTMLDivElement>(null)
+
+    // Hàm fetch messages mới hơn
+    const fetchMoreNewerMessages = async () => {
+      if (!messages || messages.length === 0) return
+      const lastMsg = messages[messages.length - 1]
+      console.log("[DEBUG] Gọi getNewerMessages với lastMsg.id:", lastMsg.id)
+      try {
+        const newerMsgs = await directChatService.getNewerMessages(directChatId, lastMsg.id)
+        if (newerMsgs && newerMsgs.length > 0) {
+          console.log(
+            "[DEBUG] Các id tin nhắn mới hơn trả về:",
+            newerMsgs.map((m: TStateDirectMessage) => m.id)
+          )
+          // Đảm bảo chỉ message cuối cùng có isLastMsgInList: true
+          const markLastMsg = (
+            msgs: TStateDirectMessage[]
+          ): (TStateDirectMessage & { isLastMsgInList?: boolean })[] =>
+            msgs.map((msg: TStateDirectMessage, idx: number) => ({
+              ...msg,
+              isLastMsgInList: idx === msgs.length - 1,
+            }))
+          dispatch(mergeMessages(markLastMsg(newerMsgs)))
+          setTimeout(() => {
+            // Log lại state directMessages sau khi merge
+            if (messages) {
+              console.log(
+                "[DEBUG] directMessages sau khi merge newerMsgs:",
+                messages.map((m: TStateDirectMessage) => m.id)
+              )
+            }
+          }, 200)
+        }
+      } catch (err) {
+        toast.error("Không thể lấy thêm tin nhắn mới hơn")
+      }
+    }
+
+    // IntersectionObserver cho message cuối cùng
+    useEffect(() => {
+      if (!lastMsgRef.current) return
+      const observer = new window.IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            fetchMoreNewerMessages()
+          }
+        },
+        { threshold: 1 }
+      )
+      observer.observe(lastMsgRef.current)
+      return () => observer.disconnect()
+    }, [messages])
+
     useEffect(() => {
       initMessageOffset()
       requestAnimationFrame(() => {
@@ -503,6 +641,15 @@ export const Messages = memo(
         checkUnreadMessage()
         updateMessagesCount()
       })
+      // Thêm log số lượng tin nhắn hiện tại
+      if (messages) {
+        console.log(`[DEBUG] Số lượng tin nhắn được load ra hiện tại: ${messages.length}`)
+      }
+      // Thêm log kiểm tra messages có type 'PIN_NOTICE' không
+      if (messages && messages.length > 0) {
+        const pinNoticeMsgs = messages.filter((msg) => msg.type === "PIN_NOTICE")
+        console.log("[DEBUG] Số lượng PIN_NOTICE:", pinNoticeMsgs.length, pinNoticeMsgs)
+      }
     }, [messages])
 
     useEffect(() => {
@@ -532,6 +679,45 @@ export const Messages = memo(
       }
     }, [])
 
+    useEffect(() => {
+      if (pendingFillContextId && messages) {
+        const allIds = messages.map((m: TStateDirectMessage) => m.id)
+        const missingRanges = findMissingRanges(allIds)
+        console.log("[DEBUG] (useEffect) Các đoạn id bị thiếu:", missingRanges)
+        missingRanges.forEach(([from, to]) => {
+          fetchMissingMessages(from, to)
+        })
+        setPendingFillContextId(null) // Reset sau khi fill
+      }
+    }, [messages, pendingFillContextId])
+
+    // Hàm xử lý reply: chỉ mở khung trả lời, không scroll
+    const handleReply = (msg: TStateDirectMessage) => {
+      onReplyFromProps(msg)
+    }
+
+    const mappedMessages = [...(messages || [])]
+      .sort((a, b) => a.id - b.id)
+      .map((message, index, arr) => {
+        const stickyTime = displayMessageStickyTime(message.createdAt, arr[index - 1]?.createdAt)
+        return (
+          <Message
+            message={message}
+            key={message.id}
+            user={user}
+            stickyTime={stickyTime}
+            onReply={handleReply}
+            isPinned={!!pinnedMessages.find((m) => m.id === message.id)}
+            onPinChange={(newState) => {
+              if (newState) setPinnedMessages([...pinnedMessages, message])
+              else setPinnedMessages(pinnedMessages.filter((m) => m.id !== message.id))
+            }}
+            pinnedCount={pinnedMessages.length}
+            onReplyPreviewClick={handleReplyPreviewClick} // <-- truyền prop này
+          />
+        )
+      })
+
     return (
       <div className="relative h-full flex flex-col">
         {/* Modal hiển thị danh sách tin nhắn đã ghim */}
@@ -539,7 +725,7 @@ export const Messages = memo(
           <PinMessageModal
             pinnedMessages={pinnedMessages}
             onClose={() => setShowPinnedModal(false)}
-            onSelectMessage={scrollToMessage}
+            onSelectMessage={handleSelectPinnedMessage}
             onUnpinMessage={handleUnpinMessage}
           />
         )}
@@ -553,34 +739,14 @@ export const Messages = memo(
               <div
                 id="STYLE-user-messages"
                 onClick={handleClickOnMessagesContainer}
-                className="flex flex-col justify-end items-center py-3 box-border w-messages-list gap-y-2"
+                className="flex flex-col justify-end py-3 box-border w-messages-list gap-y-2"
               >
                 {hasMoreMessages.current && loading === "loading-messages" && (
                   <div className="flex w-full justify-center">
                     <Spinner size="small" />
                   </div>
                 )}
-                {messages.map((msg) => (
-                  <Message
-                    key={msg.id}
-                    message={msg}
-                    user={user}
-                    stickyTime={displayMessageStickyTime(
-                      msg.createdAt,
-                      messages[messages.indexOf(msg) - 1]?.createdAt
-                    )}
-                    onReply={onReply}
-                    isPinned={!!pinnedMessages.find((m) => m.id === msg.id)}
-                    onPinChange={(newState) => {
-                      if (newState) {
-                        setPinnedMessages((prev) => [...prev, msg])
-                      } else {
-                        setPinnedMessages((prev) => prev.filter((m) => m.id !== msg.id))
-                      }
-                    }}
-                    pinnedCount={pinnedMessages.length}
-                  />
-                ))}
+                {mappedMessages}
               </div>
             ) : (
               <NoMessagesYet directChat={directChat} user={user} />

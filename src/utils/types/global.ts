@@ -9,6 +9,7 @@ import type { EMessageTypes } from "../enums"
 
 export type TStateDirectMessage = TDirectMessageWithAuthorAndReplyTo & {
   isNewMsg?: boolean
+  originMsgId?: number // id tin nhắn gốc nếu là PIN_NOTICE
 }
 
 export type TStateGroupMessage = TGroupMessage & {

@@ -239,11 +239,20 @@ const Main = ({ directChat }: TMainProps) => {
 
         {/* Box pinned messages ngay dưới header */}
         {pinnedMessages.length > 0 && (
-          <div className="w-full px-6 mt-1">
+          <div
+            className={`
+              w-full px-6 mt-1
+              ${
+                infoBarIsOpened
+                  ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container"
+                  : "translate-x-0 w-full"
+              }
+              transition duration-300 ease-slide-info-bar-timing
+            `}
+          >
             <button
-              className="flex items-center justify-between px-4 py-2 rounded bg-regular-dark-gray-cl hover:bg-gray-800 text-white font-semibold text-sm shadow-sm border border-gray-700 transition-colors"
+              className="flex items-center justify-between px-4 py-2 rounded bg-regular-dark-gray-cl hover:bg-gray-800 text-white font-semibold text-sm shadow-sm border border-gray-700 transition-colors w-full"
               onClick={() => setShowPinnedModal(true)}
-              style={{ width: "70%" }}
             >
               <div className="flex items-center gap-2">
                 <span>📌</span>

@@ -16,11 +16,14 @@ import {
   FileVideo,
   Paperclip,
   Mic,
+  Pin,
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
 import VoiceMessage from "../(voice-chat)/VoiceMessage"
 import { useState } from "react"
+import { pinService } from "@/services/pin.service"
+import { toast } from "sonner"
 
 type TContentProps = {
   content: string
@@ -472,6 +475,9 @@ type TMessageProps = {
   user: TUserWithoutPassword
   stickyTime: string | null
   onReply: (msg: TStateDirectMessage) => void
+  isPinned: boolean
+  onPinChange: (newState: boolean) => void
+  pinnedCount: number
 }
 
 const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
@@ -533,7 +539,16 @@ const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
   return <></>
 }
 
-export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) => {
+export const Message = ({
+  message,
+  user,
+  stickyTime,
+  onReply,
+  isPinned,
+  onPinChange,
+  pinnedCount,
+  onReplyPreviewClick, // <-- thêm prop này
+}: TMessageProps & { onReplyPreviewClick?: (replyToId: number) => void }) => {
   const {
     authorId,
     content,
@@ -552,6 +567,71 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
 
   const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
 
+  // Giả lập trạng thái đã ghim, sau này sẽ lấy từ props hoặc state
+  const [loadingPin, setLoadingPin] = useState(false)
+
+  const handlePinClick = async () => {
+    if (loadingPin) return
+    setLoadingPin(true)
+    try {
+      const response = await pinService.togglePinMessage(
+        message.id,
+        message.directChatId,
+        !isPinned
+      )
+
+      // Xử lý response dựa trên loại response
+      if ("success" in response) {
+        // Bỏ ghim thành công
+        onPinChange(false)
+        toast.success("Đã bỏ ghim tin nhắn")
+      } else {
+        // Ghim thành công
+        onPinChange(true)
+        toast.success("Đã ghim tin nhắn")
+      }
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"
+      toast.error(errorMessage)
+    } finally {
+      setLoadingPin(false)
+    }
+  }
+
+  // Hiển thị thông báo đặc biệt cho PIN_NOTICE
+  if (type === "PIN_NOTICE") {
+    const isUnpin = content?.toLowerCase().includes("bỏ ghim")
+    return (
+      <div className="w-full flex justify-center my-2">
+        <div className="flex items-center gap-2 bg-[#232323] border border-[#333] text-white px-4 py-2 rounded-full text-sm font-medium shadow">
+          <span className="relative inline-block w-4 h-4">
+            {isUnpin ? (
+              <Pin className="w-4 h-4 text-gray-400 opacity-70 rotate-[45deg]" />
+            ) : (
+              <Pin className="w-4 h-4" />
+            )}
+          </span>
+          <span>{content}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Hàm scroll tới message theo id và highlight
+  const scrollToMessage = (msgId: string) => {
+    const el = document.querySelector(`.QUERY-message-container-${msgId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" })
+      const overlay = el.querySelector(".QUERY-message-container-overlay")
+      if (overlay) {
+        overlay.classList.add("!opacity-100")
+        setTimeout(() => {
+          overlay.classList.remove("!opacity-100")
+        }, 1200)
+      }
+    }
+  }
+
   return (
     <>
       {stickyTime && <StickyTime stickyTime={stickyTime} />}
@@ -568,10 +648,35 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
                   className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                   title="Reply to this message"
                   onClick={() => {
-                    onReply(message)
+                    if (message && message.type !== "PIN_NOTICE") {
+                      console.log("[DEBUG] Reply button clicked", message)
+                      onReply(message)
+                    }
                   }}
                 >
                   <Quote size={14} />
+                </button>
+                <button
+                  className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                  title={
+                    isPinned
+                      ? "Bỏ ghim tin nhắn"
+                      : pinnedCount >= 5
+                        ? "Đã đạt giới hạn 5 tin nhắn ghim"
+                        : "Ghim tin nhắn"
+                  }
+                  onClick={() => {
+                    if (!isPinned && pinnedCount >= 5) {
+                      toast.error(
+                        "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                      )
+                      return
+                    }
+                    handlePinClick()
+                  }}
+                  disabled={loadingPin}
+                >
+                  <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
                 </button>
               </div>
 
@@ -579,6 +684,11 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
                 <div
                   data-reply-to-id={ReplyTo.id}
                   className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
+                  onClick={() => {
+                    if (ReplyTo) {
+                      if (onReplyPreviewClick) onReplyPreviewClick(ReplyTo.id)
+                    }
+                  }}
                 >
                   <div className="font-bold text-sm text-white truncate">
                     {ReplyTo.Author.Profile.fullName}
@@ -618,17 +728,42 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
             data-msg-id={id}
           >
             <div
-              className={`${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
+              className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
             >
               <div className="group-hover:flex hidden items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]">
                 <button
                   className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                   title="Reply to this message"
                   onClick={() => {
-                    onReply(message)
+                    if (message && message.type !== "PIN_NOTICE") {
+                      console.log("[DEBUG] Reply button clicked", message)
+                      onReply(message)
+                    }
                   }}
                 >
                   <Quote size={14} />
+                </button>
+                <button
+                  className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                  title={
+                    isPinned
+                      ? "Bỏ ghim tin nhắn"
+                      : pinnedCount >= 5
+                        ? "Đã đạt giới hạn 5 tin nhắn ghim"
+                        : "Ghim tin nhắn"
+                  }
+                  onClick={() => {
+                    if (!isPinned && pinnedCount >= 5) {
+                      toast.error(
+                        "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                      )
+                      return
+                    }
+                    handlePinClick()
+                  }}
+                  disabled={loadingPin}
+                >
+                  <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
                 </button>
               </div>
 
@@ -636,6 +771,11 @@ export const Message = ({ message, user, stickyTime, onReply }: TMessageProps) =
                 <div
                   data-reply-to-id={ReplyTo.id}
                   className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
+                  onClick={() =>
+                    onReplyPreviewClick
+                      ? onReplyPreviewClick(ReplyTo.id)
+                      : scrollToMessage(String(ReplyTo.id))
+                  }
                 >
                   <div className="font-bold text-sm text-white truncate">
                     {ReplyTo.Author.Profile.fullName}

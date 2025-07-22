@@ -15,6 +15,9 @@ interface ActionIconsProps {
   onDeleteForEveryone?: () => void
   isSender?: boolean
   messageId?: number
+  mediaUrl?: string
+  fileName?: string
+  fileType?: string
 }
 
 const MENU_WIDTH = 100

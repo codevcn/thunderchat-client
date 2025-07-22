@@ -211,11 +211,51 @@ const MediaPanel = () => {
       directChatId: directChat?.id || 0,
       status: "SENT" as any,
       isNewMsg: false,
+      Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
+      ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
     }
 
     // Phát audio và hiển thị player
     playAudio(messageForPlayer)
     setShowPlayer(true)
+  }
+
+  // Thêm hàm handleDownload
+  const handleDownload = async (item: any) => {
+    if (!item.mediaUrl && !item.fileUrl) return
+    const url = item.mediaUrl || item.fileUrl
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error("Không thể tải file")
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = blobUrl
+      const fileNameWithExt = item.fileName || "media"
+      const hasExtension = fileNameWithExt.includes(".")
+      const finalFileName = hasExtension
+        ? fileNameWithExt
+        : `${fileNameWithExt}.${item.fileType || "dat"}`
+      link.download = finalFileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      // Fallback: tải trực tiếp từ URL
+      const link = document.createElement("a")
+      link.href = url
+      const fileNameWithExt = item.fileName || "media"
+      const hasExtension = fileNameWithExt.includes(".")
+      const finalFileName = hasExtension
+        ? fileNameWithExt
+        : `${fileNameWithExt}.${item.fileType || "dat"}`
+      link.download = finalFileName
+      link.target = "_blank"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   return (
@@ -246,7 +286,7 @@ const MediaPanel = () => {
               {/* Action icons on hover, top-right */}
               <div className="absolute top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <ActionIcons
-                  onDownload={() => window.open(item.mediaUrl || item.fileUrl, "_blank")}
+                  onDownload={() => handleDownload(item)}
                   onShare={() => {}}
                   onMore={() => {}}
                   showDownload={item.mediaUrl ? true : false}
@@ -255,6 +295,9 @@ const MediaPanel = () => {
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
+                  mediaUrl={item.mediaUrl || item.fileUrl}
+                  fileName={item.fileName}
+                  fileType={item.fileType}
                 />
               </div>
               {item.mediaUrl &&
@@ -352,15 +395,18 @@ const MediaPanel = () => {
               {/* Action icons on hover */}
               <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                 <ActionIcons
-                  onDownload={() => window.open(item.fileUrl, "_blank")}
+                  onDownload={() => handleDownload(item)}
                   onShare={() => {}}
                   onMore={() => {}}
-                  showDownload={true}
+                  showDownload={!!(item.mediaUrl || item.fileUrl)}
                   isSender={item.authorId === currentUser?.id}
                   onViewOriginalMessage={() => {}}
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
+                  mediaUrl={item.mediaUrl || item.fileUrl}
+                  fileName={item.fileName}
+                  fileType={item.fileType}
                 />
               </div>
             </div>
@@ -406,15 +452,18 @@ const MediaPanel = () => {
                 onClick={(e) => e.stopPropagation()}
               >
                 <ActionIcons
-                  onDownload={() => window.open(item.fileUrl, "_blank")}
+                  onDownload={() => handleDownload(item)}
                   onShare={() => {}}
                   onMore={() => {}}
-                  showDownload={true}
+                  showDownload={!!(item.mediaUrl || item.fileUrl)}
                   isSender={item.authorId === currentUser?.id}
                   onViewOriginalMessage={() => {}}
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
+                  mediaUrl={item.fileUrl}
+                  fileName={item.fileName}
+                  fileType={item.fileType}
                 />
               </div>
             </div>

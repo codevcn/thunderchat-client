@@ -63,6 +63,44 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
 
+// Thêm hàm handleDownload ở đầu file hoặc đầu component MediaGrid
+const handleDownload = async (item: any) => {
+  if (!item.mediaUrl && !item.fileUrl) return
+  const url = item.mediaUrl || item.fileUrl
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error("Không thể tải file")
+    const blob = await response.blob()
+    const blobUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = blobUrl
+    const fileNameWithExt = item.fileName || "media"
+    const hasExtension = fileNameWithExt.includes(".")
+    const finalFileName = hasExtension
+      ? fileNameWithExt
+      : `${fileNameWithExt}.${item.fileType || "dat"}`
+    link.download = finalFileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(blobUrl)
+  } catch (error) {
+    // Fallback: tải trực tiếp từ URL
+    const link = document.createElement("a")
+    link.href = url
+    const fileNameWithExt = item.fileName || "media"
+    const hasExtension = fileNameWithExt.includes(".")
+    const finalFileName = hasExtension
+      ? fileNameWithExt
+      : `${fileNameWithExt}.${item.fileType || "dat"}`
+    link.download = finalFileName
+    link.target = "_blank"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+}
+
 // Media Grid Component
 export const MediaGrid = ({
   items,
@@ -111,7 +149,7 @@ export const MediaGrid = ({
         {/* Action icons on hover, top-right */}
         <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
           <ActionIcons
-            onDownload={() => window.open(item.mediaUrl || item.fileUrl, "_blank")}
+            onDownload={() => handleDownload(item)}
             onShare={() => {}}
             onMore={() => {}}
             showDownload={item.mediaUrl ? true : false}
@@ -120,6 +158,9 @@ export const MediaGrid = ({
             onDeleteForMe={() => console.log("Delete for me:", item.id)}
             onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
             messageId={item.id}
+            mediaUrl={item.mediaUrl || item.fileUrl}
+            fileName={item.fileName}
+            fileType={item.fileType}
           />
         </div>
         {/* Skeleton loading */}
@@ -246,7 +287,7 @@ export const FilesList = ({ items }: { items: any[] }) => {
           {/* Action icons on hover */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
             <ActionIcons
-              onDownload={() => window.open(item.fileUrl, "_blank")}
+              onDownload={() => handleDownload(item)}
               onShare={() => {}}
               onMore={() => {}}
               showDownload={true}
@@ -255,6 +296,9 @@ export const FilesList = ({ items }: { items: any[] }) => {
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
+              mediaUrl={item.fileUrl}
+              fileName={item.fileName}
+              fileType={item.fileType}
             />
           </div>
         </div>
@@ -279,9 +323,11 @@ export const AudioList = ({ items }: { items: any[] }) => {
       type: EMessageTypes.AUDIO,
       fileName: voiceMessage.fileName || "Audio message",
       content: "",
-      directChatId: 0, // Sẽ được cập nhật từ context
+      directChatId: voiceMessage.directChatId || 0,
       status: "SENT" as any,
       isNewMsg: false,
+      Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
+      ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
     }
 
     // Phát audio và hiển thị player
@@ -324,7 +370,7 @@ export const AudioList = ({ items }: { items: any[] }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <ActionIcons
-              onDownload={() => window.open(item.fileUrl, "_blank")}
+              onDownload={() => handleDownload(item)}
               onShare={() => {}}
               onMore={() => {}}
               showDownload={true}
@@ -333,6 +379,9 @@ export const AudioList = ({ items }: { items: any[] }) => {
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
+              mediaUrl={item.fileUrl}
+              fileName={item.fileName}
+              fileType={item.fileType}
             />
           </div>
         </div>

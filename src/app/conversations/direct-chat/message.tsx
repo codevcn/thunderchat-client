@@ -21,7 +21,7 @@ import {
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
 import VoiceMessage from "../(voice-chat)/VoiceMessage"
-import { useState } from "react"
+import React, { useState, forwardRef } from "react"
 import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
 
@@ -539,266 +539,280 @@ const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
   return <></>
 }
 
-export const Message = ({
-  message,
-  user,
-  stickyTime,
-  onReply,
-  isPinned,
-  onPinChange,
-  pinnedCount,
-  onReplyPreviewClick, // <-- thêm prop này
-}: TMessageProps & { onReplyPreviewClick?: (replyToId: number) => void }) => {
-  const {
-    authorId,
-    content,
-    createdAt,
-    isNewMsg,
-    id,
-    status,
-    stickerUrl,
-    mediaUrl,
-    type,
-    fileName,
-    fileType,
-    fileSize,
-    ReplyTo,
-  } = message
+export const Message = forwardRef<
+  HTMLDivElement,
+  TMessageProps & { onReplyPreviewClick?: (replyToId: number) => void }
+>(
+  (
+    { message, user, stickyTime, onReply, isPinned, onPinChange, pinnedCount, onReplyPreviewClick },
+    ref
+  ) => {
+    const {
+      authorId,
+      content,
+      createdAt,
+      isNewMsg,
+      id,
+      status,
+      stickerUrl,
+      mediaUrl,
+      type,
+      fileName,
+      fileType,
+      fileSize,
+      ReplyTo,
+    } = message
 
-  const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
+    const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
 
-  // Giả lập trạng thái đã ghim, sau này sẽ lấy từ props hoặc state
-  const [loadingPin, setLoadingPin] = useState(false)
+    // Giả lập trạng thái đã ghim, sau này sẽ lấy từ props hoặc state
+    const [loadingPin, setLoadingPin] = useState(false)
 
-  const handlePinClick = async () => {
-    if (loadingPin) return
-    setLoadingPin(true)
-    try {
-      const response = await pinService.togglePinMessage(
-        message.id,
-        message.directChatId,
-        !isPinned
-      )
+    const handlePinClick = async () => {
+      if (loadingPin) return
+      setLoadingPin(true)
+      try {
+        const response = await pinService.togglePinMessage(
+          message.id,
+          message.directChatId,
+          !isPinned
+        )
 
-      // Xử lý response dựa trên loại response
-      if ("success" in response) {
-        // Bỏ ghim thành công
-        onPinChange(false)
-        toast.success("Đã bỏ ghim tin nhắn")
-      } else {
-        // Ghim thành công
-        onPinChange(true)
-        toast.success("Đã ghim tin nhắn")
+        // Xử lý response dựa trên loại response
+        if ("success" in response) {
+          // Bỏ ghim thành công
+          onPinChange(false)
+          toast.success("Đã bỏ ghim tin nhắn")
+        } else {
+          // Ghim thành công
+          onPinChange(true)
+          toast.success("Đã ghim tin nhắn")
+        }
+      } catch (err: any) {
+        const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"
+        toast.error(errorMessage)
+      } finally {
+        setLoadingPin(false)
       }
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"
-      toast.error(errorMessage)
-    } finally {
-      setLoadingPin(false)
     }
-  }
 
-  // Hiển thị thông báo đặc biệt cho PIN_NOTICE
-  if (type === "PIN_NOTICE") {
-    const isUnpin = content?.toLowerCase().includes("bỏ ghim")
-    return (
-      <div className="w-full flex justify-center my-2">
-        <div className="flex items-center gap-2 bg-[#232323] border border-[#333] text-white px-4 py-2 rounded-full text-sm font-medium shadow">
-          <span className="relative inline-block w-4 h-4">
-            {isUnpin ? (
-              <Pin className="w-4 h-4 text-gray-400 opacity-70 rotate-[45deg]" />
-            ) : (
-              <Pin className="w-4 h-4" />
+    // Hiển thị thông báo đặc biệt cho PIN_NOTICE
+    if (type === "PIN_NOTICE") {
+      const isUnpin = content?.toLowerCase().includes("bỏ ghim")
+      return (
+        <div className="w-full flex justify-center my-2">
+          <div className="flex items-center gap-2 bg-[#232323] border border-[#333] text-white px-4 py-2 rounded-full text-sm font-medium shadow">
+            <span className="relative inline-block w-4 h-4">
+              {isUnpin ? (
+                <Pin className="w-4 h-4 text-gray-400 opacity-70 rotate-[45deg]" />
+              ) : (
+                <Pin className="w-4 h-4" />
+              )}
+            </span>
+            <span className="text-xs">{content}</span>
+            {/* Nút xem nếu có ReplyTo */}
+            {message.ReplyTo && typeof message.ReplyTo.id !== "undefined" && (
+              <button
+                className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
+                onClick={() => {
+                  if (message.ReplyTo && onReplyPreviewClick)
+                    onReplyPreviewClick(message.ReplyTo.id)
+                }}
+              >
+                Xem
+              </button>
             )}
-          </span>
-          <span>{content}</span>
+          </div>
         </div>
-      </div>
+      )
+    }
+
+    // Hàm scroll tới message theo id và highlight
+    const scrollToMessage = (msgId: string) => {
+      const el = document.querySelector(`.QUERY-message-container-${msgId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+        const overlay = el.querySelector(".QUERY-message-container-overlay")
+        if (overlay) {
+          overlay.classList.add("!opacity-100")
+          setTimeout(() => {
+            overlay.classList.remove("!opacity-100")
+          }, 1200)
+        }
+      }
+    }
+
+    return (
+      <>
+        {stickyTime && <StickyTime stickyTime={stickyTime} />}
+
+        <div
+          ref={ref}
+          className={`QUERY-message-container-${id} w-full text-regular-white-cl relative z-10`}
+        >
+          <div className="QUERY-message-container-overlay opacity-0 bg-purple-400/20 absolute top-0 left-1/2 -translate-x-1/2 w-screen h-full -z-10"></div>
+          {user.id === authorId ? (
+            <div className={`QUERY-user-message-${id} flex justify-end w-full`} data-msg-id={id}>
+              <div
+                className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "bg-regular-violet-cl"} group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
+              >
+                <div className="group-hover:flex hidden items-end h-full absolute top-0 right-[calc(100%-5px)] pr-[20px]">
+                  <button
+                    className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
+                    title="Reply to this message"
+                    onClick={() => {
+                      if (message && message.type !== "PIN_NOTICE") {
+                        console.log("[DEBUG] Reply button clicked", message)
+                        onReply(message)
+                      }
+                    }}
+                  >
+                    <Quote size={14} />
+                  </button>
+                  <button
+                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                    title={
+                      isPinned
+                        ? "Bỏ ghim tin nhắn"
+                        : pinnedCount >= 5
+                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
+                          : "Ghim tin nhắn"
+                    }
+                    onClick={() => {
+                      if (!isPinned && pinnedCount >= 5) {
+                        toast.error(
+                          "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                        )
+                        return
+                      }
+                      handlePinClick()
+                    }}
+                    disabled={loadingPin}
+                  >
+                    <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
+                  </button>
+                </div>
+
+                {ReplyTo && (
+                  <div
+                    data-reply-to-id={ReplyTo.id}
+                    className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
+                    onClick={() => {
+                      if (ReplyTo) {
+                        if (onReplyPreviewClick) onReplyPreviewClick(ReplyTo.id)
+                      }
+                    }}
+                  >
+                    <div className="font-bold text-sm text-white truncate">
+                      {ReplyTo.Author.Profile.fullName}
+                    </div>
+                    <div className="text-xs text-white break-words truncate max-w-full">
+                      {getReplyPreview(ReplyTo)}
+                    </div>
+                  </div>
+                )}
+                <Content
+                  content={content}
+                  stickerUrl={stickerUrl ?? null}
+                  mediaUrl={mediaUrl ?? null}
+                  type={type}
+                  fileName={fileName}
+                  fileType={fileType}
+                  fileSize={fileSize}
+                  message={message}
+                />
+                <div className="flex justify-end items-center gap-x-1 mt-1.5 w-full">
+                  <span className="text-xs text-regular-creator-msg-time-cl leading-none">
+                    {msgTime}
+                  </span>
+                  <div className="flex ml-0.5">
+                    {status === EMessageStatus.SENT ? (
+                      <Check size={15} />
+                    ) : (
+                      status === EMessageStatus.SEEN && <CheckCheck size={15} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`${isNewMsg || status === EMessageStatus.SENT ? "QUERY-unread-message" : ""} origin-left flex justify-start w-full`}
+              data-msg-id={id}
+            >
+              <div
+                className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
+              >
+                <div className="group-hover:flex hidden items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]">
+                  <button
+                    className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
+                    title="Reply to this message"
+                    onClick={() => {
+                      if (message && message.type !== "PIN_NOTICE") {
+                        console.log("[DEBUG] Reply button clicked", message)
+                        onReply(message)
+                      }
+                    }}
+                  >
+                    <Quote size={14} />
+                  </button>
+                  <button
+                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                    title={
+                      isPinned
+                        ? "Bỏ ghim tin nhắn"
+                        : pinnedCount >= 5
+                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
+                          : "Ghim tin nhắn"
+                    }
+                    onClick={() => {
+                      if (!isPinned && pinnedCount >= 5) {
+                        toast.error(
+                          "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                        )
+                        return
+                      }
+                      handlePinClick()
+                    }}
+                    disabled={loadingPin}
+                  >
+                    <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
+                  </button>
+                </div>
+
+                {ReplyTo && (
+                  <div
+                    data-reply-to-id={ReplyTo.id}
+                    className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
+                    onClick={() =>
+                      onReplyPreviewClick
+                        ? onReplyPreviewClick(ReplyTo.id)
+                        : scrollToMessage(String(ReplyTo.id))
+                    }
+                  >
+                    <div className="font-bold text-sm text-white truncate">
+                      {ReplyTo.Author.Profile.fullName}
+                    </div>
+                    <div className="text-xs text-white break-words truncate max-w-full">
+                      {getReplyPreview(ReplyTo)}
+                    </div>
+                  </div>
+                )}
+                <Content
+                  content={content}
+                  stickerUrl={stickerUrl ?? null}
+                  mediaUrl={mediaUrl ?? null}
+                  type={type}
+                  fileName={fileName}
+                  fileType={fileType}
+                  fileSize={fileSize}
+                  message={message}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </>
     )
   }
-
-  // Hàm scroll tới message theo id và highlight
-  const scrollToMessage = (msgId: string) => {
-    const el = document.querySelector(`.QUERY-message-container-${msgId}`)
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" })
-      const overlay = el.querySelector(".QUERY-message-container-overlay")
-      if (overlay) {
-        overlay.classList.add("!opacity-100")
-        setTimeout(() => {
-          overlay.classList.remove("!opacity-100")
-        }, 1200)
-      }
-    }
-  }
-
-  return (
-    <>
-      {stickyTime && <StickyTime stickyTime={stickyTime} />}
-
-      <div className={`QUERY-message-container-${id} w-full text-regular-white-cl relative z-10`}>
-        <div className="QUERY-message-container-overlay opacity-0 bg-purple-400/20 absolute top-0 left-1/2 -translate-x-1/2 w-screen h-full -z-10"></div>
-        {user.id === authorId ? (
-          <div className={`QUERY-user-message-${id} flex justify-end w-full`} data-msg-id={id}>
-            <div
-              className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "bg-regular-violet-cl"} group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
-            >
-              <div className="group-hover:flex hidden items-end h-full absolute top-0 right-[calc(100%-5px)] pr-[20px]">
-                <button
-                  className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
-                  title="Reply to this message"
-                  onClick={() => {
-                    if (message && message.type !== "PIN_NOTICE") {
-                      console.log("[DEBUG] Reply button clicked", message)
-                      onReply(message)
-                    }
-                  }}
-                >
-                  <Quote size={14} />
-                </button>
-                <button
-                  className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
-                  title={
-                    isPinned
-                      ? "Bỏ ghim tin nhắn"
-                      : pinnedCount >= 5
-                        ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                        : "Ghim tin nhắn"
-                  }
-                  onClick={() => {
-                    if (!isPinned && pinnedCount >= 5) {
-                      toast.error(
-                        "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
-                      )
-                      return
-                    }
-                    handlePinClick()
-                  }}
-                  disabled={loadingPin}
-                >
-                  <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
-                </button>
-              </div>
-
-              {ReplyTo && (
-                <div
-                  data-reply-to-id={ReplyTo.id}
-                  className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
-                  onClick={() => {
-                    if (ReplyTo) {
-                      if (onReplyPreviewClick) onReplyPreviewClick(ReplyTo.id)
-                    }
-                  }}
-                >
-                  <div className="font-bold text-sm text-white truncate">
-                    {ReplyTo.Author.Profile.fullName}
-                  </div>
-                  <div className="text-xs text-white break-words truncate max-w-full">
-                    {getReplyPreview(ReplyTo)}
-                  </div>
-                </div>
-              )}
-              <Content
-                content={content}
-                stickerUrl={stickerUrl ?? null}
-                mediaUrl={mediaUrl ?? null}
-                type={type}
-                fileName={fileName}
-                fileType={fileType}
-                fileSize={fileSize}
-                message={message}
-              />
-              <div className="flex justify-end items-center gap-x-1 mt-1.5 w-full">
-                <span className="text-xs text-regular-creator-msg-time-cl leading-none">
-                  {msgTime}
-                </span>
-                <div className="flex ml-0.5">
-                  {status === EMessageStatus.SENT ? (
-                    <Check size={15} />
-                  ) : (
-                    status === EMessageStatus.SEEN && <CheckCheck size={15} />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div
-            className={`${isNewMsg || status === EMessageStatus.SENT ? "QUERY-unread-message" : ""} origin-left flex justify-start w-full`}
-            data-msg-id={id}
-          >
-            <div
-              className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
-            >
-              <div className="group-hover:flex hidden items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]">
-                <button
-                  className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
-                  title="Reply to this message"
-                  onClick={() => {
-                    if (message && message.type !== "PIN_NOTICE") {
-                      console.log("[DEBUG] Reply button clicked", message)
-                      onReply(message)
-                    }
-                  }}
-                >
-                  <Quote size={14} />
-                </button>
-                <button
-                  className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
-                  title={
-                    isPinned
-                      ? "Bỏ ghim tin nhắn"
-                      : pinnedCount >= 5
-                        ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                        : "Ghim tin nhắn"
-                  }
-                  onClick={() => {
-                    if (!isPinned && pinnedCount >= 5) {
-                      toast.error(
-                        "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
-                      )
-                      return
-                    }
-                    handlePinClick()
-                  }}
-                  disabled={loadingPin}
-                >
-                  <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
-                </button>
-              </div>
-
-              {ReplyTo && (
-                <div
-                  data-reply-to-id={ReplyTo.id}
-                  className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
-                  onClick={() =>
-                    onReplyPreviewClick
-                      ? onReplyPreviewClick(ReplyTo.id)
-                      : scrollToMessage(String(ReplyTo.id))
-                  }
-                >
-                  <div className="font-bold text-sm text-white truncate">
-                    {ReplyTo.Author.Profile.fullName}
-                  </div>
-                  <div className="text-xs text-white break-words truncate max-w-full">
-                    {getReplyPreview(ReplyTo)}
-                  </div>
-                </div>
-              )}
-              <Content
-                content={content}
-                stickerUrl={stickerUrl ?? null}
-                mediaUrl={mediaUrl ?? null}
-                type={type}
-                fileName={fileName}
-                fileType={fileType}
-                fileSize={fileSize}
-                message={message}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
+)

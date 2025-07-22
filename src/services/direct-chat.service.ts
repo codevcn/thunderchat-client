@@ -37,8 +37,8 @@ class DirectChatService {
     return data
   }
 
-  async getNewerMessages(directChatId: number, msgOffset: number) {
-    const { data } = await getNewerDirectMessages(directChatId, msgOffset)
+  async getNewerMessages(directChatId: number, msgOffset: number, limit?: number) {
+    const { data } = await getNewerDirectMessages(directChatId, msgOffset, limit)
     if (!data) throw new DirectChatError("Không tìm thấy messages mới hơn")
     return data
   }

@@ -291,7 +291,7 @@ const MediaPanel = () => {
                   onMore={() => {}}
                   showDownload={item.mediaUrl ? true : false}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}}
+                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
@@ -400,7 +400,7 @@ const MediaPanel = () => {
                   onMore={() => {}}
                   showDownload={!!(item.mediaUrl || item.fileUrl)}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}}
+                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
@@ -457,7 +457,7 @@ const MediaPanel = () => {
                   onMore={() => {}}
                   showDownload={!!(item.mediaUrl || item.fileUrl)}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}}
+                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
@@ -507,7 +507,7 @@ const MediaPanel = () => {
                   onShare={() => {}}
                   onMore={() => {}}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}}
+                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}

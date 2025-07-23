@@ -154,7 +154,7 @@ export const MediaGrid = ({
             onMore={() => {}}
             showDownload={item.mediaUrl ? true : false}
             isSender={item.authorId === currentUser?.id}
-            onViewOriginalMessage={() => {}}
+            onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
             onDeleteForMe={() => console.log("Delete for me:", item.id)}
             onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
             messageId={item.id}
@@ -292,7 +292,7 @@ export const FilesList = ({ items }: { items: any[] }) => {
               onMore={() => {}}
               showDownload={true}
               isSender={item.authorId === currentUser?.id}
-              onViewOriginalMessage={() => {}}
+              onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
@@ -375,7 +375,7 @@ export const AudioList = ({ items }: { items: any[] }) => {
               onMore={() => {}}
               showDownload={true}
               isSender={item.authorId === currentUser?.id}
-              onViewOriginalMessage={() => {}}
+              onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
@@ -431,7 +431,7 @@ export const LinksList = ({ items }: { items: any[] }) => {
               onShare={() => {}}
               onMore={() => {}}
               isSender={item.authorId === currentUser?.id}
-              onViewOriginalMessage={() => {}}
+              onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}

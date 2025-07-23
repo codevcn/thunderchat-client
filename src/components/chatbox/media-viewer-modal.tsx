@@ -12,11 +12,14 @@ import {
   Download,
   ZoomIn,
   ZoomOut,
+  MessageSquare,
 } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import dayjs from "dayjs"
 import type { TUserWithProfile } from "@/utils/types/be-api"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
 
 type MediaItem = {
   id: number
@@ -75,6 +78,8 @@ const MediaViewerModal = ({
     setIsVideoLoading(true)
   }, [currentIndex])
 
+  const currentMedia = mediaItems[currentIndex]
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return
@@ -98,62 +103,76 @@ const MediaViewerModal = ({
     }
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, currentIndex, mediaItems])
+  }, [isOpen, currentMedia])
 
-  const currentMedia = mediaItems[currentIndex]
-
-  // Lấy thông tin người gửi
   const getSenderInfo = () => {
-    if (!currentMedia) return null
-    if (currentMedia.authorId === creator.id) return creator
-    if (currentMedia.authorId === recipient.id) return recipient
-    return null
+    if (!currentMedia?.authorId) return null
+    return currentMedia.authorId === creator.id ? creator : recipient
   }
+
   const sender = getSenderInfo()
 
   const goToPrevious = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1)
-      setIsVideoPlaying(false)
     }
   }
+
   const goToNext = () => {
     if (currentIndex < mediaItems.length - 1) {
       setCurrentIndex(currentIndex + 1)
-      setIsVideoPlaying(false)
     }
   }
+
   const toggleVideoPlay = () => {
     if (videoRef.current) {
-      if (isVideoPlaying) videoRef.current.pause()
-      else videoRef.current.play()
+      if (isVideoPlaying) {
+        videoRef.current.pause()
+      } else {
+        videoRef.current.play()
+      }
       setIsVideoPlaying(!isVideoPlaying)
     }
   }
+
   const handleVideoEnded = () => setIsVideoPlaying(false)
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setZoomLevel(parseInt(e.target.value))
+
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 25, 300))
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 25, 25))
 
   const handleDownload = async () => {
-    if (!currentMedia) return
-    const url = currentMedia.mediaUrl
-    const fileName = currentMedia.fileName || "media"
+    if (!currentMedia?.mediaUrl) return
     try {
-      const response = await fetch(url, { mode: "cors" })
+      const response = await fetch(currentMedia.mediaUrl)
+      if (!response.ok) throw new Error("Không thể tải file")
       const blob = await response.blob()
       const blobUrl = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = blobUrl
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
+      const link = document.createElement("a")
+      link.href = blobUrl
+      const fileNameWithExt = currentMedia.fileName || "media"
+      const hasExtension = fileNameWithExt.includes(".")
+      const finalFileName = hasExtension
+        ? fileNameWithExt
+        : `${fileNameWithExt}.${currentMedia.type.toLowerCase()}`
+      link.download = finalFileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
       window.URL.revokeObjectURL(blobUrl)
-    } catch (err) {
-      // Nếu fetch lỗi (CORS), fallback mở link ở tab mới
-      window.open(url, "_blank")
+      toast.success("Đã tải xuống thành công")
+    } catch (error) {
+      toast.error("Lỗi khi tải xuống file")
+    }
+  }
+
+  // Thêm hàm xem tin nhắn gốc
+  const handleViewOriginalMessage = () => {
+    if (currentMedia?.id) {
+      eventEmitter.emit(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, currentMedia.id)
+      onClose() // Đóng modal sau khi emit event
+      toast.success("Đang hiển thị context tin nhắn gốc...")
     }
   }
 
@@ -241,6 +260,14 @@ const MediaViewerModal = ({
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Nút xem tin nhắn gốc */}
+          <button
+            className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+            onClick={handleViewOriginalMessage}
+            title="Xem tin nhắn gốc"
+          >
+            <MessageSquare className="w-4 h-4 text-gray-400" />
+          </button>
           <button className="p-2 hover:bg-gray-700 rounded-full transition-colors">
             <Trash2 className="w-4 h-4 text-gray-400" />
           </button>

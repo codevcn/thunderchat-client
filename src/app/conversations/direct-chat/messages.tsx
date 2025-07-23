@@ -30,7 +30,6 @@ import { expressionService } from "@/services/expression.service"
 import Image from "next/image"
 import { chattingService } from "@/services/chatting.service"
 import { CustomTooltip } from "@/components/materials"
-import { useScrollToMessage } from "@/hooks/use-scroll-to-message-media"
 import { Pin } from "lucide-react"
 import { PinMessageModal } from "./pin-message"
 import { pinService } from "@/services/pin.service"
@@ -206,15 +205,6 @@ export const Messages = memo(
 
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
-
-    // --- Context mode state ---
-    // const [contextMessages, setContextMessages] = useState<TStateDirectMessage[] | null>(null)
-    // const [contextRootId, setContextRootId] = useState<number | null>(null)
-    // const [contextHasMore, setContextHasMore] = useState<boolean>(true)
-    // const [contextLastMsgId, setContextLastMsgId] = useState<number | null>(null)
-    // const contextLastMsgRef = useRef<HTMLDivElement>(null)
-
-    // Xoá useState cho pinnedMessages, showPinnedModal
 
     // Xử lý cuộn xuống dưới khi nhấn nút
     const scrollToBottomMessage = () => {
@@ -536,6 +526,11 @@ export const Messages = memo(
       showMessageContext(replyToId) // Chỉ nút Xem/reply preview mới show context
     }
 
+    // Thêm hàm xử lý scroll đến tin nhắn media (tương tự như reply và ghim)
+    const handleScrollToMessageMedia = (messageId: number) => {
+      showMessageContext(messageId) // Sử dụng showMessageContext để hiển thị context
+    }
+
     // Thay thế hàm fetchMissingMessages bằng phiên bản mới
     const fetchMissingMessages = async (fromId: number, toId: number) => {
       let offset = fromId - 1
@@ -632,12 +627,14 @@ export const Messages = memo(
       }
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
+      eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
       clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
       clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
       return () => {
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
+        eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
         clientSocket.socket.removeListener(
           ESocketEvents.recovered_connection,
           handleRecoverdConnection
@@ -661,54 +658,6 @@ export const Messages = memo(
         setPendingFillContextId(null) // Reset sau khi fill
       }
     }, [messages, pendingFillContextId])
-
-    // IntersectionObserver cho contextMessages (tin cuối cùng)
-    // useEffect(() => {
-    //   if (!contextMessages || !contextHasMore) return
-    //   if (!contextLastMsgRef.current) return
-    //   const observer = new window.IntersectionObserver(
-    //     (entries) => {
-    //       if (entries[0].isIntersecting && contextHasMore && contextLastMsgId) {
-    //         fetchMoreNewerContextMessages()
-    //       }
-    //     },
-    //     { threshold: 1 }
-    //   )
-    //   observer.observe(contextLastMsgRef.current)
-    //   return () => observer.disconnect()
-    // }, [contextMessages, contextHasMore, contextLastMsgId])
-
-    // Hàm fetch thêm 20 tin mới hơn cho context
-    // const fetchMoreNewerContextMessages = async () => {
-    //   if (!contextLastMsgId || !contextRootId) return
-    //   try {
-    //     const newerMsgs = await directChatService.getNewerMessages(
-    //       directChatId,
-    //       contextLastMsgId,
-    //       20
-    //     )
-    //     if (newerMsgs && newerMsgs.length > 0) {
-    //       const merged = [
-    //         ...(contextMessages || []),
-    //         ...newerMsgs.filter(
-    //           (msg: TStateDirectMessage) =>
-    //             !(contextMessages || []).some((m: TStateDirectMessage) => m.id === msg.id)
-    //         ),
-    //       ].map((msg: TStateDirectMessage, idx: number, arr: TStateDirectMessage[]) => ({
-    //         ...msg,
-    //         isLastMsgInList: idx === arr.length - 1,
-    //       }))
-    //       setContextMessages(merged)
-    //       setContextLastMsgId(merged[merged.length - 1]?.id || null)
-    //       if (newerMsgs.length < 20) setContextHasMore(false)
-    //     } else {
-    //       setContextHasMore(false)
-    //     }
-    //   } catch (err) {
-    //     toast.error("Không thể lấy thêm tin nhắn mới hơn")
-    //     setContextHasMore(false)
-    //   }
-    // }
 
     // Hàm bỏ ghim tin nhắn (unpin)
     const handleUnpinMessage = async (msgId: number) => {
@@ -802,7 +751,3 @@ export const Messages = memo(
     )
   }
 )
-
-//DỪNG TỚI ĐÂY
-//OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
-///HHHHHHHHHH

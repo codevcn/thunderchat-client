@@ -19,8 +19,8 @@ export const getDirectMessageContext = (messageId: number) => {
   return clientAxios.get(url, requestConfig)
 }
 
-export const getNewerDirectMessages = (directChatId: number, msgOffset: number) =>
+export const getNewerDirectMessages = (directChatId: number, msgOffset: number, limit?: number) =>
   clientAxios.get(`/message/get-newer-messages`, {
     ...requestConfig,
-    params: { directChatId, msgOffset },
+    params: { directChatId, msgOffset, ...(limit ? { limit } : {}) },
   })

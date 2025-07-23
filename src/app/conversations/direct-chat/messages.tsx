@@ -204,6 +204,16 @@ export const Messages = memo(
     const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadOffsetTop: -1 }) // Biến để lưu thông tin về tin nhắn chưa đọc
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
 
+    // Thêm state lưu id cuối context
+    const [contextEndId, setContextEndId] = useState<number | null>(null)
+
+    // --- Context mode state ---
+    // const [contextMessages, setContextMessages] = useState<TStateDirectMessage[] | null>(null)
+    // const [contextRootId, setContextRootId] = useState<number | null>(null)
+    // const [contextHasMore, setContextHasMore] = useState<boolean>(true)
+    // const [contextLastMsgId, setContextLastMsgId] = useState<number | null>(null)
+    // const contextLastMsgRef = useRef<HTMLDivElement>(null)
+
     // Xoá useState cho pinnedMessages, showPinnedModal
 
     // Xử lý cuộn xuống dưới khi nhấn nút
@@ -497,61 +507,33 @@ export const Messages = memo(
       setShowPinnedModal(false) // Đóng modal sau khi cuộn
     }
 
-    // Hàm xử lý khi click vào reply preview
-    const handleReplyPreviewClick = async (replyToId: number) => {
-      if (messages) {
-        const hasReplyTo = messages.some((m) => m.id === replyToId)
-        if (!hasReplyTo) {
-          try {
-            const contextMsgs = await directChatService.getMessageContext(replyToId)
-            dispatch(mergeMessages(contextMsgs))
-            setPendingFillContextId(replyToId)
-            setTimeout(() => {
-              scrollToMessage(replyToId)
-            }, 100)
-          } catch (err) {
-            toast.error("Không thể lấy ngữ cảnh tin nhắn gốc để reply")
-          }
-        } else {
-          scrollToMessage(replyToId)
-        }
-      }
-    }
-
-    const handleUnpinMessage = async (msgId: number) => {
-      try {
-        const response = await pinService.togglePinMessage(msgId, directChat.id, false)
-
-        // Xử lý response dựa trên loại response
-        if ("success" in response && response.success) {
-          setPinnedMessages((prev) => prev.filter((m) => m.id !== msgId))
-          toast.success("Đã bỏ ghim tin nhắn")
-        }
-      } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || "Lỗi khi bỏ ghim tin nhắn"
-        toast.error(errorMessage)
-      }
-    }
-
-    // Thêm hàm xử lý chọn tin nhắn ghim
-    const handleSelectPinnedMessage = async (messageId: number) => {
-      console.log("[DEBUG] Nhấn vào tin nhắn ghim, messageId:", messageId)
+    // Hàm dùng chung để show context quanh 1 messageId (áp dụng cho pinned, reply, nút Xem)
+    const showMessageContext = async (messageId: number) => {
       try {
         const contextMsgs = await directChatService.getMessageContext(messageId)
-        console.log(
-          "[DEBUG] Kết quả trả về từ getMessageContext:",
-          contextMsgs.map((m: TStateDirectMessage) => m.id)
-        )
-        dispatch(mergeMessages(contextMsgs))
-        setPendingFillContextId(messageId) // Đánh dấu cần kiểm tra fill context
+        // Đánh dấu context
+        const contextWithFlag = contextMsgs.map((msg: TStateDirectMessage) => ({
+          ...msg,
+          isContextMessage: true,
+        }))
+        dispatch(mergeMessages(contextWithFlag))
+        // Lưu id lớn nhất của context
+        setContextEndId(Math.max(...contextWithFlag.map((m: TStateDirectMessage) => m.id)))
         setTimeout(() => {
           scrollToMessage(messageId)
-        }, 100)
-        setShowPinnedModal(false)
+        }, 200)
       } catch (err) {
-        console.error("[DEBUG] Lỗi khi lấy context message:", err)
         toast.error("Không thể lấy ngữ cảnh tin nhắn")
       }
+    }
+
+    // Sử dụng showMessageContext cho pinned, nút Xem/reply preview
+    const handleSelectPinnedMessage = showMessageContext
+    const handleReply = (msg: TStateDirectMessage) => {
+      onReplyFromProps(msg) // Mở khung trả lời như cũ, không show context
+    }
+    const handleReplyPreviewClick = (replyToId: number) => {
+      showMessageContext(replyToId) // Chỉ nút Xem/reply preview mới show context
     }
 
     // Thay thế hàm fetchMissingMessages bằng phiên bản mới
@@ -560,7 +542,7 @@ export const Messages = memo(
       let done = false
       while (!done) {
         console.log(`[DEBUG] Gọi fetchMissingMessages với offset: ${offset}, target đến: ${toId}`)
-        const newerMsgs = await directChatService.getNewerMessages(directChatId, offset)
+        const newerMsgs = await directChatService.getNewerMessages(directChatId, offset, 20)
         if (!newerMsgs || newerMsgs.length === 0) {
           console.log("[DEBUG] Không lấy được thêm tin nhắn nào, dừng lại.")
           break
@@ -587,33 +569,21 @@ export const Messages = memo(
     // Hàm fetch messages mới hơn
     const fetchMoreNewerMessages = async () => {
       if (!messages || messages.length === 0) return
-      const lastMsg = messages[messages.length - 1]
-      console.log("[DEBUG] Gọi getNewerMessages với lastMsg.id:", lastMsg.id)
+      // Nếu đang ở context, lấy offset là contextEndId, ngược lại lấy id cuối cùng của mảng
+      const offset = contextEndId ?? messages[messages.length - 1].id
+      console.log("[DEBUG] Gọi getNewerMessages với offset:", offset)
       try {
-        const newerMsgs = await directChatService.getNewerMessages(directChatId, lastMsg.id)
+        const newerMsgs = await directChatService.getNewerMessages(directChatId, offset, 20)
         if (newerMsgs && newerMsgs.length > 0) {
-          console.log(
-            "[DEBUG] Các id tin nhắn mới hơn trả về:",
-            newerMsgs.map((m: TStateDirectMessage) => m.id)
-          )
-          // Đảm bảo chỉ message cuối cùng có isLastMsgInList: true
-          const markLastMsg = (
-            msgs: TStateDirectMessage[]
-          ): (TStateDirectMessage & { isLastMsgInList?: boolean })[] =>
-            msgs.map((msg: TStateDirectMessage, idx: number) => ({
-              ...msg,
-              isLastMsgInList: idx === msgs.length - 1,
-            }))
-          dispatch(mergeMessages(markLastMsg(newerMsgs)))
-          setTimeout(() => {
-            // Log lại state directMessages sau khi merge
-            if (messages) {
-              console.log(
-                "[DEBUG] directMessages sau khi merge newerMsgs:",
-                messages.map((m: TStateDirectMessage) => m.id)
-              )
-            }
-          }, 200)
+          dispatch(mergeMessages(newerMsgs))
+          // Nếu đang ở context, cập nhật contextEndId = id lớn nhất vừa merge (hoặc set null nếu đã hết context)
+          if (contextEndId) {
+            const maxId = Math.max(...newerMsgs.map((m: TStateDirectMessage) => m.id))
+            setContextEndId(maxId)
+          }
+        } else {
+          // Nếu không còn tin nhắn mới hơn, thoát context
+          if (contextEndId) setContextEndId(null)
         }
       } catch (err) {
         toast.error("Không thể lấy thêm tin nhắn mới hơn")
@@ -692,32 +662,102 @@ export const Messages = memo(
       }
     }, [messages, pendingFillContextId])
 
-    // Hàm xử lý reply: chỉ mở khung trả lời, không scroll
-    const handleReply = (msg: TStateDirectMessage) => {
-      onReplyFromProps(msg)
+    // IntersectionObserver cho contextMessages (tin cuối cùng)
+    // useEffect(() => {
+    //   if (!contextMessages || !contextHasMore) return
+    //   if (!contextLastMsgRef.current) return
+    //   const observer = new window.IntersectionObserver(
+    //     (entries) => {
+    //       if (entries[0].isIntersecting && contextHasMore && contextLastMsgId) {
+    //         fetchMoreNewerContextMessages()
+    //       }
+    //     },
+    //     { threshold: 1 }
+    //   )
+    //   observer.observe(contextLastMsgRef.current)
+    //   return () => observer.disconnect()
+    // }, [contextMessages, contextHasMore, contextLastMsgId])
+
+    // Hàm fetch thêm 20 tin mới hơn cho context
+    // const fetchMoreNewerContextMessages = async () => {
+    //   if (!contextLastMsgId || !contextRootId) return
+    //   try {
+    //     const newerMsgs = await directChatService.getNewerMessages(
+    //       directChatId,
+    //       contextLastMsgId,
+    //       20
+    //     )
+    //     if (newerMsgs && newerMsgs.length > 0) {
+    //       const merged = [
+    //         ...(contextMessages || []),
+    //         ...newerMsgs.filter(
+    //           (msg: TStateDirectMessage) =>
+    //             !(contextMessages || []).some((m: TStateDirectMessage) => m.id === msg.id)
+    //         ),
+    //       ].map((msg: TStateDirectMessage, idx: number, arr: TStateDirectMessage[]) => ({
+    //         ...msg,
+    //         isLastMsgInList: idx === arr.length - 1,
+    //       }))
+    //       setContextMessages(merged)
+    //       setContextLastMsgId(merged[merged.length - 1]?.id || null)
+    //       if (newerMsgs.length < 20) setContextHasMore(false)
+    //     } else {
+    //       setContextHasMore(false)
+    //     }
+    //   } catch (err) {
+    //     toast.error("Không thể lấy thêm tin nhắn mới hơn")
+    //     setContextHasMore(false)
+    //   }
+    // }
+
+    // Hàm bỏ ghim tin nhắn (unpin)
+    const handleUnpinMessage = async (msgId: number) => {
+      try {
+        const response = await pinService.togglePinMessage(msgId, directChat.id, false)
+        // Xử lý response dựa trên loại response
+        if ("success" in response && response.success) {
+          setPinnedMessages((prev) => prev.filter((m) => m.id !== msgId))
+          toast.success("Đã bỏ ghim tin nhắn")
+        }
+      } catch (err: any) {
+        const errorMessage = err?.response?.data?.message || "Lỗi khi bỏ ghim tin nhắn"
+        toast.error(errorMessage)
+      }
     }
 
+    // mappedMessages: ưu tiên contextMessages nếu có
     const mappedMessages = [...(messages || [])]
-      .sort((a, b) => a.id - b.id)
-      .map((message, index, arr) => {
+      .sort((a: TStateDirectMessage, b: TStateDirectMessage) => a.id - b.id)
+      .map((message: TStateDirectMessage, index, arr) => {
         const stickyTime = displayMessageStickyTime(message.createdAt, arr[index - 1]?.createdAt)
+        const isLast = contextEndId ? message.id === contextEndId : index === arr.length - 1
         return (
-          <Message
-            message={message}
+          <div
             key={message.id}
-            user={user}
-            stickyTime={stickyTime}
-            onReply={handleReply}
-            isPinned={!!pinnedMessages.find((m) => m.id === message.id)}
-            onPinChange={(newState) => {
-              if (newState) setPinnedMessages([...pinnedMessages, message])
-              else setPinnedMessages(pinnedMessages.filter((m) => m.id !== message.id))
-            }}
-            pinnedCount={pinnedMessages.length}
-            onReplyPreviewClick={handleReplyPreviewClick} // <-- truyền prop này
-          />
+            ref={isLast ? lastMsgRef : undefined}
+            className={isLast ? "QUERY-context-last-msg" : undefined}
+          >
+            <Message
+              message={message}
+              user={user}
+              stickyTime={stickyTime}
+              onReply={handleReply}
+              isPinned={!!pinnedMessages.find((m: TStateDirectMessage) => m.id === message.id)}
+              onPinChange={(newState) => {
+                if (newState) setPinnedMessages([...pinnedMessages, message])
+                else
+                  setPinnedMessages(
+                    pinnedMessages.filter((m: TStateDirectMessage) => m.id !== message.id)
+                  )
+              }}
+              pinnedCount={pinnedMessages.length}
+              onReplyPreviewClick={handleReplyPreviewClick}
+            />
+          </div>
         )
       })
+
+    // XÓA nút reset context và logic liên quan
 
     return (
       <div className="relative h-full flex flex-col">
@@ -730,7 +770,6 @@ export const Messages = memo(
             onUnpinMessage={handleUnpinMessage}
           />
         )}
-
         <div
           className="flex flex-col items-center w-full h-full overflow-y-scroll overflow-x-hidden STYLE-styled-scrollbar px-3 box-border"
           ref={messagesContainer}
@@ -763,3 +802,7 @@ export const Messages = memo(
     )
   }
 )
+
+//DỪNG TỚI ĐÂY
+//OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
+///HHHHHHHHHH

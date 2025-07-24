@@ -24,6 +24,7 @@ import VoiceMessage from "../(voice-chat)/VoiceMessage"
 import React, { useState, forwardRef } from "react"
 import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
+import { createPortal } from "react-dom"
 
 type TContentProps = {
   content: string
@@ -84,7 +85,7 @@ const ImageModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div className="relative max-w-[90vw] max-h-[90vh]">
@@ -289,11 +290,14 @@ const Content = ({
             </svg>
           </button>
         </div>
-        <ImageModal
-          imageUrl={mediaUrl}
-          isOpen={isImageModalOpen}
-          onClose={() => setIsImageModalOpen(false)}
-        />
+        {createPortal(
+          <ImageModal
+            imageUrl={mediaUrl}
+            isOpen={isImageModalOpen}
+            onClose={() => setIsImageModalOpen(false)}
+          />,
+          document.body
+        )}
       </>
     )
   }
@@ -597,7 +601,7 @@ export const Message = forwardRef<
     }
 
     // Hiển thị thông báo đặc biệt cho PIN_NOTICE
-    if (type === "PIN_NOTICE") {
+    if (type === EMessageTypes.PIN_NOTICE) {
       const isUnpin = content?.toLowerCase().includes("bỏ ghim")
       return (
         <div className="w-full flex justify-center my-2">
@@ -609,7 +613,10 @@ export const Message = forwardRef<
                 <Pin className="w-4 h-4" />
               )}
             </span>
-            <span className="text-xs">{content}</span>
+            <div
+              className="max-w-[300px] text-sm truncate"
+              dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
+            ></div>
             {/* Nút xem nếu có ReplyTo */}
             {message.ReplyTo && typeof message.ReplyTo.id !== "undefined" && (
               <button

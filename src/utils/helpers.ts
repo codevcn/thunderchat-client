@@ -1,5 +1,5 @@
 import dayjs from "dayjs"
-import type { TFormData } from "./types/global"
+import type { TFormData, THighlightOffsets } from "./types/global"
 import DOMPurify from "dompurify"
 import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
 
@@ -116,4 +116,48 @@ export function updateObjectByPath<T extends Record<string, any>>(
       current[path] = value
     }
   }
+}
+
+/**
+ * Extract the offsets of the highlighted text
+ * @param originalText - The original text
+ * @param highlightedText - The highlighted text
+ * @returns The offsets of the highlighted text
+ */
+export function extractHighlightOffsets(
+  original: string,
+  highlights: string[]
+): THighlightOffsets[] {
+  const offsets: THighlightOffsets[] = []
+  const matched = new Set<number>() // để tránh duplicate nếu từ xuất hiện nhiều lần
+
+  for (const highlighted of highlights) {
+    const regex = /<em>(.*?)<\/em>/g
+    let match: RegExpExecArray | null
+
+    while ((match = regex.exec(highlighted)) !== null) {
+      const word = match[1]
+      if (!word) continue
+
+      // Tìm tất cả vị trí xuất hiện của từ trong original
+      let searchStart = 0
+      while (searchStart < original.length) {
+        const index = original.indexOf(word, searchStart)
+        if (index === -1) break
+
+        if (!matched.has(index)) {
+          offsets.push({
+            start: index,
+            end: index + word.length,
+          })
+          matched.add(index)
+          break // nếu chỉ muốn lấy vị trí đầu tiên trong mỗi chuỗi highlight
+        }
+
+        searchStart = index + word.length
+      }
+    }
+  }
+
+  return offsets
 }

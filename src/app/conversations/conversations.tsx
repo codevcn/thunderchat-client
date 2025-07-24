@@ -14,7 +14,7 @@ import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.sel
 import { unwrapResult } from "@reduxjs/toolkit"
 import { searchService } from "@/services/search.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { createPathWithParams, santizeMsgContent } from "@/utils/helpers"
+import { createPathWithParams, extractHighlightOffsets, santizeMsgContent } from "@/utils/helpers"
 import { fetchDirectChatThunk } from "@/redux/conversations/conversations.thunks"
 import { directChatService } from "@/services/direct-chat.service"
 import { EMessageTypes, EPaginations } from "@/utils/enums"
@@ -24,34 +24,51 @@ import { AddMembersBoard } from "./group/create-group-chat"
 import { groupChatService } from "@/services/group-chat.service"
 import { TChatType, TConversationCard } from "@/utils/types/global"
 import { useUser } from "@/hooks/user"
+import { clearGlobalSearchResult, setGlobalSearchResult } from "@/redux/search/search.slice"
+import { renderHighlightedContent } from "@/utils/tsx-helpers"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 
 type TResultCardProps = {
   avatarUrl?: string
   convName: string
-  textUnder: string
+  subtitle: string
+  highlights?: string[]
 }
 
-const ResultCard = ({ avatarUrl, convName, textUnder }: TResultCardProps) => {
+const ResultCard = ({ avatarUrl, convName, subtitle, highlights }: TResultCardProps) => {
+  console.log(">>> highlights:", highlights)
   return (
-    <CustomTooltip title="Click to open a chat" placement="right">
-      <div className="flex w-full p-3 py-2 cursor-pointer hover:bg-regular-hover-card-cl rounded-xl gap-3">
-        <div>
-          {avatarUrl ? (
-            <CustomAvatar src={avatarUrl} imgSize={50} />
-          ) : (
-            <CustomAvatar imgSize={50} fallback={convName[0]} />
-          )}
+    <div className="flex w-full p-3 py-2 cursor-pointer hover:bg-regular-hover-card-cl rounded-lg gap-3">
+      <CustomTooltip
+        title="Click to open a chat"
+        placement="right"
+        className="w-full cursor-pointer"
+      >
+        <div className="flex w-full gap-3">
+          <div className="w-[50px]">
+            <CustomAvatar
+              className="border border-white/20 font-bold text-xl"
+              src={avatarUrl}
+              imgSize={50}
+              fallback={convName[0]}
+            />
+          </div>
+          <div className="flex flex-col gap-1 max-w-[calc(100%-62px)]">
+            <span className="font-bold text-base w-fit">{convName}</span>
+            {highlights && highlights.length > 0 && (
+              <span className="text-xs text-regular-icon-cl truncate w-full">
+                {renderHighlightedContent(subtitle, extractHighlightOffsets(subtitle, highlights))}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col justify-center gap-1">
-          <span className="font-bold text-base">{convName}</span>
-          <span className="text-xs text-regular-icon-cl">{textUnder}</span>
-        </div>
-      </div>
-    </CustomTooltip>
+      </CustomTooltip>
+    </div>
   )
 }
+
+type TSearchType = "users" | "messages"
 
 type TSearchResultProps = {
   loading: boolean
@@ -62,6 +79,8 @@ const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
   const { users, messages } = searchResult
   const router = useRouter()
   const dispatch = useAppDispatch()
+  const [activeTab, setActiveTab] = useState<TSearchType>("users")
+  const buttonsGroupRef = useRef<HTMLDivElement>(null)
 
   const startDirectChat = async () => {
     const res = await dispatch(fetchDirectChatThunk({ recipientId: id }))
@@ -69,42 +88,197 @@ const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
     router.push(createPathWithParams("/conversations", { cid: convData.id.toString() }))
   }
 
-  return users && users.length && messages && messages.length ? (
-    <div>
-      <div>
-        <h3 className="font-bold pl-3 pb-1 text-regular-icon-cl">Users</h3>
-        <div>
-          {users &&
-            users.length > 0 &&
-            users.map((user) => (
-              <ResultCard
-                key={user.id}
-                convName={user.fullName || "Unnamed"}
-                avatarUrl={user.avatarUrl}
-                textUnder={user.isOnline ? "Online" : "Offline"}
-              />
-            ))}
+  const handleTabClick = (e: React.MouseEvent<HTMLButtonElement>, tab: TSearchType) => {
+    setActiveTab(tab)
+    const buttonsGroup = buttonsGroupRef.current
+    if (buttonsGroup) {
+      const activeTabIndicator = buttonsGroup.querySelector<HTMLSpanElement>(
+        ".QUERY-active-tab-indicator"
+      )
+      if (activeTabIndicator) {
+        const buttonWidth = e.currentTarget.offsetWidth
+        const buttonOffsetLeft = e.currentTarget.offsetLeft
+        activeTabIndicator.style.width = `${buttonWidth}px`
+        activeTabIndicator.style.left = `${buttonOffsetLeft}px`
+      }
+    }
+  }
+
+  const setupActiveTab = () => {
+    if (users && users.length > 0) {
+      buttonsGroupRef.current?.querySelector<HTMLButtonElement>(".QUERY-tab-button-users")?.click()
+    } else if (messages && messages.length > 0) {
+      buttonsGroupRef.current
+        ?.querySelector<HTMLButtonElement>(".QUERY-tab-button-messages")
+        ?.click()
+    }
+  }
+
+  useEffect(() => {
+    setupActiveTab()
+  }, [searchResult])
+
+  const usersExist = users && users.length > 0
+  const messagesExist = messages && messages.length > 0
+
+  return (
+    (usersExist || messagesExist) && (
+      <div className="flex flex-col gap-2">
+        <div
+          className="flex px-2 relative border-b-2 border-regular-black-cl"
+          ref={buttonsGroupRef}
+        >
+          <span className="QUERY-active-tab-indicator bg-regular-violet-cl h-1 transition duration-200 absolute bottom-0 left-0"></span>
+          <button
+            className={`${activeTab === "users" ? "text-regular-violet-cl" : "text-regular-white-cl"} QUERY-tab-button-users px-4 pb-3 pt-3 hover:bg-regular-hover-card-cl`}
+            onClick={(e) => handleTabClick(e, "users")}
+          >
+            Users
+          </button>
+          <button
+            className={`${activeTab === "messages" ? "text-regular-violet-cl" : "text-regular-white-cl"} QUERY-tab-button-messages px-4 pb-3 pt-3 hover:bg-regular-hover-card-cl`}
+            onClick={(e) => handleTabClick(e, "messages")}
+          >
+            Messages
+          </button>
+        </div>
+        <div className="pt-2 px-2 STYLE-styled-scrollbar">
+          <div hidden={activeTab !== "users"} className="w-full">
+            {usersExist &&
+              users.map((user) => (
+                <ResultCard
+                  key={user.id}
+                  avatarUrl={user.avatarUrl}
+                  convName={user.fullName || ""}
+                  subtitle={""}
+                />
+              ))}
+          </div>
+          <div hidden={activeTab !== "messages"} className="w-full">
+            {messagesExist &&
+              messages.map((message) => (
+                <ResultCard
+                  key={message.id}
+                  convName={message.conversationName}
+                  subtitle={message.messageContent}
+                  highlights={message.highlights}
+                />
+              ))}
+          </div>
         </div>
       </div>
-      <div>
-        <h3 className="font-bold pl-3 pb-1 text-regular-icon-cl">Messages</h3>
-        <div>
-          {messages &&
-            messages.length > 0 &&
-            messages.map((message) => (
-              <ResultCard
-                key={message.id}
-                convName={message.conversationName}
-                textUnder={message.messageContent}
-                avatarUrl={message.avatarUrl}
-              />
-            ))}
+    )
+  )
+}
+
+type TSearchSectionProps = {
+  inputFocused: boolean
+  isSearching: boolean
+}
+
+const SearchSection = ({ inputFocused, isSearching }: TSearchSectionProps) => {
+  const globalSearchResult = useAppSelector((state) => state.search.globalSearchResult)
+  console.log(">>> global Search Result:", globalSearchResult)
+
+  return (
+    <div
+      className={`${inputFocused ? "animate-super-zoom-out-fade-in" : "animate-super-zoom-in-fade-out"} z-20 pt-2 pb-5 absolute top-0 left-0 box-border w-full h-full overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar`}
+    >
+      {globalSearchResult ? (
+        <SearchResult loading={isSearching} searchResult={globalSearchResult} />
+      ) : (
+        <div className="flex justify-center items-center h-full w-full">
+          <p className="text-regular-icon-cl">No results found</p>
         </div>
-      </div>
+      )}
     </div>
-  ) : (
-    <div className="flex justify-center items-center pt-5">
-      {loading && <Spinner size="large" />}
+  )
+}
+
+type TGlobalSearchBarProps = {
+  setIsSearching: Dispatch<SetStateAction<boolean>>
+  setInputFocused: Dispatch<SetStateAction<boolean>>
+  inputFocused: boolean
+  isSearching: boolean
+}
+
+const GlobalSearchBar = ({
+  setInputFocused,
+  setIsSearching,
+  inputFocused,
+  isSearching,
+}: TGlobalSearchBarProps) => {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const debounce = useDebounce()
+  const dispatch = useAppDispatch()
+
+  const searchGlobally = debounce(async (e: ChangeEvent<HTMLInputElement>) => {
+    let inputValue = e.target.value.trim()
+    if (!inputValue) return
+    setIsSearching(true)
+    searchService
+      .searchGlobally(inputValue)
+      .then((res) => {
+        dispatch(setGlobalSearchResult(res))
+      })
+      .catch((err) => {
+        toast.error(axiosErrorHandler.handleHttpError(err).message)
+      })
+      .finally(() => {
+        setIsSearching(false)
+      })
+  }, 300)
+
+  const closeSearch = () => {
+    if (inputRef.current?.value) inputRef.current.value = ""
+    setInputFocused(false)
+  }
+
+  const clearInput = () => {
+    if (inputRef.current?.value) inputRef.current.value = ""
+    dispatch(clearGlobalSearchResult())
+  }
+
+  return (
+    <div className="flex gap-1 items-center px-2 box-border text-regular-placeholder-cl">
+      <div
+        className={`flex ${inputFocused ? "animate-appear-zoom-in-s40" : "animate-disappear-zoom-out-s40"}`}
+      >
+        <IconButton
+          className="flex justify-center items-center h-[40px] w-[40px]"
+          onClick={closeSearch}
+        >
+          <ArrowLeft color="currentColor" size={20} />
+        </IconButton>
+      </div>
+
+      <div className="flex flex-auto relative w-full">
+        {isSearching ? (
+          <span className="absolute top-1/2 -translate-y-1/2 z-20 h-5 w-5 left-3">
+            <Spinner size="small" className="text-regular-violet-cl" />
+          </span>
+        ) : (
+          <span className="absolute top-1/2 -translate-y-1/2 z-20 h-5 w-5 left-3">
+            <SearchIcon color="currentColor" size={20} />
+          </span>
+        )}
+
+        <input
+          type="text"
+          className="box-border h-[40px] w-full px-10 rounded-full transition duration-200 border-2 placeholder:text-regular-placeholder-cl outline-none text-white bg-regular-hover-card-cl border-regular-hover-card-cl hover:border-regular-violet-cl hover:bg-regular-hover-card-cl focus:border-regular-violet-cl"
+          placeholder="Search..."
+          onChange={searchGlobally}
+          onFocus={() => setInputFocused(true)}
+          ref={inputRef}
+        />
+
+        <IconButton
+          className="flex justify-center items-center right-1 h-[35px] w-[35px] absolute top-1/2 -translate-y-1/2 z-20"
+          onClick={clearInput}
+        >
+          <X color="currentColor" />
+        </IconButton>
+      </div>
     </div>
   )
 }
@@ -278,86 +452,6 @@ const ConversationCards = () => {
   )
 }
 
-type TGlobalSearchBarProps = {
-  setIsSearching: Dispatch<SetStateAction<boolean>>
-  setInputFocused: Dispatch<SetStateAction<boolean>>
-  inputFocused: boolean
-  setSearchResult: (result: TGlobalSearchData) => void
-}
-
-const GlobalSearchBar = ({
-  setInputFocused,
-  setIsSearching,
-  inputFocused,
-  setSearchResult,
-}: TGlobalSearchBarProps) => {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const debounce = useDebounce()
-
-  const searchGlobally = debounce(async (e: ChangeEvent<HTMLInputElement>) => {
-    let inputValue = e.target.value.trim()
-    if (!inputValue) return
-    setIsSearching(true)
-    searchService
-      .searchGlobally(inputValue)
-      .then((res) => {
-        setSearchResult(res)
-      })
-      .catch((err) => {
-        toast.error(axiosErrorHandler.handleHttpError(err).message)
-      })
-      .finally(() => {
-        setIsSearching(false)
-      })
-  }, 300)
-
-  const closeSearch = () => {
-    if (inputRef.current?.value) inputRef.current.value = ""
-    setInputFocused(false)
-  }
-
-  const clearInput = () => {
-    if (inputRef.current?.value) inputRef.current.value = ""
-  }
-
-  return (
-    <div className="flex gap-1 items-center px-2 box-border text-regular-placeholder-cl">
-      <div
-        className={`flex ${inputFocused ? "animate-appear-zoom-in-s40" : "animate-disappear-zoom-out-s40"}`}
-      >
-        <IconButton
-          className="flex justify-center items-center h-[40px] w-[40px]"
-          onClick={closeSearch}
-        >
-          <ArrowLeft color="currentColor" size={20} />
-        </IconButton>
-      </div>
-
-      <div className="flex flex-auto relative w-full">
-        <span className="absolute top-1/2 -translate-y-1/2 z-20 left-3">
-          <SearchIcon color="currentColor" size={20} />
-        </span>
-
-        <input
-          type="text"
-          className="box-border h-[40px] w-full px-10 rounded-full transition duration-200 border-2 placeholder:text-regular-placeholder-cl outline-none text-white bg-regular-hover-card-cl border-regular-hover-card-cl hover:border-regular-violet-cl hover:bg-regular-hover-card-cl focus:border-regular-violet-cl"
-          placeholder="Search..."
-          onChange={searchGlobally}
-          onFocus={() => setInputFocused(true)}
-          ref={inputRef}
-        />
-
-        <IconButton
-          className="flex justify-center items-center right-1 h-[35px] w-[35px] absolute top-1/2 -translate-y-1/2 z-20"
-          onClick={clearInput}
-        >
-          <X color="currentColor" />
-        </IconButton>
-      </div>
-    </div>
-  )
-}
-
 type TFloatingMenuProps = {
   onOpenGroupChat: Dispatch<SetStateAction<boolean>>
   openGroupChat: boolean
@@ -397,7 +491,6 @@ const FloatingMenu = ({ onOpenGroupChat, openGroupChat }: TFloatingMenuProps) =>
 export const Conversations = () => {
   const [inputFocused, setInputFocused] = useState<boolean>(false)
   const [isSearching, setIsSearching] = useState<boolean>(false)
-  const [searchResult, setSearchResult] = useState<TGlobalSearchData>()
   const [openGroupChat, setOpenGroupChat] = useState<boolean>(false)
 
   return (
@@ -410,21 +503,11 @@ export const Conversations = () => {
           setInputFocused={setInputFocused}
           setIsSearching={setIsSearching}
           inputFocused={inputFocused}
-          setSearchResult={setSearchResult}
+          isSearching={isSearching}
         />
 
         <div className="relative z-10 grow overflow-hidden">
-          <div
-            className={`${inputFocused ? "animate-super-zoom-out-fade-in" : "animate-super-zoom-in-fade-out"} z-20 py-5 absolute top-0 left-0 px-2 box-border w-full h-full overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar`}
-          >
-            {searchResult ? (
-              <SearchResult loading={isSearching} searchResult={searchResult} />
-            ) : (
-              <div className="flex justify-center items-center h-full w-full">
-                <p className="text-regular-icon-cl">No results found</p>
-              </div>
-            )}
-          </div>
+          <SearchSection inputFocused={inputFocused} isSearching={isSearching} />
 
           <div
             className={`${inputFocused ? "animate-zoom-fade-out" : "animate-zoom-fade-in"} w-full h-full absolute top-0 left-0 z-30 px-2`}

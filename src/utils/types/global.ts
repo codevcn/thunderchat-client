@@ -105,3 +105,8 @@ export type TChatType = "direct" | "group"
 export type TRemoveGroupChatMemberState = {
   memberId: number
 }
+
+export type THighlightOffsets = {
+  start: number
+  end: number
+}

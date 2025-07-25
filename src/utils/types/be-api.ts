@@ -48,6 +48,7 @@ export type TDirectMessage = {
   fileType?: string
   fileSize?: number
   thumbnailUrl?: string | null
+  isDeleted: boolean
 }
 
 export type TDirectMessageWithAuthor = TDirectMessage & {
@@ -255,4 +256,10 @@ export type TFetchGroupChatsData = TGroupChat & {
 export type TUpdateGroupChatParams = {
   groupName?: string
   avatarUrl?: string
+}
+
+// Response khi xoá/thu hồi tin nhắn direct chat
+export type TDeleteDirectMessageRes = {
+  isDeleted: boolean
+  content: string
 }

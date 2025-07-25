@@ -24,3 +24,7 @@ export const getNewerDirectMessages = (directChatId: number, msgOffset: number, 
     ...requestConfig,
     params: { directChatId, msgOffset, ...(limit ? { limit } : {}) },
   })
+
+// API xoá/thu hồi tin nhắn direct chat
+export const deleteDirectMessage = (messageId: number) =>
+  clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)

@@ -43,11 +43,14 @@ export const messagesSlice = createSlice({
   name: "messages",
   reducers: {
     pushNewMessages: (state, action: PayloadAction<TStateDirectMessage[]>) => {
-      const currentMessages = state.directMessages
-      state.directMessages =
-        currentMessages && currentMessages.length > 0
-          ? [...currentMessages, ...action.payload]
-          : action.payload
+      const currentMessages = state.directMessages || []
+      const newMessages = action.payload
+      const ids = new Set(newMessages.map((m) => m.id))
+      // Replace message cũ nếu trùng id, thêm mới nếu chưa có
+      state.directMessages = [
+        ...currentMessages.filter((m) => !ids.has(m.id)),
+        ...newMessages,
+      ].sort((a, b) => a.id - b.id)
     },
     updateMessages: (state, action: PayloadAction<TMessageStateUpdates[]>) => {
       const currentMessages = state.directMessages

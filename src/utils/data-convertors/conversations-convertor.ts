@@ -1,6 +1,6 @@
 import type { TFetchDirectChatsData, TFetchGroupChatsData, TUserWithProfile } from "../types/be-api"
 import type { TConversationCard } from "../types/global"
-import { EMessageTypes } from "../enums"
+import { EChatType, EMessageTypes } from "../enums"
 
 export const convertToDirectChatsUIData = (
   data: TFetchDirectChatsData[],
@@ -23,7 +23,7 @@ export const convertToDirectChatsUIData = (
         type: lastMessage?.type || EMessageTypes.TEXT,
       },
       title: creator.id === user.id ? item.Recipient.Profile.fullName : creatorProfile.fullName,
-      type: "direct",
+      type: EChatType.DIRECT,
       createdAt: item.createdAt,
     }
   })
@@ -45,7 +45,7 @@ export const convertToGroupChatsUIData = (data: TFetchGroupChatsData[]): TConver
         type: lastMessage?.type || EMessageTypes.TEXT,
       },
       title: item.name,
-      type: "group",
+      type: EChatType.GROUP,
       createdAt: item.createdAt,
     }
   })

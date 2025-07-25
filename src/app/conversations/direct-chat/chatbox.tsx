@@ -22,6 +22,7 @@ import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.con
 import { useAudioMessages } from "@/hooks/audio-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateDirectMessage } from "@/utils/types/global"
+import { setDirectChat } from "@/redux/messages/messages.slice"
 
 const TypingIndicator = () => {
   return (
@@ -185,15 +186,24 @@ const Main = ({ directChat }: TMainProps) => {
 
 type TDirectChatboxProps = {
   directChatId: number
+  isTemp: boolean
 }
 
-export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
-  const { directChat } = useAppSelector(({ messages }) => messages)
+export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => {
+  const { directChat, tempChatData } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
 
-  useEffect(() => {
+  const fetchDirectChat = () => {
+    if (isTemp && tempChatData) {
+      dispatch(setDirectChat(tempChatData))
+      return
+    }
     dispatch(fetchDirectChatThunk(directChatId))
-  }, [])
+  }
+
+  useEffect(() => {
+    fetchDirectChat()
+  }, [directChatId])
 
   return (
     directChatId &&

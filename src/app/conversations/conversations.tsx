@@ -4,28 +4,27 @@ import { CustomAvatar, CustomPopover, CustomTooltip, Skeleton, toast } from "@/c
 import { Search as SearchIcon, ArrowLeft, X, Pin, Menu, Users } from "lucide-react"
 import dayjs from "dayjs"
 import { useDebounce } from "@/hooks/debounce"
-import type { TGlobalSearchData } from "@/utils/types/be-api"
+import type { TGlobalSearchData, TUserWithProfile } from "@/utils/types/be-api"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
 import { Spinner } from "@/components/materials/spinner"
 import { IconButton } from "@/components/materials/icon-button"
-import { useRouter } from "next/navigation"
 import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.selectors"
-import { unwrapResult } from "@reduxjs/toolkit"
 import { searchService } from "@/services/search.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { createPathWithParams, extractHighlightOffsets, santizeMsgContent } from "@/utils/helpers"
-import { fetchDirectChatThunk } from "@/redux/conversations/conversations.thunks"
+import { extractHighlightOffsets, santizeMsgContent } from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
-import { EMessageTypes, EPaginations } from "@/utils/enums"
+import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
 import { addConversations } from "@/redux/conversations/conversations.slice"
 import { toaster } from "@/utils/toaster"
 import { AddMembersBoard } from "./group/create-group-chat"
 import { groupChatService } from "@/services/group-chat.service"
-import { TChatType, TConversationCard } from "@/utils/types/global"
+import { TConversationCard } from "@/utils/types/global"
 import { useUser } from "@/hooks/user"
 import { clearGlobalSearchResult, setGlobalSearchResult } from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
+import { useNavToConversation } from "@/hooks/navigation"
+import { setTempChatData } from "@/redux/messages/messages.slice"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 
@@ -34,12 +33,21 @@ type TResultCardProps = {
   convName: string
   subtitle: string
   highlights?: string[]
+  onStartChat: () => void
 }
 
-const ResultCard = ({ avatarUrl, convName, subtitle, highlights }: TResultCardProps) => {
-  console.log(">>> highlights:", highlights)
+const ResultCard = ({
+  avatarUrl,
+  convName,
+  subtitle,
+  highlights,
+  onStartChat,
+}: TResultCardProps) => {
   return (
-    <div className="flex w-full p-3 py-2 cursor-pointer hover:bg-regular-hover-card-cl rounded-lg gap-3">
+    <div
+      className="flex w-full p-3 py-2 cursor-pointer hover:bg-regular-hover-card-cl rounded-lg gap-3"
+      onClick={onStartChat}
+    >
       <CustomTooltip
         title="Click to open a chat"
         placement="right"
@@ -71,21 +79,60 @@ const ResultCard = ({ avatarUrl, convName, subtitle, highlights }: TResultCardPr
 type TSearchType = "users" | "messages"
 
 type TSearchResultProps = {
-  loading: boolean
   searchResult: TGlobalSearchData
 }
 
-const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
+const SearchResult = ({ searchResult }: TSearchResultProps) => {
   const { users, messages } = searchResult
-  const router = useRouter()
-  const dispatch = useAppDispatch()
   const [activeTab, setActiveTab] = useState<TSearchType>("users")
   const buttonsGroupRef = useRef<HTMLDivElement>(null)
+  const navToConversation = useNavToConversation()
+  const dispatch = useAppDispatch()
+  const user = useUser()!
+  console.log(">>> search result:", searchResult)
 
-  const startDirectChat = async () => {
-    const res = await dispatch(fetchDirectChatThunk({ recipientId: id }))
-    const convData = unwrapResult(res)
-    router.push(createPathWithParams("/conversations", { cid: convData.id.toString() }))
+  const startChatHandler = async (
+    type: "users" | "messages",
+    chatType: EChatType,
+    chatId?: number,
+    otherUser?: TUserWithProfile
+  ) => {
+    console.log(">>> start chat params:", { type, chatType, chatId, otherUser })
+    if (type === "messages" && chatId) {
+      navToConversation(chatId, chatType)
+    } else if (type === "users" && otherUser) {
+      const otherUserId = otherUser.id
+      directChatService.findConversationWithOtherUser(otherUserId).then((directChat) => {
+        if (directChat) {
+          navToConversation(directChat.id, EChatType.DIRECT)
+        } else {
+          dispatch(
+            setTempChatData({
+              id: -1,
+              createdAt: new Date().toISOString(),
+              creatorId: user.id,
+              recipientId: otherUserId,
+              Creator: {
+                id: user.id,
+                email: user.email,
+                password: user.password,
+                createdAt: user.createdAt,
+                Profile: user.Profile,
+              },
+              Recipient: {
+                id: otherUserId,
+                email: "",
+                password: "",
+                createdAt: "",
+                Profile: otherUser.Profile,
+              },
+              lastSentMessageId: undefined,
+            })
+          )
+          navToConversation(-1, EChatType.DIRECT)
+        }
+      })
+    }
   }
 
   const handleTabClick = (e: React.MouseEvent<HTMLButtonElement>, tab: TSearchType) => {
@@ -148,9 +195,10 @@ const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
               users.map((user) => (
                 <ResultCard
                   key={user.id}
-                  avatarUrl={user.avatarUrl}
-                  convName={user.fullName || ""}
+                  avatarUrl={user.Profile.avatar}
+                  convName={user.Profile.fullName || ""}
                   subtitle={""}
+                  onStartChat={() => startChatHandler("users", EChatType.DIRECT, undefined, user)}
                 />
               ))}
           </div>
@@ -162,6 +210,7 @@ const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
                   convName={message.conversationName}
                   subtitle={message.messageContent}
                   highlights={message.highlights}
+                  onStartChat={() => startChatHandler("messages", message.chatType, message.chatId)}
                 />
               ))}
           </div>
@@ -173,19 +222,17 @@ const SearchResult = ({ loading, searchResult }: TSearchResultProps) => {
 
 type TSearchSectionProps = {
   inputFocused: boolean
-  isSearching: boolean
 }
 
-const SearchSection = ({ inputFocused, isSearching }: TSearchSectionProps) => {
+const SearchSection = ({ inputFocused }: TSearchSectionProps) => {
   const globalSearchResult = useAppSelector((state) => state.search.globalSearchResult)
-  console.log(">>> global Search Result:", globalSearchResult)
 
   return (
     <div
       className={`${inputFocused ? "animate-super-zoom-out-fade-in" : "animate-super-zoom-in-fade-out"} z-20 pt-2 pb-5 absolute top-0 left-0 box-border w-full h-full overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar`}
     >
       {globalSearchResult ? (
-        <SearchResult loading={isSearching} searchResult={globalSearchResult} />
+        <SearchResult searchResult={globalSearchResult} />
       ) : (
         <div className="flex justify-center items-center h-full w-full">
           <p className="text-regular-icon-cl">No results found</p>
@@ -289,7 +336,7 @@ const ConversationCards = () => {
   const directChatLastId = useRef<number | undefined>(undefined)
   const groupChatLastId = useRef<number | undefined>(undefined)
   const tempFlagUseEffectRef = useRef<boolean>(true)
-  const router = useRouter()
+  const navToConversation = useNavToConversation()
   const [loading, setLoading] = useState<boolean>(false)
   const user = useUser()!
 
@@ -310,10 +357,10 @@ const ConversationCards = () => {
     if (conversations && conversations.length > 0) {
       for (const conversation of conversations) {
         // Tìm id cuối cùng theo loại chat trong mảng
-        if (conversation.type === "direct") {
+        if (conversation.type === EChatType.DIRECT) {
           directChatLastId.current = conversation.id
         }
-        if (conversation.type === "group") {
+        if (conversation.type === EChatType.GROUP) {
           groupChatLastId.current = conversation.id
         }
       }
@@ -370,10 +417,8 @@ const ConversationCards = () => {
     dispatch(addConversations(sortedChats))
   }
 
-  const navToDirectChat = (id: number, type: TChatType) => {
-    router.push(
-      createPathWithParams("/conversations", { [type === "direct" ? "cid" : "gid"]: id.toString() })
-    )
+  const navToDirectChat = (id: number, type: EChatType) => {
+    navToConversation(id, type)
   }
 
   useEffect(() => {
@@ -507,7 +552,7 @@ export const Conversations = () => {
         />
 
         <div className="relative z-10 grow overflow-hidden">
-          <SearchSection inputFocused={inputFocused} isSearching={isSearching} />
+          <SearchSection inputFocused={inputFocused} />
 
           <div
             className={`${inputFocused ? "animate-zoom-fade-out" : "animate-zoom-fade-in"} w-full h-full absolute top-0 left-0 z-30 px-2`}

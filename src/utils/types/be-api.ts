@@ -1,7 +1,13 @@
 /**
  * This file contains the types for the BE API server (backend api server)
  */
-import type { EFriendRequestStatus, EGroupChatRole, EMessageTypes, ESortTypes } from "@/utils/enums"
+import type {
+  EFriendRequestStatus,
+  EGroupChatRole,
+  EMessageTypes,
+  ESortTypes,
+  EChatType,
+} from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 
 // ================================= DB entities =================================
@@ -31,7 +37,7 @@ export type TDirectChat = {
   createdAt: string
   creatorId: number
   recipientId: number
-  lastSentMessageId: number
+  lastSentMessageId?: number
 }
 
 export type TDirectMessage = {
@@ -95,7 +101,7 @@ export type TGroupChat = {
   name: string
   creatorId: number
   createdAt: string
-  lastSentMessageId: number
+  lastSentMessageId?: number
 }
 
 export type TGroupMessage = {
@@ -192,7 +198,7 @@ export type TSearchUsersParams = {
 }
 
 export type TGetDirectMsgsParams = {
-  msgOffset: number
+  msgOffset?: number
   directChatId: number
   limit: number
   sortType: ESortTypes
@@ -207,17 +213,17 @@ export type TGetDirectMessagesData = {
 }
 
 export type TGlobalSearchData = {
-  users: {
-    id: number
-    avatarUrl?: string
-    fullName?: string
-  }[]
+  users: (TUserWithProfile & {
+    isOnline: boolean
+  })[]
   messages: {
     id: number
     avatarUrl?: string
     conversationName: string
     messageContent: string
     highlights: string[]
+    chatType: EChatType
+    chatId: number
   }[]
 }
 

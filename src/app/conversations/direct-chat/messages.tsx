@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useRef, useState, useEffect, memo } from "react"
 import { fetchDirectMessagesThunk } from "@/redux/messages/messages.thunk"
 import type {
-  TDirectMessageWithAuthor,
   TGetDirectMessagesMessage,
   TSticker,
   TUserWithoutPassword,
@@ -151,7 +150,7 @@ export const Messages = memo(({ directChat, onReply }: TMessagesProps) => {
   const hasMoreMessages = useRef<boolean>(true) // Biến để kiểm tra xem còn tin nhắn nào để tải thêm hay không
   const firstScrollToBottom = useRef<boolean>(true) // Biến để kiểm tra xem đã cuộn xuống dưới lần đầu hay chưa
   const finalMessageId = useRef<number>(-1) // Biến để lưu ID của tin nhắn cuối cùng trong danh sách
-  const msgOffset = useRef<number>(lastSentMessageId) // Biến lưu offset để tải thêm tin nhắn
+  const msgOffset = useRef<number | undefined>(lastSentMessageId) // Biến lưu offset để tải thêm tin nhắn
   const dispatch = useAppDispatch()
   const tempFlagUseEffectRef = useRef<boolean>(true)
   const messagesPreCount = useRef<number>(0) // Biến để lưu số lượng tin nhắn trước đó trong danh sách
@@ -218,7 +217,11 @@ export const Messages = memo(({ directChat, onReply }: TMessagesProps) => {
     }
   }
 
-  const fetchMessages = async (directChatId: number, msgOffset: number, isFirstTime: boolean) => {
+  const fetchMessages = async (
+    directChatId: number,
+    msgOffset: number | undefined,
+    isFirstTime: boolean
+  ) => {
     const msgsContainerEle = messagesContainer.current
     if (!msgsContainerEle) return
     setLoading("loading-messages")

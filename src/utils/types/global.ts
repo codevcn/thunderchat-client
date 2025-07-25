@@ -5,7 +5,7 @@ import type {
   TGroupMessage,
   TDirectMessageWithAuthorAndReplyTo,
 } from "@/utils/types/be-api"
-import type { EMessageTypes } from "../enums"
+import type { EChatType, EMessageTypes } from "../enums"
 
 export type TStateDirectMessage = TDirectMessageWithAuthorAndReplyTo & {
   isNewMsg?: boolean
@@ -51,7 +51,7 @@ export type TConversationCard = {
   }
   lastMessageTime?: string
   pinIndex: number
-  type: "direct" | "group"
+  type: EChatType
   createdAt: string
 }
 

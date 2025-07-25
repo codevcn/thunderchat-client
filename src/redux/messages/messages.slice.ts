@@ -4,7 +4,7 @@ import type {
   TStateDirectMessage,
   TStateGroupMessage,
 } from "@/utils/types/global"
-import { PayloadAction, createSlice, current } from "@reduxjs/toolkit"
+import { PayloadAction, createSlice } from "@reduxjs/toolkit"
 import { fetchDirectMessagesThunk, fetchGroupMessagesThunk } from "./messages.thunk"
 import type {
   TDirectChatData,
@@ -28,6 +28,7 @@ type TMessagesState = {
   directMessages: TStateDirectMessage[] | null
   groupMessages: TStateGroupMessage[] | null
   fetchedMsgs: boolean
+  tempChatData: TDirectChatData | null
 }
 
 const initialState: TMessagesState = {
@@ -37,6 +38,7 @@ const initialState: TMessagesState = {
   directMessages: null,
   groupMessages: null,
   fetchedMsgs: false,
+  tempChatData: null,
 }
 
 export const messagesSlice = createSlice({
@@ -82,7 +84,12 @@ export const messagesSlice = createSlice({
       if (groupChatMembers) {
         state.groupChatMembers = groupChatMembers.filter((member) => member.id !== memberId)
       }
-      console.log(">>> gr mems:", current(state).groupChatMembers)
+    },
+    setDirectChat: (state, action: PayloadAction<TDirectChatData>) => {
+      state.directChat = action.payload
+    },
+    setTempChatData: (state, action: PayloadAction<TDirectChatData>) => {
+      state.tempChatData = action.payload
     },
   },
   extraReducers: (builder) => {
@@ -130,5 +137,11 @@ export const messagesSlice = createSlice({
   },
 })
 
-export const { pushNewMessages, updateMessages, updateGroupChat, removeGroupChatMember } =
-  messagesSlice.actions
+export const {
+  pushNewMessages,
+  updateMessages,
+  updateGroupChat,
+  removeGroupChatMember,
+  setDirectChat,
+  setTempChatData,
+} = messagesSlice.actions

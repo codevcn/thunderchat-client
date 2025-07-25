@@ -75,3 +75,8 @@ export enum EGroupChatRole {
   ADMIN = "ADMIN",
   MEMBER = "MEMBER",
 }
+
+export enum EChatType {
+  DIRECT = "DIRECT",
+  GROUP = "GROUP",
+}

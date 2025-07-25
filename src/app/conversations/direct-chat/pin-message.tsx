@@ -209,7 +209,7 @@ export const PinMessageModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-regular-dark-gray-cl rounded-lg shadow-lg max-w-md w-full p-0 relative border border-gray-700">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b-2 border-purple-700 bg-[var(--tdc-regular-tooltip-bgcl)] rounded-t-lg">
+        <div className="flex items-center justify-between px-4 py-2 border-b-2 border-[#734fd1] bg-[#8661e9] rounded-t-lg">
           <span className="font-semibold text-base text-white">
             Danh sách ghim ({pinnedMessages.length})
           </span>

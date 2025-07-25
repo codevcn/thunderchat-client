@@ -24,3 +24,6 @@ export const getNewerDirectMessages = (directChatId: number, msgOffset: number, 
     ...requestConfig,
     params: { directChatId, msgOffset, ...(limit ? { limit } : {}) },
   })
+
+export const postCreateDirectChat = (recipientId: number) =>
+  clientAxios.post("/direct-chat/create", { recipientId }, requestConfig)

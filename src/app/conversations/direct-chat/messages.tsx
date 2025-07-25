@@ -571,7 +571,7 @@ export const Messages = memo(
       if (!messages || messages.length === 0) return
       // Nếu đang ở context, lấy offset là contextEndId, ngược lại lấy id cuối cùng của mảng
       const offset = contextEndId ?? messages[messages.length - 1].id
-      console.log("[DEBUG] Gọi getNewerMessages với offset:", offset)
+      //console.log("[DEBUG] Gọi getNewerMessages với offset:", offset)
       try {
         const newerMsgs = await directChatService.getNewerMessages(directChatId, offset, 20)
         if (newerMsgs && newerMsgs.length > 0) {
@@ -614,12 +614,12 @@ export const Messages = memo(
       })
       // Thêm log số lượng tin nhắn hiện tại
       if (messages) {
-        console.log(`[DEBUG] Số lượng tin nhắn được load ra hiện tại: ${messages.length}`)
+        //console.log(`[DEBUG] Số lượng tin nhắn được load ra hiện tại: ${messages.length}`)
       }
       // Thêm log kiểm tra messages có type 'PIN_NOTICE' không
       if (messages && messages.length > 0) {
         const pinNoticeMsgs = messages.filter((msg) => msg.type === "PIN_NOTICE")
-        console.log("[DEBUG] Số lượng PIN_NOTICE:", pinNoticeMsgs.length, pinNoticeMsgs)
+        //console.log("[DEBUG] Số lượng PIN_NOTICE:", pinNoticeMsgs.length, pinNoticeMsgs)
       }
     }, [messages])
 
@@ -656,7 +656,7 @@ export const Messages = memo(
       if (pendingFillContextId && messages) {
         const allIds = messages.map((m: TStateDirectMessage) => m.id)
         const missingRanges = findMissingRanges(allIds)
-        console.log("[DEBUG] (useEffect) Các đoạn id bị thiếu:", missingRanges)
+        //onsole.log("[DEBUG] (useEffect) Các đoạn id bị thiếu:", missingRanges)
         missingRanges.forEach(([from, to]) => {
           fetchMissingMessages(from, to)
         })

@@ -24,3 +24,9 @@ export const getNewerDirectMessages = (directChatId: number, msgOffset: number, 
     ...requestConfig,
     params: { directChatId, msgOffset, ...(limit ? { limit } : {}) },
   })
+
+export const checkCanSendDirectMessage = (receiverId: number) =>
+  clientAxios.get<{ canSend: boolean }>(`/message/can-send-message`, {
+    ...requestConfig,
+    params: { receiverId },
+  })

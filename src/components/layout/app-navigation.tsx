@@ -74,11 +74,14 @@ export const AppNavigation = memo((props: AppNavigationProps) => {
         </div>
 
         <CustomTooltip placement="right" title="Settings">
-          <div className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3">
+          <Link
+            href="/user-settings"
+            className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
+          >
             <div className="m-auto">
               <Settings size={20} color="white" />
             </div>
-          </div>
+          </Link>
         </CustomTooltip>
       </div>
       <div className="absolute top-0 right-0 min-w-[0.5px] h-full bg-regular-hover-card-cl"></div>

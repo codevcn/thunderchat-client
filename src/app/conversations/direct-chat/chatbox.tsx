@@ -23,6 +23,7 @@ import { useUser } from "@/hooks/user"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import type { TPinMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
+import { directChatService } from "@/services/direct-chat.service"
 
 const TypingIndicator = () => {
   return (
@@ -47,9 +48,10 @@ type THeaderProps = {
   infoBarIsOpened: boolean
   onOpenInfoBar: (open: boolean) => void
   friendInfo: TUserWithProfile
+  canSend: boolean | null
 }
 
-const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo }: THeaderProps) => {
+const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, canSend }: THeaderProps) => {
   const { Profile } = friendInfo
   const [isTyping, setIsTyping] = useState<boolean>(false)
 
@@ -99,8 +101,17 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo }: THeaderProps) =>
         </CustomTooltip>
 
         <CustomTooltip title="Call" placement="bottom" align="end">
-          <div>
-            <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
+          <div style={canSend === false ? { opacity: 0.5, pointerEvents: "none" } : {}}>
+            <IconButton
+              className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
+              onClick={
+                canSend === false
+                  ? undefined
+                  : () => {
+                      /* logic gọi */
+                    }
+              }
+            >
               <Phone />
             </IconButton>
           </div>
@@ -120,9 +131,10 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo }: THeaderProps) =>
 
 type TMainProps = {
   directChat: TDirectChatData
+  canSend: boolean | null
 }
 
-const Main = ({ directChat }: TMainProps) => {
+const Main = ({ directChat, canSend }: TMainProps) => {
   const { Recipient, Creator } = directChat
   const user = useUser()!
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
@@ -235,6 +247,7 @@ const Main = ({ directChat }: TMainProps) => {
           infoBarIsOpened={infoBarIsOpened}
           onOpenInfoBar={handleOpenInfoBar}
           friendInfo={friendInfo}
+          canSend={canSend}
         />
 
         {/* Box pinned messages ngay dưới header */}
@@ -288,6 +301,7 @@ const Main = ({ directChat }: TMainProps) => {
                 setPinnedMessages={setPinnedMessages}
                 showPinnedModal={showPinnedModal}
                 setShowPinnedModal={setShowPinnedModal}
+                canSend={canSend}
               />
             </div>
             <div className="w-full flex justify-center">
@@ -295,6 +309,7 @@ const Main = ({ directChat }: TMainProps) => {
                 directChat={directChat}
                 replyMessage={replyMessage}
                 setReplyMessage={handleSetReplyMessage}
+                canSend={canSend}
               />
             </div>
           </div>
@@ -312,16 +327,25 @@ type TDirectChatboxProps = {
 export const DirectChatbox = ({ directChatId }: TDirectChatboxProps) => {
   const { directChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
+  const [canSend, setCanSend] = useState<boolean | null>(null)
+  const user = useUser()
 
   useEffect(() => {
     dispatch(fetchDirectChatThunk(directChatId))
   }, [])
 
+  useEffect(() => {
+    if (!directChat) return
+    const receiverId =
+      user?.id === directChat.recipientId ? directChat.creatorId : directChat.recipientId
+    directChatService.checkCanSendMessage(receiverId).then(setCanSend)
+  }, [directChat?.id, user?.id])
+
   return (
     directChatId &&
     directChat && (
       <VoicePlayerProvider>
-        <Main directChat={directChat} />
+        <Main directChat={directChat} canSend={canSend} />
       </VoicePlayerProvider>
     )
   )

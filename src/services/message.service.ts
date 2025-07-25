@@ -6,6 +6,7 @@ import {
 } from "@/apis/messages"
 import { ESortTypes } from "@/utils/enums"
 import type {
+  TDirectMessage,
   TGetDirectMessagesData,
   TGetDirectMsgsParams,
   TGetGroupMessagesData,

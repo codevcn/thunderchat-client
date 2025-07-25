@@ -88,7 +88,7 @@ const ExpressionPicker = ({
           chattingService.recursiveSendingQueueMessages()
         } else if ("isError" in data && data.isError) {
           console.log(">>> data err:", data)
-          toast.error("Error when sending message")
+          toast.error(data?.message || "Error when sending message")
         }
       }
     )
@@ -270,7 +270,7 @@ const MessageTextField = ({
         chattingService.recursiveSendingQueueMessages()
       } else if ("isError" in data && data.isError) {
         console.log(">>> data err:", data)
-        toast.error("Error when sending message")
+        toast.error(data?.message || "Error when sending message")
       }
     })
     setReplyMessage(null)
@@ -364,10 +364,11 @@ type TTypeMessageBarProps = {
   directChat: TDirectChat
   replyMessage: TStateDirectMessage | null
   setReplyMessage: (msg: any | null) => void
+  canSend?: boolean | null
 }
 
 export const TypeMessageBar = memo(
-  ({ directChat, replyMessage, setReplyMessage }: TTypeMessageBarProps) => {
+  ({ directChat, replyMessage, setReplyMessage, canSend }: TTypeMessageBarProps) => {
     const user = useUser()
     const textFieldRef = useRef<HTMLDivElement | null>(null)
     const [hasContent, setHasContent] = useState<boolean>(false)
@@ -748,6 +749,16 @@ export const TypeMessageBar = memo(
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl, isRecording])
+
+    if (canSend === false) {
+      return (
+        <div className="w-full flex flex-col items-center">
+          <div className="system-message text-center text-gray-500 my-10 py-4 w-full">
+            Người này chỉ nhận tin nhắn từ bạn bè. Bạn không thể gửi tin nhắn.
+          </div>
+        </div>
+      )
+    }
 
     return (
       <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border relative">

@@ -41,12 +41,15 @@ const SHOW_SCROLL_BTN_THRESHOLD: number = 250
 type TNoMessagesYetProps = {
   directChat: TDirectChatData
   user: TUserWithoutPassword
+  canSend: boolean | null
 }
 
-const NoMessagesYet = ({ directChat, user }: TNoMessagesYetProps) => {
+const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
   const [greetingSticker, setGreetingSticker] = useState<TSticker | null>(null)
   const { id: directChatId, recipientId, creatorId } = directChat
   const tempFlagUseEffectRef = useRef<boolean>(true)
+
+  console.log("canSend", canSend)
 
   const fetchRandomSticker = async () => {
     await expressionService
@@ -76,7 +79,7 @@ const NoMessagesYet = ({ directChat, user }: TNoMessagesYetProps) => {
             chattingService.recursiveSendingQueueMessages()
           } else if ("isError" in data && data.isError) {
             console.log(">>> error in data:", data)
-            toast.error("Error when sending message")
+            toast.error(data?.message || "Error when sending message")
           }
         }
       )
@@ -89,6 +92,8 @@ const NoMessagesYet = ({ directChat, user }: TNoMessagesYetProps) => {
       fetchRandomSticker()
     }
   }, [])
+
+  if (canSend === false) return null
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 m-auto text-center text-base">
@@ -158,6 +163,7 @@ type TMessagesProps = {
   setPinnedMessages: React.Dispatch<React.SetStateAction<TStateDirectMessage[]>>
   showPinnedModal: boolean
   setShowPinnedModal: React.Dispatch<React.SetStateAction<boolean>>
+  canSend: boolean | null
 }
 
 type TMessagesLoadingState = "loading-messages"
@@ -187,6 +193,7 @@ export const Messages = memo(
     setPinnedMessages,
     showPinnedModal,
     setShowPinnedModal,
+    canSend,
   }: TMessagesProps) => {
     const { id: directChatId, recipientId, creatorId, lastSentMessageId } = directChat
     const { directMessages: messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
@@ -738,7 +745,7 @@ export const Messages = memo(
                 {mappedMessages}
               </div>
             ) : (
-              <NoMessagesYet directChat={directChat} user={user} />
+              <NoMessagesYet directChat={directChat} user={user} canSend={canSend} />
             )
           ) : (
             <div className="m-auto w-11 h-11">

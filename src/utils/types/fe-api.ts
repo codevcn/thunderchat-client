@@ -3,6 +3,7 @@
  */
 import type { TEmoji } from "@/utils/types/global"
 import type { TUserWithoutPassword, TProfile } from "@/utils/types/be-api"
+import type { TUserSettings } from "./be-api"
 
 export type TGetEmojisRes = {
   foodDrink: TEmoji[]
@@ -16,3 +17,12 @@ export type TGetEmojisErrRes = {
 }
 
 export type TUserWithProfileFE = TUserWithoutPassword & { Profile: Omit<TProfile, "userId"> }
+
+export type TGetUserSettingsRes = TUserSettings
+export type TUpdateUserSettingsReq = {
+  onlyReceiveFriendMessage: boolean
+}
+
+export type TCheckCanSendDirectMessageRes = {
+  canSend: boolean
+}

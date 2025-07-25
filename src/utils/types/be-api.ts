@@ -256,3 +256,17 @@ export type TUpdateGroupChatParams = {
   groupName?: string
   avatarUrl?: string
 }
+
+export type TUserSettings = {
+  id: number
+  userId: number
+  onlyReceiveFriendMessage: boolean
+}
+
+export type TUpdateUserSettingsParams = {
+  onlyReceiveFriendMessage: boolean
+}
+
+export type TCheckCanSendDirectMessageRes = {
+  canSend: boolean
+}

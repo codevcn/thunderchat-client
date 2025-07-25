@@ -17,6 +17,7 @@ import {
   Paperclip,
   Mic,
   Pin,
+  Share2,
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
@@ -25,6 +26,8 @@ import React, { useState, forwardRef } from "react"
 import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
 import { createPortal } from "react-dom"
+import ActionIcons from "@/components/materials/action-icons"
+import { ShareMessageModal } from "./ShareMessageModal"
 
 type TContentProps = {
   content: string
@@ -649,6 +652,8 @@ export const Message = forwardRef<
       }
     }
 
+    const [showShareModal, setShowShareModal] = useState(false)
+
     return (
       <>
         {stickyTime && <StickyTime stickyTime={stickyTime} />}
@@ -676,6 +681,29 @@ export const Message = forwardRef<
                   >
                     <Quote size={14} />
                   </button>
+                  {/* Nút chia sẻ */}
+                  <button
+                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    title="Chia sẻ tin nhắn"
+                    onClick={() => setShowShareModal(true)}
+                  >
+                    <Share2 size={14} />
+                  </button>
+                  {/* Modal chia sẻ - render qua portal */}
+                  {showShareModal &&
+                    createPortal(
+                      <ShareMessageModal
+                        open={showShareModal}
+                        onClose={() => setShowShareModal(false)}
+                        onSelectFriend={(friend) => {
+                          setShowShareModal(false)
+                          console.log("[SHARE] Chia sẻ tin nhắn:", message)
+                          console.log("[SHARE] Đến bạn:", friend)
+                          // TODO: Gửi lại nội dung cho bạn này
+                        }}
+                      />,
+                      document.body
+                    )}
                   <button
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
                     title={
@@ -763,6 +791,29 @@ export const Message = forwardRef<
                   >
                     <Quote size={14} />
                   </button>
+                  {/* Nút chia sẻ */}
+                  <button
+                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    title="Chia sẻ tin nhắn"
+                    onClick={() => setShowShareModal(true)}
+                  >
+                    <Share2 size={14} />
+                  </button>
+                  {/* Modal chia sẻ - render qua portal */}
+                  {showShareModal &&
+                    createPortal(
+                      <ShareMessageModal
+                        open={showShareModal}
+                        onClose={() => setShowShareModal(false)}
+                        onSelectFriend={(friend) => {
+                          setShowShareModal(false)
+                          console.log("[SHARE] Chia sẻ tin nhắn:", message)
+                          console.log("[SHARE] Đến bạn:", friend)
+                          // TODO: Gửi lại nội dung cho bạn này
+                        }}
+                      />,
+                      document.body
+                    )}
                   <button
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
                     title={

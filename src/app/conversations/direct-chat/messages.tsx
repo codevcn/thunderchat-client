@@ -237,6 +237,11 @@ export const Messages = memo(
           }
           const finalMessageData = messages[messages.length - 1]
           if (finalMessageId.current !== finalMessageData.id) {
+            // Nếu tin nhắn mới là PIN_NOTICE thì không cuộn xuống cuối
+            if (finalMessageData.type === EMessageTypes.PIN_NOTICE) {
+              finalMessageId.current = finalMessageData.id
+              return
+            }
             // Chỉ cuộn xuống dưới khi có tin nhắn mới từ user hoặc friend
             finalMessageId.current = finalMessageData.id
             if (

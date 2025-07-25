@@ -23,7 +23,7 @@ export type PinMessageModalProps = {
 }
 
 // Helper function to render message content based on type
-const renderMessageContent = (message: TStateDirectMessage) => {
+export const renderMessageContent = (message: TStateDirectMessage) => {
   const { type, content, mediaUrl, stickerUrl, fileName, fileType, fileSize } = message
 
   // Helper function to get file icon
@@ -209,14 +209,11 @@ export const PinMessageModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-regular-dark-gray-cl rounded-lg shadow-lg max-w-md w-full p-0 relative border border-gray-700">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700 bg-regular-dark-gray-cl rounded-t-lg">
+        <div className="flex items-center justify-between px-4 py-2 border-b-2 border-purple-700 bg-[var(--tdc-regular-tooltip-bgcl)] rounded-t-lg">
           <span className="font-semibold text-base text-white">
             Danh sách ghim ({pinnedMessages.length})
           </span>
-          <button
-            className="text-sm text-blue-400 hover:text-blue-300 hover:underline"
-            onClick={onClose}
-          >
+          <button className="text-sm text-white font-bold hover:underline" onClick={onClose}>
             Thu gọn
           </button>
         </div>
@@ -228,19 +225,19 @@ export const PinMessageModal = ({
             pinnedMessages.slice(0, 5).map((msg) => (
               <li
                 key={msg.id}
-                className="flex items-start gap-3 px-4 py-3 hover:bg-gray-800 cursor-pointer group relative"
+                className="flex items-start gap-3 px-4 py-3 bg-regular-dark-gray-cl rounded-lg hover:bg-gray-800 cursor-pointer group relative"
                 onClick={() => onSelectMessage(msg.id)}
               >
                 {/* Icon */}
-                <span className="mt-1 text-blue-400 flex-shrink-0">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="8" cy="8" r="6" />
-                    <rect x="5.5" y="5.5" width="5" height="5" rx="1.5" />
+                <span className="mt-1 text-white flex-shrink-0">
+                  <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2">
+                    <circle cx="8" cy="8" r="6" stroke="white" />
+                    <rect x="5.5" y="5.5" width="5" height="5" rx="1.5" stroke="white" />
                   </svg>
                 </span>
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-blue-300 mb-1">Tin nhắn</div>
+                  <div className="font-semibold text-sm text-white font-bold mb-1">Tin nhắn</div>
                   <div className="text-xs text-gray-300 mb-1">
                     {msg.Author?.Profile?.fullName || "Người gửi"}
                   </div>

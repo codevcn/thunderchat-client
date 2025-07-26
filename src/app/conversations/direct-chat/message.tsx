@@ -17,13 +17,16 @@ import {
   Paperclip,
   Mic,
   Pin,
+  MoreHorizontal,
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
 import VoiceMessage from "../(voice-chat)/VoiceMessage"
-import React, { useState, forwardRef } from "react"
+import React, { useState, forwardRef, useEffect, useRef } from "react"
 import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
+import { DropdownMessage } from "@/components/materials/dropdown-message"
+import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
 
 type TContentProps = {
   content: string
@@ -201,6 +204,15 @@ const Content = ({
   message,
 }: TContentProps) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+
+  if (message?.isDeleted) {
+    return (
+      <div
+        className="max-w-full break-words whitespace-pre-wrap text-sm inline"
+        dangerouslySetInnerHTML={{ __html: santizeMsgContent("Tin nhắn này đã được thu hồi") }}
+      ></div>
+    )
+  }
 
   // Hiển thị ảnh
   if (type === EMessageTypes.IMAGE && mediaUrl) {
@@ -642,6 +654,44 @@ export const Message = forwardRef<
       }
     }
 
+    const [showDropdown, setShowDropdown] = useState(false)
+    const { refs, floatingStyles, update } = useFloating({
+      placement: "bottom-end",
+      middleware: [
+        offset(4),
+        flip({ fallbackPlacements: ["top-end", "bottom-end"] }),
+        shift({ padding: 8 }),
+      ],
+      whileElementsMounted: autoUpdate,
+    })
+    const popupRef = refs.floating
+
+    // Đóng popup khi click ra ngoài
+    useEffect(() => {
+      if (!showDropdown) return
+      const handleClick = (e: MouseEvent) => {
+        const floatingEl = refs.floating.current
+        const referenceEl = refs.reference.current
+        const isRefEl = referenceEl instanceof HTMLElement
+        if (
+          floatingEl &&
+          !floatingEl.contains(e.target as Node) &&
+          (!isRefEl || !referenceEl.contains(e.target as Node))
+        ) {
+          setShowDropdown(false)
+        }
+      }
+      document.addEventListener("mousedown", handleClick)
+      return () => document.removeEventListener("mousedown", handleClick)
+    }, [showDropdown, refs])
+
+    const handleShowDropdown = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setShowDropdown(true)
+      setTimeout(update, 0)
+    }
+    const handleCloseDropdown = () => setShowDropdown(false)
+
     return (
       <>
         {stickyTime && <StickyTime stickyTime={stickyTime} />}
@@ -656,7 +706,12 @@ export const Message = forwardRef<
               <div
                 className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "bg-regular-violet-cl"} group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
               >
-                <div className="group-hover:flex hidden items-end h-full absolute top-0 right-[calc(100%-5px)] pr-[20px]">
+                <div
+                  className={
+                    (showDropdown ? "flex" : "group-hover:flex hidden") +
+                    " items-end h-full absolute top-0 right-[calc(100%-5px)] pr-[20px]"
+                  }
+                >
                   <button
                     className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                     title="Reply to this message"
@@ -690,6 +745,14 @@ export const Message = forwardRef<
                     disabled={loadingPin}
                   >
                     <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
+                  </button>
+                  <button
+                    ref={refs.setReference}
+                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    title="More actions"
+                    onClick={handleShowDropdown}
+                  >
+                    <MoreHorizontal size={16} />
                   </button>
                 </div>
 
@@ -743,7 +806,12 @@ export const Message = forwardRef<
               <div
                 className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
               >
-                <div className="group-hover:flex hidden items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]">
+                <div
+                  className={
+                    (showDropdown ? "flex" : "group-hover:flex hidden") +
+                    " items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]"
+                  }
+                >
                   <button
                     className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                     title="Reply to this message"
@@ -777,6 +845,14 @@ export const Message = forwardRef<
                     disabled={loadingPin}
                   >
                     <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
+                  </button>
+                  <button
+                    ref={refs.setReference}
+                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    title="More actions"
+                    onClick={handleShowDropdown}
+                  >
+                    <MoreHorizontal size={16} />
                   </button>
                 </div>
 
@@ -812,6 +888,22 @@ export const Message = forwardRef<
             </div>
           )}
         </div>
+        {showDropdown && (
+          <div ref={refs.setFloating} style={{ ...floatingStyles, zIndex: 9999 }}>
+            <DropdownMessage
+              onPin={() => {
+                handlePinClick()
+                handleCloseDropdown()
+              }}
+              isPinned={isPinned}
+              onClose={handleCloseDropdown}
+              content={content}
+              isTextMessage={type === "TEXT"}
+              canDelete={user.id === authorId && !message.isDeleted}
+              messageId={message.id}
+            />
+          </div>
+        )}
       </>
     )
   }

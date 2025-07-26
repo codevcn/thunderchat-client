@@ -30,3 +30,6 @@ export const checkCanSendDirectMessage = (receiverId: number) =>
     ...requestConfig,
     params: { receiverId },
   })
+// API xoá/thu hồi tin nhắn direct chat
+export const deleteDirectMessage = (messageId: number) =>
+  clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)

@@ -4,6 +4,7 @@ import {
   getDirectMessageContext,
   getNewerDirectMessages,
   checkCanSendDirectMessage,
+  deleteDirectMessage,
 } from "@/apis/direct-chat"
 import { DirectChatError } from "@/utils/custom-errors"
 import { convertToDirectChatsUIData } from "@/utils/data-convertors/conversations-convertor"
@@ -47,6 +48,12 @@ class DirectChatService {
   async checkCanSendMessage(receiverId: number): Promise<boolean> {
     const { data } = await checkCanSendDirectMessage(receiverId)
     return !!data?.canSend
+  }
+
+  // Xoá/thu hồi tin nhắn direct chat
+  async deleteMessage(messageId: number) {
+    const { data } = await deleteDirectMessage(messageId)
+    return data
   }
 }
 

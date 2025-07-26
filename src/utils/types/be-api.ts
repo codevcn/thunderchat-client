@@ -48,6 +48,7 @@ export type TDirectMessage = {
   fileType?: string
   fileSize?: number
   thumbnailUrl?: string | null
+  isDeleted: boolean
 }
 
 export type TDirectMessageWithAuthor = TDirectMessage & {
@@ -269,4 +270,9 @@ export type TUpdateUserSettingsParams = {
 
 export type TCheckCanSendDirectMessageRes = {
   canSend: boolean
+}
+// Response khi xoá/thu hồi tin nhắn direct chat
+export type TDeleteDirectMessageRes = {
+  isDeleted: boolean
+  content: string
 }

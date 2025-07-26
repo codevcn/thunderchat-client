@@ -33,7 +33,7 @@ import type { TEmoji, TStateDirectMessage } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
 import { uploadFile } from "@/apis/upload"
-import { santizeMsgContent, extractEmojisFromMessage } from "@/utils/helpers"
+import { santizeMsgContent, extractEmojisFromMessage, unescapeHtml } from "@/utils/helpers"
 import { TChattingPayload } from "@/utils/types/socket"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
@@ -240,23 +240,94 @@ const MessageTextField = ({
   }, INDICATE_TYPING_DELAY)
 
   const handleTyping = (msg: string) => {
-    console.log(">>> msg:", msg)
-    if (extractEmojisFromMessage(msg).length > 0) {
-      const textfield = textFieldRef.current
-      console.log(">>>>>>" + textfield)
-      if (textfield) {
-        textfield.innerText = textfield.innerText.replace(msg, "")
-        console.log(">>>>>" + textfield.innerText.replace(msg, ""))
-      }
-      eventEmitter.emit(EInternalEvents.MSG_TEXTFIELD_EDITED, { content: msg })
-    }
-
+    // Clean up message: loại bỏ link tags và decode HTML
+    const cleanedMsg = cleanMessageContent(msg)
+    // Kiểm tra emoji trong message đã clean
+    const emojis = extractEmojisFromMessage(cleanedMsg)
     if (msg.trim() && msg.length > 0) {
       setHasContent(true)
     } else {
       setHasContent(false)
     }
+
     indicateUserIsTyping("typing")
+  }
+
+  // Hàm clean up nội dung message
+  const cleanMessageContent = (message: string): string => {
+    // Decode HTML entities
+    let cleaned = unescapeHtml(message)
+
+    // Loại bỏ link tags
+    cleaned = cleaned.replace(/<link[^>]*>/g, "")
+
+    // Loại bỏ whitespace thừa
+    cleaned = cleaned.trim()
+
+    return cleaned
+  }
+
+  // Xử lý paste event để đảm bảo emoji hiển thị đúng
+  const handlePaste = (e: ClipboardEvent) => {
+    const textField = textFieldRef.current
+    if (!textField) return
+
+    // Đợi một chút để DOM được cập nhật
+    setTimeout(() => {
+      const content = textField.innerHTML
+
+      // Clean up content trước khi xử lý
+      const cleanedContent = cleanMessageContent(content)
+
+      // Kiểm tra xem có emoji img tags không
+      const emojis = extractEmojisFromMessage(cleanedContent)
+
+      if (emojis.length > 0) {
+        // Thay thế nội dung encoded bằng nội dung đã clean để hiển thị emoji
+        if (content !== cleanedContent) {
+          textField.innerHTML = cleanedContent
+          // Điều chỉnh kích thước sau khi thay thế nội dung
+          setTimeout(() => {
+            if (textField) {
+              // Reset kích thước để tính toán lại
+              textField.style.height = "auto"
+              textField.style.width = "auto"
+
+              // Tính toán kích thước mới
+              const newHeight = Math.min(
+                Math.max(textField.scrollHeight, 21), // min height
+                300 // max height
+              )
+
+              // Tính toán chiều rộng mới (giới hạn tối đa 100% container)
+              const containerWidth = textField.parentElement?.clientWidth || 1000
+              const newWidth = Math.min(textField.scrollWidth, containerWidth)
+
+              // Áp dụng kích thước mới
+              textField.style.height = `${newHeight}px`
+              textField.style.width = `${newWidth}px`
+
+              // Thêm overflow nếu cần
+              textField.style.overflowY = textField.scrollHeight > 300 ? "auto" : "hidden"
+              textField.style.overflowX = textField.scrollWidth > newWidth ? "auto" : "hidden"
+
+              // Di chuyển con trỏ đến cuối text
+              const range = document.createRange()
+              const selection = window.getSelection()
+              range.selectNodeContents(textField)
+              range.collapse(false) // false để đặt con trỏ ở cuối, true để đặt ở đầu
+              if (selection) {
+                selection.removeAllRanges()
+                selection.addRange(range)
+              }
+
+              // Focus vào textfield
+              textField.focus()
+            }
+          }, 0)
+        }
+      }
+    }, 10)
   }
 
   const sendMessage = (msgToSend: string) => {
@@ -310,8 +381,18 @@ const MessageTextField = ({
 
   useEffect(() => {
     eventEmitter.on(EInternalEvents.CLICK_ON_LAYOUT, handleClickOnLayout)
+
+    // Thêm paste event listener
+    const textField = textFieldRef.current
+    if (textField) {
+      textField.addEventListener("paste", handlePaste)
+    }
+
     return () => {
       eventEmitter.off(EInternalEvents.CLICK_ON_LAYOUT, handleClickOnLayout)
+      if (textField) {
+        textField.removeEventListener("paste", handlePaste)
+      }
     }
   }, [])
 

@@ -7,7 +7,7 @@ import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useEffect, useMemo, useState, useRef } from "react"
-import { Search, Phone, MoreVertical } from "lucide-react"
+import { Search, Phone, MoreVertical, Pin } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { setLastSeen } from "@/utils/helpers"
@@ -25,6 +25,7 @@ import { setDirectChat } from "@/redux/messages/messages.slice"
 import type { TPinMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
+import { renderMessageContent } from "./pin-message"
 
 const TypingIndicator = () => {
   return (
@@ -241,6 +242,9 @@ const Main = ({ directChat, canSend }: TMainProps) => {
     return user.id === Creator.id ? Recipient : Creator
   }, [Recipient, Creator])
 
+  // Lấy tin nhắn ghim mới nhất (API đã sort đúng thứ tự mới nhất đến cũ nhất)
+  const latestPinned = pinnedMessages[0] || null
+
   return (
     <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative">
       <div className="flex flex-col items-center w-full box-border h-screen bg-no-repeat bg-transparent bg-cover bg-center relative">
@@ -269,8 +273,18 @@ const Main = ({ directChat, canSend }: TMainProps) => {
               onClick={() => setShowPinnedModal(true)}
             >
               <div className="flex items-center gap-2">
-                <span>📌</span>
-                <span>Đã ghim</span>
+                <Pin className="w-4 h-4" />
+                <div className="flex flex-col text-left">
+                  <div className="flex flex-row items-center gap-2">
+                    <span className="text-xs text-white font-medium truncate max-w-[90px]">
+                      {latestPinned?.Author?.Profile?.fullName || "Người gửi"}
+                    </span>
+                    <span className="text-xs text-gray-300 truncate max-w-[180px]">
+                      {/* Hiển thị nội dung tin nhắn ghim mới nhất */}
+                      {latestPinned && renderMessageContent(latestPinned)}
+                    </span>
+                  </div>
+                </div>
               </div>
               <span className="bg-gray-700 text-white rounded-full px-2 text-xs font-bold">
                 {pinnedMessages.length}

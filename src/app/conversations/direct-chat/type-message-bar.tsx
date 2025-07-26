@@ -1,7 +1,22 @@
 "use client"
 
 import { CustomTooltip, IconButton } from "@/components/materials"
-import { FileVideo, Mic, Paperclip, Reply, Send, Smile, Sticker, Trash, X } from "lucide-react"
+import {
+  Download,
+  FileVideo,
+  Mic,
+  Paperclip,
+  Reply,
+  Send,
+  Smile,
+  Sticker,
+  Trash,
+  X,
+  Image as ImageIcon,
+  FileText,
+  BarChart2,
+  MapPin,
+} from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { AutoResizeTextField } from "@/components/materials"
@@ -324,10 +339,10 @@ const MessageTextField = ({
 }
 
 const fileOptions = [
-  { icon: "🖼️", label: "Photo or video", value: "photo" },
-  { icon: "📄", label: "Document", value: "document" },
-  { icon: "📊", label: "Create poll", value: "poll" },
-  { icon: "📍", label: "Location", value: "location" },
+  { icon: <ImageIcon size={20} />, label: "Photo or video", value: "photo" },
+  { icon: <FileText size={20} />, label: "Document", value: "document" },
+  { icon: <BarChart2 size={20} />, label: "Create poll", value: "poll" },
+  { icon: <MapPin size={20} />, label: "Location", value: "location" },
 ]
 
 function FileTypeMenu({
@@ -338,17 +353,19 @@ function FileTypeMenu({
   onClose: () => void
 }) {
   return (
-    <div className="absolute bottom-12 left-0 z-50 bg-white shadow-lg rounded-lg p-2 w-56 border border-gray-200">
+    <div className="absolute bottom-12 left-0 z-50 bg-regular-dark-gray-cl shadow-lg rounded-lg p-2 w-56 border border-gray-700">
       {fileOptions.map((opt) => (
         <button
           key={opt.value}
-          className="flex items-center w-full px-3 py-2 hover:bg-gray-100 rounded transition text-gray-800"
+          className="flex items-center w-full px-3 py-2 hover:bg-regular-violet-cl/20 rounded transition text-white hover:text-regular-violet-cl focus:outline-none focus:ring-2 focus:ring-regular-violet-cl"
           onClick={() => {
             onSelect(opt.value)
             onClose()
           }}
         >
-          <span className="text-xl mr-3">{opt.icon}</span>
+          <span className="text-xl mr-3 flex items-center justify-center w-7 h-7 bg-regular-dark-gray-cl rounded-full border border-gray-700">
+            {opt.icon}
+          </span>
           <span>{opt.label}</span>
         </button>
       ))}

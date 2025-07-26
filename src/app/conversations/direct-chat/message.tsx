@@ -1,7 +1,11 @@
 import { EMessageTypes, ETimeFormats } from "@/utils/enums"
 import { santizeMsgContent } from "@/utils/helpers"
 import { EMessageStatus } from "@/utils/socket/enums"
-import type { TDirectMessageWithAuthor, TUserWithoutPassword } from "@/utils/types/be-api"
+import type {
+  TDirectMessageWithAuthor,
+  TUserWithoutPassword,
+  TGetFriendsData,
+} from "@/utils/types/be-api"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import dayjs from "dayjs"
 import {
@@ -17,7 +21,11 @@ import {
   Paperclip,
   Mic,
   Pin,
+  Share2,
+  Download as DownloadIcon,
+  RotateCw,
   MoreHorizontal,
+  X as CloseIcon,
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
@@ -27,6 +35,13 @@ import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
 import { DropdownMessage } from "@/components/materials/dropdown-message"
 import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
+import { createPortal } from "react-dom"
+import ActionIcons from "@/components/materials/action-icons"
+import { ShareMessageModal } from "./ShareMessageModal"
+import { directChatService } from "@/services/direct-chat.service"
+import { chattingService } from "@/services/chatting.service"
+import { useUser } from "@/hooks/user"
+import { clientSocket } from "@/utils/socket/client-socket"
 
 type TContentProps = {
   content: string
@@ -87,98 +102,37 @@ const ImageModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div className="relative max-w-[90vw] max-h-[90vh]">
-        {/* Nút chức năng */}
-        <div className="absolute -top-12 right-0 flex gap-2 z-10">
-          {/* Download */}
-          <button
-            onClick={handleDownload}
-            className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
-            title="Tải xuống ảnh"
-          >
-            {/* Download icon */}
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {/* Thanh nút chức năng trên cùng */}
+        <div className="absolute -top-12 left-0 w-full flex flex-row items-center justify-end z-10 px-2">
+          {/* Nhóm nút chức năng */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownload}
+              className="text-white hover:bg-white/20 rounded-full p-2 transition-colors flex items-center justify-center"
+              title="Tải xuống ảnh"
             >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
-          {/* Rotate */}
-          <button
-            onClick={handleRotate}
-            className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
-            title="Xoay ảnh"
-          >
-            {/* Rotate icon */}
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              <DownloadIcon size={22} />
+            </button>
+            <button
+              onClick={handleRotate}
+              className="text-white hover:bg-white/20 rounded-full p-2 transition-colors flex items-center justify-center"
+              title="Xoay ảnh"
             >
-              <path d="M21 2v6h-6" />
-              <path d="M3 13a9 9 0 0 1 14.5-7.5L21 8" />
-              <path d="M21 8v2" />
-            </svg>
-          </button>
-          {/* More (3 dots) */}
-          <button
-            className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
-            title="Tùy chọn khác"
-            tabIndex={-1}
-          >
-            {/* Dots icon */}
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              <RotateCw size={22} />
+            </button>
+            <button
+              className="text-white hover:bg-white/20 rounded-full p-2 transition-colors flex items-center justify-center"
+              title="Tùy chọn khác"
+              tabIndex={-1}
             >
-              <circle cx="12" cy="12" r="1.5" />
-              <circle cx="19" cy="12" r="1.5" />
-              <circle cx="5" cy="12" r="1.5" />
-            </svg>
-          </button>
+              <MoreHorizontal size={22} />
+            </button>
+          </div>
         </div>
-        {/* Nút đóng */}
-        <button
-          onClick={onClose}
-          className="absolute -top-12 left-0 text-white hover:text-gray-300 transition-colors z-10"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
         <Image
           src={imageUrl}
           alt="Zoomed image"
@@ -228,84 +182,16 @@ const Content = ({
             priority
             onClick={() => setIsImageModalOpen(true)}
           />
-          {/* Nút tải xuống ảnh */}
-          <button
-            type="button"
-            className="absolute top-2 right-2 p-1 bg-white/80 hover:bg-white rounded-full shadow transition-colors opacity-0 group-hover:opacity-100"
-            title="Tải xuống ảnh"
-            onClick={async (e) => {
-              e.stopPropagation()
-
-              try {
-                // Fetch ảnh từ S3
-                const response = await fetch(mediaUrl)
-                if (!response.ok) throw new Error("Không thể tải ảnh")
-
-                // Tạo blob từ response
-                const blob = await response.blob()
-
-                // Tạo URL cho blob
-                const blobUrl = window.URL.createObjectURL(blob)
-
-                // Tạo thẻ a để tải ảnh
-                const link = document.createElement("a")
-                link.href = blobUrl
-
-                // Đảm bảo tên file có extension
-                const fileNameWithExt = fileName || "image"
-                const hasExtension = fileNameWithExt.includes(".")
-                const finalFileName = hasExtension
-                  ? fileNameWithExt
-                  : `${fileNameWithExt}.${fileType || "jpg"}`
-
-                link.download = finalFileName
-
-                // Thêm vào DOM, click và xóa
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-
-                // Giải phóng blob URL
-                window.URL.revokeObjectURL(blobUrl)
-              } catch (error) {
-                console.error("Lỗi khi tải ảnh:", error)
-                // Fallback: thử cách cũ
-                const link = document.createElement("a")
-                link.href = mediaUrl
-                const fileNameWithExt = fileName || "image"
-                const hasExtension = fileNameWithExt.includes(".")
-                const finalFileName = hasExtension
-                  ? fileNameWithExt
-                  : `${fileNameWithExt}.${fileType || "jpg"}`
-                link.download = finalFileName
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-              }
-            }}
-          >
-            {/* Download icon */}
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
+          {/* XÓA NÚT TẢI XUỐNG Ở ĐÂY */}
         </div>
-        <ImageModal
-          imageUrl={mediaUrl}
-          isOpen={isImageModalOpen}
-          onClose={() => setIsImageModalOpen(false)}
-        />
+        {createPortal(
+          <ImageModal
+            imageUrl={mediaUrl}
+            isOpen={isImageModalOpen}
+            onClose={() => setIsImageModalOpen(false)}
+          />,
+          document.body
+        )}
       </>
     )
   }
@@ -609,7 +495,7 @@ export const Message = forwardRef<
     }
 
     // Hiển thị thông báo đặc biệt cho PIN_NOTICE
-    if (type === "PIN_NOTICE") {
+    if (type === EMessageTypes.PIN_NOTICE) {
       const isUnpin = content?.toLowerCase().includes("bỏ ghim")
       return (
         <div className="w-full flex justify-center my-2">
@@ -621,7 +507,10 @@ export const Message = forwardRef<
                 <Pin className="w-4 h-4" />
               )}
             </span>
-            <span className="text-xs">{content}</span>
+            <div
+              className="max-w-[300px] text-sm truncate"
+              dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
+            ></div>
             {/* Nút xem nếu có ReplyTo */}
             {message.ReplyTo && typeof message.ReplyTo.id !== "undefined" && (
               <button
@@ -691,6 +580,8 @@ export const Message = forwardRef<
       setTimeout(update, 0)
     }
     const handleCloseDropdown = () => setShowDropdown(false)
+    const [showShareModal, setShowShareModal] = useState(false)
+    const reactUser = useUser() // Đặt ở đầu component
 
     return (
       <>
@@ -724,6 +615,69 @@ export const Message = forwardRef<
                   >
                     <Quote size={14} />
                   </button>
+                  {/* Nút chia sẻ */}
+                  <button
+                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    title="Chia sẻ tin nhắn"
+                    onClick={() => setShowShareModal(true)}
+                  >
+                    <Share2 size={14} />
+                  </button>
+                  {/* Modal chia sẻ - render qua portal */}
+                  {showShareModal &&
+                    createPortal(
+                      <ShareMessageModal
+                        open={showShareModal}
+                        onClose={() => setShowShareModal(false)}
+                        onSelectFriend={async (friend: TGetFriendsData) => {
+                          // setShowShareModal(false)
+                          // try {
+                          //   if (!reactUser) throw new Error("No user")
+                          //   // Xác định đúng user bạn bè
+                          //   const getFriendUser = (friend: TGetFriendsData, userId: number) => {
+                          //     if (friend.senderId === userId) return friend.Recipient
+                          //     return (friend as any).Sender
+                          //   }
+                          //   const friendUser = getFriendUser(friend, reactUser.id)
+                          //   if (!friendUser) throw new Error("Không xác định được bạn bè")
+                          //   // 1. Tạo/lấy direct chat với bạn bè
+                          //   const directChat = await directChatService.createOrGetDirectChat(
+                          //     friendUser.id
+                          //   )
+                          //   if (!directChat || !directChat.id)
+                          //     throw new Error("Không lấy được directChatId")
+                          //   const directChatId = directChat.id
+                          //   // 2. Chuẩn bị payload gửi lại tin nhắn
+                          //   const token = chattingService.getMessageToken()
+                          //   const payload: any = {
+                          //     content: message.content,
+                          //     mediaUrl: message.mediaUrl,
+                          //     fileName: message.fileName,
+                          //     fileType: message.fileType,
+                          //     fileSize: message.fileSize,
+                          //     stickerUrl: message.stickerUrl,
+                          //     type: message.type,
+                          //     receiverId: friendUser.id,
+                          //     directChatId,
+                          //     token,
+                          //     timestamp: new Date(),
+                          //   }
+                          //   // 3. Gửi lại tin nhắn
+                          //   chattingService.sendMessage(message.type, payload, (res) => {
+                          //     chattingService.setAcknowledgmentFlag(true)
+                          //     chattingService.recursiveSendingQueueMessages()
+                          //     if ("success" in res && res.success)
+                          //       toast.success("Đã chia sẻ tin nhắn!")
+                          //     else toast.error("Chia sẻ thất bại!")
+                          //   })
+                          // } catch (err) {
+                          //   console.error("[SHARE-DEBUG] Lỗi chia sẻ:", err)
+                          //   toast.error("Không thể chia sẻ tin nhắn!")
+                          // }
+                        }}
+                      />,
+                      document.body
+                    )}
                   <button
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
                     title={
@@ -824,6 +778,69 @@ export const Message = forwardRef<
                   >
                     <Quote size={14} />
                   </button>
+                  {/* Nút chia sẻ */}
+                  <button
+                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    title="Chia sẻ tin nhắn"
+                    onClick={() => setShowShareModal(true)}
+                  >
+                    <Share2 size={14} />
+                  </button>
+                  {/* Modal chia sẻ - render qua portal */}
+                  {showShareModal &&
+                    createPortal(
+                      <ShareMessageModal
+                        open={showShareModal}
+                        onClose={() => setShowShareModal(false)}
+                        onSelectFriend={async (friend: TGetFriendsData) => {
+                          // setShowShareModal(false)
+                          // try {
+                          //   if (!reactUser) throw new Error("No user")
+                          //   // Xác định đúng user bạn bè
+                          //   const getFriendUser = (friend: TGetFriendsData, userId: number) => {
+                          //     if (friend.senderId === userId) return friend.Recipient
+                          //     return (friend as any).Sender
+                          //   }
+                          //   const friendUser = getFriendUser(friend, reactUser.id)
+                          //   if (!friendUser) throw new Error("Không xác định được bạn bè")
+                          //   // 1. Tạo/lấy direct chat với bạn bè
+                          //   const directChat = await directChatService.createOrGetDirectChat(
+                          //     friendUser.id
+                          //   )
+                          //   if (!directChat || !directChat.id)
+                          //     throw new Error("Không lấy được directChatId")
+                          //   const directChatId = directChat.id
+                          //   // 2. Chuẩn bị payload gửi lại tin nhắn
+                          //   const token = chattingService.getMessageToken()
+                          //   const payload: any = {
+                          //     content: message.content,
+                          //     mediaUrl: message.mediaUrl,
+                          //     fileName: message.fileName,
+                          //     fileType: message.fileType,
+                          //     fileSize: message.fileSize,
+                          //     stickerUrl: message.stickerUrl,
+                          //     type: message.type,
+                          //     receiverId: friendUser.id,
+                          //     directChatId,
+                          //     token,
+                          //     timestamp: new Date(),
+                          //   }
+                          //   // 3. Gửi lại tin nhắn
+                          //   chattingService.sendMessage(message.type, payload, (res) => {
+                          //     chattingService.setAcknowledgmentFlag(true)
+                          //     chattingService.recursiveSendingQueueMessages()
+                          //     if ("success" in res && res.success)
+                          //       toast.success("Đã chia sẻ tin nhắn!")
+                          //     else toast.error("Chia sẻ thất bại!")
+                          //   })
+                          // } catch (err) {
+                          //   console.error("[SHARE-DEBUG] Lỗi chia sẻ:", err)
+                          //   toast.error("Không thể chia sẻ tin nhắn!")
+                          // }
+                        }}
+                      />,
+                      document.body
+                    )}
                   <button
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
                     title={

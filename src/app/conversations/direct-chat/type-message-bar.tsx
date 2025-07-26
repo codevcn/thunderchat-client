@@ -30,7 +30,7 @@ import type { TEmoji, TStateDirectMessage } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
 import { uploadFile } from "@/apis/upload"
-import { santizeMsgContent } from "@/utils/helpers"
+import { extractEmojisFromMessage, santizeMsgContent } from "@/utils/helpers"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -238,6 +238,17 @@ const MessageTextField = ({
   }, INDICATE_TYPING_DELAY)
 
   const handleTyping = (msg: string) => {
+    console.log(">>> msg:", msg)
+    if (extractEmojisFromMessage(msg).length > 0) {
+      const textfield = textFieldRef.current
+      console.log(">>>>>>" + textfield)
+      if (textfield) {
+        textfield.innerText = textfield.innerText.replace(msg, "")
+        console.log(">>>>>" + textfield.innerText.replace(msg, ""))
+      }
+      eventEmitter.emit(EInternalEvents.MSG_TEXTFIELD_EDITED, { content: msg })
+    }
+
     if (msg.trim() && msg.length > 0) {
       setHasContent(true)
     } else {

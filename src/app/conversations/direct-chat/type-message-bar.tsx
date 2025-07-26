@@ -836,13 +836,7 @@ export const TypeMessageBar = memo(
     }, [audioUrl, isRecording])
 
     if (canSend === false) {
-      return (
-        <div className="w-full flex flex-col items-center">
-          <div className="system-message text-center text-gray-500 my-10 py-4 w-full">
-            Người này chỉ nhận tin nhắn từ bạn bè. Bạn không thể gửi tin nhắn.
-          </div>
-        </div>
-      )
+      return null
     }
 
     return (

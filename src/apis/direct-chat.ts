@@ -18,3 +18,23 @@ export const getFindConversationWithOtherUser = (otherUserId: number) =>
     "/direct-chat/find-conversation-with-other-user/" + otherUserId,
     requestConfig
   )
+export const getDirectMessageContext = (messageId: number) => {
+  const url = `/message/context/${messageId}`
+  console.log("[DEBUG] Gọi API context:", url)
+  return clientAxios.get(url, requestConfig)
+}
+
+export const getNewerDirectMessages = (directChatId: number, msgOffset: number, limit?: number) =>
+  clientAxios.get(`/message/get-newer-messages`, {
+    ...requestConfig,
+    params: { directChatId, msgOffset, ...(limit ? { limit } : {}) },
+  })
+
+export const checkCanSendDirectMessage = (receiverId: number) =>
+  clientAxios.get<{ canSend: boolean }>(`/message/can-send-message`, {
+    ...requestConfig,
+    params: { receiverId },
+  })
+// API xoá/thu hồi tin nhắn direct chat
+export const deleteDirectMessage = (messageId: number) =>
+  clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)

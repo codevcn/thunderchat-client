@@ -18,7 +18,7 @@ import type { TEmoji, TStateDirectMessage } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
 import { uploadFile } from "@/apis/upload"
-import { santizeMsgContent } from "@/utils/helpers"
+import { santizeMsgContent, extractEmojisFromMessage } from "@/utils/helpers"
 import { TChattingPayload } from "@/utils/types/socket"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
@@ -75,7 +75,7 @@ const ExpressionPicker = ({
           chattingService.setAcknowledgmentFlag(true)
           chattingService.recursiveSendingQueueMessages()
         } else if ("isError" in data && data.isError) {
-          toast.error("Error when sending message")
+          toast.error(data?.message || "Error when sending message")
         }
       }
     )
@@ -225,6 +225,17 @@ const MessageTextField = ({
   }, INDICATE_TYPING_DELAY)
 
   const handleTyping = (msg: string) => {
+    console.log(">>> msg:", msg)
+    if (extractEmojisFromMessage(msg).length > 0) {
+      const textfield = textFieldRef.current
+      console.log(">>>>>>" + textfield)
+      if (textfield) {
+        textfield.innerText = textfield.innerText.replace(msg, "")
+        console.log(">>>>>" + textfield.innerText.replace(msg, ""))
+      }
+      eventEmitter.emit(EInternalEvents.MSG_TEXTFIELD_EDITED, { content: msg })
+    }
+
     if (msg.trim() && msg.length > 0) {
       setHasContent(true)
     } else {
@@ -255,7 +266,7 @@ const MessageTextField = ({
         chattingService.setAcknowledgmentFlag(true)
         chattingService.recursiveSendingQueueMessages()
       } else if ("isError" in data && data.isError) {
-        toast.error("Error when sending message")
+        toast.error(data?.message || "Error when sending message")
       }
     })
     setReplyMessage(null)
@@ -349,10 +360,11 @@ type TTypeMessageBarProps = {
   directChat: TDirectChat
   replyMessage: TStateDirectMessage | null
   setReplyMessage: (msg: any | null) => void
+  canSend?: boolean | null
 }
 
 export const TypeMessageBar = memo(
-  ({ directChat, replyMessage, setReplyMessage }: TTypeMessageBarProps) => {
+  ({ directChat, replyMessage, setReplyMessage, canSend }: TTypeMessageBarProps) => {
     const user = useUser()
     const textFieldRef = useRef<HTMLDivElement | null>(null)
     const [hasContent, setHasContent] = useState<boolean>(false)
@@ -469,7 +481,7 @@ export const TypeMessageBar = memo(
             continue
           }
           // Upload file lên server
-          const { url, fileName, fileType } = await uploadFile(file)
+          const { url, fileName, fileType, thumbnailUrl } = await uploadFile(file)
           let messageType = EMessageTypes.IMAGE
           if (file.type.startsWith("image/")) messageType = EMessageTypes.IMAGE
           else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
@@ -483,6 +495,12 @@ export const TypeMessageBar = memo(
             receiverId: user.id === recipientId ? creatorId : recipientId,
             token: chattingService.getMessageToken(),
             timestamp: new Date(),
+          }
+          // if (messageType === EMessageTypes.DOCUMENT) {
+          //   msgPayload.fileSize = file.size
+          // }
+          if (messageType === EMessageTypes.VIDEO && thumbnailUrl) {
+            msgPayload.thumbnailUrl = thumbnailUrl
           }
 
           chattingService.sendMessage(messageType, msgPayload, (data) => {
@@ -718,6 +736,16 @@ export const TypeMessageBar = memo(
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl, isRecording])
+
+    if (canSend === false) {
+      return (
+        <div className="w-full flex flex-col items-center">
+          <div className="system-message text-center text-gray-500 my-10 py-4 w-full">
+            Người này chỉ nhận tin nhắn từ bạn bè. Bạn không thể gửi tin nhắn.
+          </div>
+        </div>
+      )
+    }
 
     return (
       <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border relative">

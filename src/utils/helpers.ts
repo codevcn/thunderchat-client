@@ -1,5 +1,5 @@
 import dayjs from "dayjs"
-import type { TFormData, THighlightOffsets } from "./types/global"
+import type { TEmoji, TFormData, THighlightOffsets } from "./types/global"
 import DOMPurify from "dompurify"
 import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
 
@@ -164,4 +164,39 @@ export function extractHighlightOffsets(
 
 export function randomInRange(min: number, max: number): number {
   return Math.random() * (max - min) + min
+}
+
+export function unescapeHtml(html: string): string {
+  return html
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+}
+
+export function extractEmojisFromMessage(message: string): TEmoji[] {
+  // Tìm tất cả các thẻ <img> có class "STYLE-emoji-img"
+  const imgTagRegex = /<img[^>]*class="STYLE-emoji-img"[^>]*>/g
+  const emojiTags = message.match(imgTagRegex) || []
+
+  // Hàm tách src và alt từ 1 thẻ img
+  function parseEmojiTag(tag: string): TEmoji | null {
+    const srcMatch = tag.match(/src="([^"]+)"/)
+    const altMatch = tag.match(/alt="([^"]+)"/)
+    if (!srcMatch || !altMatch) return null
+    return {
+      src: srcMatch[1],
+      name: altMatch[1].replace(/\.webp$/i, ""),
+    }
+  }
+
+  // Lặp qua từng thẻ img tìm được để tạo array emoji
+  const emojis: TEmoji[] = []
+  for (const tag of emojiTags) {
+    const emoji = parseEmojiTag(tag)
+    if (emoji) emojis.push(emoji)
+  }
+
+  return emojis
 }

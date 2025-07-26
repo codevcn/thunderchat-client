@@ -61,7 +61,12 @@ export const VoiceMessagePlayer: React.FC = () => {
 
   // Xác định người gửi
   const isCurrentUser = currentMessage.authorId === currentUser?.id
-  const senderName = isCurrentUser ? "Bạn" : "Người dùng"
+  let senderName = "Bạn"
+  if (!isCurrentUser) {
+    console.log("currentMessage", currentMessage.Author)
+    console.log("currentMessage", currentMessage.Author?.Profile?.fullName)
+    senderName = currentMessage.Author?.Profile?.fullName || "Người dùng"
+  }
   const sentTime = dayjs(currentMessage.createdAt).format("MMM D [at] HH:mm")
 
   // Kiểm tra có thể next/previous không
@@ -101,7 +106,11 @@ export const VoiceMessagePlayer: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col ml-2">
-          <div className="font-semibold text-[15px]">{senderName}</div>
+          <div className="font-semibold text-[15px]">
+            <span className="truncate block max-w-[120px]" title={senderName}>
+              {senderName}
+            </span>
+          </div>
           <div className="flex items-center gap-2 text-xs text-gray-300">
             <span>{formatTime(currentTime)}</span>
             <span className="mx-1">•</span>

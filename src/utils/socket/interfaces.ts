@@ -12,6 +12,8 @@ import type {
   TTypingEmitPayload,
   TFriendRequestPayload,
   TWsErrorResponse,
+  TPinMessageEventData,
+  TPinDirectChatEventData,
 } from "../types/socket"
 
 export interface IListenSocketEvents {
@@ -27,6 +29,8 @@ export interface IListenSocketEvents {
   [ESocketEvents.message_seen_direct]: (payload: TMsgSeenListenPayload) => void
   [ESocketEvents.typing_direct]: (isTyping: boolean) => void
   [ESocketEvents.friend_request_action]: (payload: TFriendRequestPayload) => void
+  [ESocketEvents.pin_message]: (data: TPinMessageEventData) => void
+  [ESocketEvents.pin_direct_chat]: (data: TPinDirectChatEventData) => void
 }
 
 export interface IEmitSocketEvents {

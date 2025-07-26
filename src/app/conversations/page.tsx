@@ -46,7 +46,6 @@ const ConversationPage = () => {
 
         <div className="flex grow relative z-20">
           <Conversations />
-
           <SwitchChatbox />
         </div>
       </div>

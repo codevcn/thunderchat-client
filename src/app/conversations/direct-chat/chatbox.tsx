@@ -1,13 +1,12 @@
 "use client"
 
-// >>> fix this: remove
 import { dev_test_values } from "../../../../temp/test"
 
 import { CustomAvatar, CustomTooltip } from "@/components/materials"
 import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { Search, Phone, MoreVertical } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
@@ -23,6 +22,9 @@ import { useAudioMessages } from "@/hooks/audio-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import { setDirectChat } from "@/redux/messages/messages.slice"
+import type { TPinMessageEventData } from "@/utils/types/socket"
+import { pinService } from "@/services/pin.service"
+import { directChatService } from "@/services/direct-chat.service"
 
 const TypingIndicator = () => {
   return (
@@ -47,9 +49,10 @@ type THeaderProps = {
   infoBarIsOpened: boolean
   onOpenInfoBar: (open: boolean) => void
   friendInfo: TUserWithProfile
+  canSend: boolean | null
 }
 
-const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo }: THeaderProps) => {
+const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, canSend }: THeaderProps) => {
   const { Profile } = friendInfo
   const [isTyping, setIsTyping] = useState<boolean>(false)
 
@@ -99,8 +102,17 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo }: THeaderProps) =>
         </CustomTooltip>
 
         <CustomTooltip title="Call" placement="bottom" align="end">
-          <div>
-            <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
+          <div style={canSend === false ? { opacity: 0.5, pointerEvents: "none" } : {}}>
+            <IconButton
+              className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
+              onClick={
+                canSend === false
+                  ? undefined
+                  : () => {
+                      /* logic gọi */
+                    }
+              }
+            >
               <Phone />
             </IconButton>
           </div>
@@ -120,15 +132,98 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo }: THeaderProps) =>
 
 type TMainProps = {
   directChat: TDirectChatData
+  canSend: boolean | null
 }
 
-const Main = ({ directChat }: TMainProps) => {
+const Main = ({ directChat, canSend }: TMainProps) => {
   const { Recipient, Creator } = directChat
   const user = useUser()!
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
   const { showPlayer } = useVoicePlayer()
   const [replyMessage, setReplyMessage] = useState<TStateDirectMessage | null>(null)
+  // Thêm state quản lý pinned
+  const [showPinnedModal, setShowPinnedModal] = useState(false)
+  const [pinnedMessages, setPinnedMessages] = useState<TStateDirectMessage[]>([])
+
+  // Ref để luôn lấy directChat.id mới nhất trong handler
+  const directChatIdRef = useRef<number | undefined>(directChat?.id)
+  const fetchPinnedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    directChatIdRef.current = directChat?.id
+  }, [directChat?.id])
+
+  // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
+  useEffect(() => {
+    // Remove toàn bộ listener cũ trước khi đăng ký mới
+    clientSocket.socket.off(ESocketEvents.pin_message)
+    const handlePinMessage = (data: TPinMessageEventData) => {
+      const currentChatId = directChatIdRef.current
+
+      // Kiểm tra xem event có thuộc về chat hiện tại không
+      if (data.directChatId === currentChatId) {
+        // Clear timeout cũ nếu có
+        if (fetchPinnedTimeoutRef.current) {
+          clearTimeout(fetchPinnedTimeoutRef.current)
+        }
+
+        // Debounce fetch để tránh fetch quá nhiều lần
+        fetchPinnedTimeoutRef.current = setTimeout(() => {
+          pinService
+            .getPinnedMessages(data.directChatId)
+            .then((convertedMessages) => {
+              setPinnedMessages(convertedMessages)
+            })
+            .catch(() => {
+              setPinnedMessages([])
+            })
+        }, 500) // Delay 500ms
+      }
+    }
+    clientSocket.socket.on(ESocketEvents.pin_message, handlePinMessage)
+    return () => {
+      clientSocket.socket.off(ESocketEvents.pin_message, handlePinMessage)
+      // Cleanup timeout
+      if (fetchPinnedTimeoutRef.current) {
+        clearTimeout(fetchPinnedTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Fetch pinned messages ban đầu khi vào phòng chat
+  useEffect(() => {
+    if (directChat?.id) {
+      pinService
+        .getPinnedMessages(directChat.id)
+        .then((convertedMessages) => {
+          setPinnedMessages(convertedMessages)
+        })
+        .catch(() => setPinnedMessages([]))
+    }
+  }, [directChat?.id])
+
+  // Đảm bảo client join room mỗi khi vào hoặc chuyển phòng chat, và join lại khi reconnect
+  useEffect(() => {
+    if (!directChat?.id) return
+    const room = `direct_chat_${directChat.id}`
+    const joinRoom = () => {
+      clientSocket.socket.emit("join_room" as any, { room })
+    }
+    joinRoom()
+    // Join lại khi socket reconnect
+    clientSocket.socket.on("connect", joinRoom)
+    const handleJoinedRoom = (joinedRoom: string) => {
+      // Room joined successfully
+    }
+    clientSocket.socket.on("joined_room" as any, handleJoinedRoom)
+    return () => {
+      clientSocket.socket.off("connect", joinRoom)
+      clientSocket.socket.off("joined_room" as any, handleJoinedRoom)
+      // Rời room khi chuyển phòng chat
+      clientSocket.socket.emit("leave_room" as any, { room })
+    }
+  }, [directChat?.id])
 
   // Add logging for setReplyMessage
   const handleSetReplyMessage = (msg: TStateDirectMessage | null) => {
@@ -140,7 +235,7 @@ const Main = ({ directChat }: TMainProps) => {
   }
 
   // Hook để quản lý danh sách audio messages
-  useAudioMessages()
+  const { loading: audioLoading } = useAudioMessages()
 
   const friendInfo = useMemo<TUserWithProfile>(() => {
     return user.id === Creator.id ? Recipient : Creator
@@ -153,30 +248,72 @@ const Main = ({ directChat }: TMainProps) => {
           infoBarIsOpened={infoBarIsOpened}
           onOpenInfoBar={handleOpenInfoBar}
           friendInfo={friendInfo}
+          canSend={canSend}
         />
 
-        {/* Voice Player floating layer */}
-        {showPlayer && (
+        {/* Box pinned messages ngay dưới header */}
+        {pinnedMessages.length > 0 && (
           <div
-            className="absolute top-[60px] left-0 z-30 w-full max-w-none sm:max-w-[480px] sm:left-1/2 sm:-translate-x-1/2 px-0"
-            style={{ pointerEvents: "none" }}
+            className={`
+              w-full px-6 mt-1
+              ${
+                infoBarIsOpened
+                  ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container"
+                  : "translate-x-0 w-full"
+              }
+              transition duration-300 ease-slide-info-bar-timing
+            `}
           >
-            <div className="px-4" style={{ pointerEvents: "auto" }}>
-              <VoiceMessagePlayer />
-            </div>
+            <button
+              className="flex items-center justify-between px-4 py-2 rounded bg-regular-dark-gray-cl hover:bg-gray-800 text-white font-semibold text-sm shadow-sm border border-gray-700 transition-colors w-full"
+              onClick={() => setShowPinnedModal(true)}
+            >
+              <div className="flex items-center gap-2">
+                <span>📌</span>
+                <span>Đã ghim</span>
+              </div>
+              <span className="bg-gray-700 text-white rounded-full px-2 text-xs font-bold">
+                {pinnedMessages.length}
+              </span>
+            </button>
           </div>
         )}
 
         <div
-          className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
+          className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden relative`}
         >
-          <Messages directChat={directChat} onReply={handleSetReplyMessage} />
-
-          <TypeMessageBar
-            directChat={directChat}
-            replyMessage={replyMessage}
-            setReplyMessage={handleSetReplyMessage}
-          />
+          {/* Voice Player floating layer */}
+          {showPlayer && (
+            <div
+              className="absolute top-0 left-0 right-0 z-[70] flex justify-center"
+              style={{ pointerEvents: "none" }}
+            >
+              <div className="w-full max-w-[480px] px-4" style={{ pointerEvents: "auto" }}>
+                <VoiceMessagePlayer />
+              </div>
+            </div>
+          )}
+          <div className="flex flex-col flex-1 w-full justify-between h-0">
+            <div className="flex-1 w-full overflow-y-auto">
+              <Messages
+                directChat={directChat}
+                onReply={handleSetReplyMessage}
+                pinnedMessages={pinnedMessages}
+                setPinnedMessages={setPinnedMessages}
+                showPinnedModal={showPinnedModal}
+                setShowPinnedModal={setShowPinnedModal}
+                canSend={canSend}
+              />
+            </div>
+            <div className="w-full flex justify-center">
+              <TypeMessageBar
+                directChat={directChat}
+                replyMessage={replyMessage}
+                setReplyMessage={handleSetReplyMessage}
+                canSend={canSend}
+              />
+            </div>
+          </div>
         </div>
       </div>
       <InfoBar friendInfo={friendInfo} />
@@ -192,6 +329,8 @@ type TDirectChatboxProps = {
 export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => {
   const { directChat, tempChatData } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
+  const [canSend, setCanSend] = useState<boolean | null>(null)
+  const user = useUser()
 
   const fetchDirectChat = () => {
     if (isTemp) {
@@ -205,11 +344,18 @@ export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => 
     fetchDirectChat()
   }, [directChatId])
 
+  useEffect(() => {
+    if (!directChat) return
+    const receiverId =
+      user?.id === directChat.recipientId ? directChat.creatorId : directChat.recipientId
+    directChatService.checkCanSendMessage(receiverId).then(setCanSend)
+  }, [directChat?.id, user?.id])
+
   return (
     directChatId &&
     directChat && (
       <VoicePlayerProvider>
-        <Main directChat={directChat} />
+        <Main directChat={directChat} canSend={canSend} />
       </VoicePlayerProvider>
     )
   )

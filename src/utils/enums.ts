@@ -69,6 +69,7 @@ export enum EMessageTypes {
   VIDEO = "VIDEO",
   DOCUMENT = "DOCUMENT",
   AUDIO = "AUDIO",
+  PIN_NOTICE = "PIN_NOTICE",
 }
 
 export enum EGroupChatRole {

@@ -1,6 +1,13 @@
 "use client"
 
-import { CustomAvatar, CustomPopover, CustomTooltip, Skeleton, toast } from "@/components/materials"
+import {
+  CustomAvatar,
+  CustomPopover,
+  CustomTooltip,
+  Skeleton,
+  toast,
+  PinButton,
+} from "@/components/materials"
 import { Search as SearchIcon, ArrowLeft, X, Pin, Menu, Users } from "lucide-react"
 import dayjs from "dayjs"
 import { useDebounce } from "@/hooks/debounce"
@@ -15,7 +22,7 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { extractHighlightOffsets, randomInRange, santizeMsgContent } from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
 import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
-import { addConversations } from "@/redux/conversations/conversations.slice"
+import { addConversations, clearConversations } from "@/redux/conversations/conversations.slice"
 import { toaster } from "@/utils/toaster"
 import { AddMembersBoard } from "./group/create-group-chat"
 import { groupChatService } from "@/services/group-chat.service"
@@ -32,6 +39,10 @@ import {
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
 import { setTempChatData } from "@/redux/messages/messages.slice"
+import { usePinDirectChats } from "@/hooks/pin-messages"
+import { clientSocket } from "@/utils/socket/client-socket"
+import { ESocketEvents } from "@/utils/socket/events"
+import type { TPinDirectChatEventData } from "@/utils/types/socket"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 const SEARCH_LIMIT: number = 10
@@ -519,6 +530,16 @@ const ConversationCards = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const user = useUser()!
 
+  // Pin functionality
+  const {
+    pinnedDirectChats,
+    pinnedCount,
+    togglePinDirectChat,
+    isDirectChatPinned,
+    loading: pinLoading,
+    fetchPinnedDirectChats,
+  } = usePinDirectChats()
+
   const getPinIndexClass = (pinIndex: number): string => {
     switch (pinIndex) {
       case 1:
@@ -592,13 +613,104 @@ const ConversationCards = () => {
 
   const fetchConversations = async () => {
     const [directChats, groupChats] = await Promise.all([fetchDirectChats(), fetchGroupChats()])
-    const sortedChats = sortConversations([...directChats, ...groupChats])
+    const allChats = [...directChats, ...groupChats]
+
+    // Enhanced sorting: pinned chats first, then by time
+    const sortedChats = allChats.sort((a, b) => {
+      const aIsPinned = a.type === EChatType.DIRECT ? isDirectChatPinned(a.id) : false
+      const bIsPinned = b.type === EChatType.DIRECT ? isDirectChatPinned(b.id) : false
+
+      // If both have same pin status, sort by time
+      if (aIsPinned === bIsPinned) {
+        const getTimestamp = (chat: TConversationCard) => {
+          // Use lastMessageTime if available, otherwise use createdAt
+          const timeToUse = chat.lastMessageTime || chat.createdAt
+          return new Date(timeToUse).getTime()
+        }
+        return getTimestamp(b) - getTimestamp(a) // Latest first
+      }
+
+      // If different pin status, pinned ones go first
+      return aIsPinned ? -1 : 1
+    })
+
+    // Clear existing conversations and add new ones to avoid duplicates
     dispatch(addConversations(sortedChats))
   }
 
   const navToDirectChat = (id: number, type: EChatType) => {
     navToConversation(id, type)
   }
+
+  const handlePinToggle = (directChatId: number) => {
+    const isCurrentlyPinned = isDirectChatPinned(directChatId)
+    const currentPinnedCount = pinnedDirectChats.length
+
+    // Check if trying to pin and already at limit
+    if (!isCurrentlyPinned && currentPinnedCount >= MAX_NUMBER_OF_PINNED_CONVERSATIONS) {
+      toast.error(
+        `Bạn chỉ có thể ghim tối đa ${MAX_NUMBER_OF_PINNED_CONVERSATIONS} cuộc trò chuyện`
+      )
+      return
+    }
+
+    togglePinDirectChat(directChatId, !isCurrentlyPinned).catch((error) => {
+      console.error("Error toggling pin:", error)
+    })
+  }
+
+  // WebSocket listener for direct chat pin events
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
+    const handlePinDirectChat = (data: TPinDirectChatEventData) => {
+      // Refresh pinned chats when pin status changes
+      fetchPinnedDirectChats()
+
+      // Debounce conversations refresh to avoid multiple calls
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        fetchConversations()
+      }, 100)
+    }
+
+    clientSocket.socket.on(ESocketEvents.pin_direct_chat, handlePinDirectChat)
+
+    return () => {
+      clientSocket.socket.off(ESocketEvents.pin_direct_chat, handlePinDirectChat)
+      clearTimeout(timeoutId)
+    }
+  }, [fetchPinnedDirectChats])
+
+  // Auto-sort conversations when pinned status changes
+  useEffect(() => {
+    if (conversations && conversations.length > 0) {
+      const sortedChats = [...conversations].sort((a, b) => {
+        const aIsPinned = a.type === EChatType.DIRECT ? isDirectChatPinned(a.id) : false
+        const bIsPinned = b.type === EChatType.DIRECT ? isDirectChatPinned(b.id) : false
+
+        // If both have same pin status, sort by time
+        if (aIsPinned === bIsPinned) {
+          const getTimestamp = (chat: TConversationCard) => {
+            const timeToUse = chat.lastMessageTime || chat.createdAt
+            return new Date(timeToUse).getTime()
+          }
+          return getTimestamp(b) - getTimestamp(a) // Latest first
+        }
+
+        // If different pin status, pinned ones go first
+        return aIsPinned ? -1 : 1
+      })
+
+      // Only update if order actually changed
+      const currentOrder = conversations.map((c) => c.id).join(",")
+      const newOrder = sortedChats.map((c) => c.id).join(",")
+
+      if (currentOrder !== newOrder) {
+        dispatch(addConversations(sortedChats))
+      }
+    }
+  }, [pinnedDirectChats, conversations, isDirectChatPinned, dispatch])
 
   useEffect(() => {
     if (tempFlagUseEffectRef.current) {
@@ -623,49 +735,70 @@ const ConversationCards = () => {
     </div>
   ) : conversations && conversations.length > 0 ? (
     <div className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar">
-      {conversations.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type }) => (
-        <div
-          className={`flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${getPinIndexClass(pinIndex)}`}
-          key={`${type}-${id}`}
-          onClick={() => navToDirectChat(id, type)}
-        >
-          <div>
-            <CustomAvatar
-              src={avatar.src || undefined}
-              imgSize={50}
-              fallback={avatar.fallback.toUpperCase()}
-              fallbackClassName="bg-regular-violet-cl text-2xl"
-            />
-          </div>
-          <div className="w-[195px]">
-            <div className="flex justify-between items-center w-full gap-3">
-              <h3 className="truncate font-bold grow text-left leading-snug">{title}</h3>
-              <div className="text-[10px] w-max text-regular-icon-cl">
-                {dayjs(lastMessageTime).format("MMM D, YYYY")}
+      {conversations.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type }) => {
+        const isPinned = type === EChatType.DIRECT ? isDirectChatPinned(id) : false
+
+        return (
+          <div
+            className={`group flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${getPinIndexClass(pinIndex)} group`}
+            key={`${type}-${id}`}
+            onClick={() => navToDirectChat(id, type)}
+          >
+            <div>
+              <CustomAvatar
+                src={avatar.src || undefined}
+                imgSize={50}
+                fallback={avatar.fallback.toUpperCase()}
+                fallbackClassName="bg-regular-violet-cl text-2xl"
+              />
+            </div>
+            <div className="w-[195px]">
+              <div className="flex justify-between items-center w-full gap-3">
+                <h3 className="truncate font-bold grow text-left leading-snug">{title}</h3>
+                <div className="text-[10px] w-max text-regular-icon-cl">
+                  {dayjs(lastMessageTime).format("MMM D, YYYY")}
+                </div>
+              </div>
+              <div className="flex justify-between items-center mt-1 box-border gap-3">
+                {subtitle.type === EMessageTypes.STICKER ? (
+                  <p className="truncate text-regular-placeholder-cl text-sm">
+                    <span className="text-regular-icon-cl italic">Sticker</span>
+                  </p>
+                ) : (
+                  <p
+                    dangerouslySetInnerHTML={{
+                      __html: santizeMsgContent(subtitle.content),
+                    }}
+                    className="truncate opacity-60 text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
+                  ></p>
+                )}
+                <div className="flex items-center gap-1">
+                  {!!pinIndex &&
+                    pinIndex !== -1 &&
+                    pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
+                      <CustomTooltip title="This directChat was pinned" placement="bottom">
+                        <Pin color="currentColor" size={21} />
+                      </CustomTooltip>
+                    )}
+                  {type === EChatType.DIRECT && (
+                    <div
+                      className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                    >
+                      <PinButton
+                        isPinned={isPinned}
+                        onToggle={() => handlePinToggle(id)}
+                        loading={pinLoading}
+                        size={16}
+                        tooltipText={isPinned ? "Bỏ ghim cuộc trò chuyện" : "Ghim cuộc trò chuyện"}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex justify-between items-center mt-1 box-border gap-3">
-              {subtitle.type === EMessageTypes.STICKER ? (
-                <p className="truncate text-regular-placeholder-cl text-sm">
-                  <span className="text-regular-icon-cl italic">Sticker</span>
-                </p>
-              ) : (
-                <p
-                  dangerouslySetInnerHTML={{
-                    __html: santizeMsgContent(subtitle.content),
-                  }}
-                  className="truncate opacity-60 text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
-                ></p>
-              )}
-              {!!pinIndex && pinIndex !== -1 && pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
-                <CustomTooltip title="This directChat was pinned" placement="bottom">
-                  <Pin color="currentColor" size={21} />
-                </CustomTooltip>
-              )}
-            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   ) : (
     <div className="flex flex-col gap-2 justify-center items-center h-full px-3">

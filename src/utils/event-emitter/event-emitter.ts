@@ -14,6 +14,7 @@ interface IEventEmitter {
   [EInternalEvents.SAME_PATH_NAVIGATION]: () => void
   [EInternalEvents.SEND_FRIEND_REQUEST]: (requestData: TGetFriendRequestsData) => void
   [EInternalEvents.OPEN_MANAGE_MEMBERS]: (groupChatId: number) => void
+  [EInternalEvents.SCROLL_TO_MESSAGE_MEDIA]: (messageId: number) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

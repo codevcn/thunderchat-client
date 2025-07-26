@@ -283,7 +283,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const nextMessage = audioMessages[nextIndex]
       setCurrentAudioIndex(nextIndex)
       setCurrentMessage(nextMessage)
-      setCurrentAudioUrl(nextMessage.mediaUrl)
+      setCurrentAudioUrl(nextMessage.mediaUrl ?? null)
       // Tự động phát audio tiếp theo
       if (isPlaying) {
         playAudio(nextMessage)
@@ -297,7 +297,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const prevMessage = audioMessages[prevIndex]
       setCurrentAudioIndex(prevIndex)
       setCurrentMessage(prevMessage)
-      setCurrentAudioUrl(prevMessage.mediaUrl)
+      setCurrentAudioUrl(prevMessage.mediaUrl ?? null)
       // Tự động phát audio trước đó
       if (isPlaying) {
         playAudio(prevMessage)
@@ -308,7 +308,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const handleSetAudioMessages = useCallback((messages: TStateDirectMessage[]) => {
     setAudioMessages(messages)
     setCurrentAudioIndex(0)
-    setCurrentAudioUrl(messages[0]?.mediaUrl || null)
+    setCurrentAudioUrl(messages[0]?.mediaUrl ?? null)
   }, [])
 
   const value: VoicePlayerContextType = {

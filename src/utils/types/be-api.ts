@@ -224,6 +224,7 @@ export type TGlobalSearchData = {
     highlights: string[]
     chatType: EChatType
     chatId: number
+    createdAt: string
   }[]
 }
 

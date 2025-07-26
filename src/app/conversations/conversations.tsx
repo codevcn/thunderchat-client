@@ -21,12 +21,20 @@ import { AddMembersBoard } from "./group/create-group-chat"
 import { groupChatService } from "@/services/group-chat.service"
 import { TConversationCard } from "@/utils/types/global"
 import { useUser } from "@/hooks/user"
-import { clearGlobalSearchResult, setGlobalSearchResult } from "@/redux/search/search.slice"
+import {
+  addMessages,
+  addUsers,
+  resetSearch,
+  setGlobalSearchResult,
+  setNoMoreMessages,
+  setNoMoreUsers,
+} from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
 import { setTempChatData } from "@/redux/messages/messages.slice"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
+const SEARCH_LIMIT: number = 10
 
 type TResultCardProps = {
   avatarUrl?: string
@@ -34,6 +42,7 @@ type TResultCardProps = {
   subtitle: string
   highlights?: string[]
   onStartChat: () => void
+  email?: string
 }
 
 const ResultCard = ({
@@ -42,6 +51,7 @@ const ResultCard = ({
   subtitle,
   highlights,
   onStartChat,
+  email,
 }: TResultCardProps) => {
   return (
     <div
@@ -64,10 +74,12 @@ const ResultCard = ({
           </div>
           <div className="flex flex-col gap-1 max-w-[calc(100%-62px)]">
             <span className="font-bold text-base w-fit">{convName}</span>
-            {highlights && highlights.length > 0 && (
+            {highlights && highlights.length > 0 ? (
               <span className="text-xs text-regular-icon-cl truncate w-full">
                 {renderHighlightedContent(subtitle, extractHighlightOffsets(subtitle, highlights))}
               </span>
+            ) : (
+              <span className="text-sm text-regular-icon-cl truncate w-full">{email}</span>
             )}
           </div>
         </div>
@@ -76,20 +88,54 @@ const ResultCard = ({
   )
 }
 
+const getSearchPayload = (globalSearchResult: TGlobalSearchData | null) => {
+  const isFirstSearch = !globalSearchResult
+  let messageOffsetId: number | undefined
+  let messageOffsetCreatedAt: string | undefined
+  let userOffsetId: number | undefined
+  let userOffsetFullName: string | undefined
+  let userOffsetEmail: string | undefined
+  if (globalSearchResult) {
+    const { messages, users } = globalSearchResult
+    const lastMessage = messages.at(-1)
+    const lastUser = users.at(-1)
+    messageOffsetId = lastMessage?.id
+    messageOffsetCreatedAt = lastMessage ? dayjs(lastMessage.createdAt).toISOString() : undefined
+    userOffsetId = lastUser?.id
+    userOffsetFullName = lastUser?.Profile.fullName
+    userOffsetEmail = lastUser?.email
+  }
+  return {
+    isFirstSearch,
+    messageOffsetId,
+    messageOffsetCreatedAt,
+    userOffsetId,
+    userOffsetFullName,
+    userOffsetEmail,
+    searchLimit: SEARCH_LIMIT,
+  }
+}
+
 type TSearchType = "users" | "messages"
 
 type TSearchResultProps = {
   searchResult: TGlobalSearchData
+  globalSearchInputRef: React.RefObject<HTMLInputElement | null>
 }
 
-const SearchResult = ({ searchResult }: TSearchResultProps) => {
+const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps) => {
   const { users, messages } = searchResult
   const [activeTab, setActiveTab] = useState<TSearchType>("users")
   const buttonsGroupRef = useRef<HTMLDivElement>(null)
   const navToConversation = useNavToConversation()
   const dispatch = useAppDispatch()
   const user = useUser()!
-  console.log(">>> search result:", searchResult)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const { globalSearchResult, noMoreMessages, noMoreUsers } = useAppSelector(
+    (state) => state.search
+  )
+  const [isSearching, setIsSearching] = useState<boolean>(false)
+  const loadMoreObserver = useRef<IntersectionObserver | null>(null)
 
   const startChatHandler = async (
     type: "users" | "messages",
@@ -97,7 +143,6 @@ const SearchResult = ({ searchResult }: TSearchResultProps) => {
     chatId?: number,
     otherUser?: TUserWithProfile
   ) => {
-    console.log(">>> start chat params:", { type, chatType, chatId, otherUser })
     if (type === "messages" && chatId) {
       navToConversation(chatId, chatType)
     } else if (type === "users" && otherUser) {
@@ -161,9 +206,86 @@ const SearchResult = ({ searchResult }: TSearchResultProps) => {
     }
   }
 
+  const loadMore = () => {
+    const {
+      isFirstSearch,
+      messageOffsetId,
+      messageOffsetCreatedAt,
+      userOffsetId,
+      userOffsetFullName,
+      userOffsetEmail,
+      searchLimit,
+    } = getSearchPayload(globalSearchResult)
+    const keyword = globalSearchInputRef.current?.value
+    if (!keyword) return
+    setIsSearching(true)
+    searchService
+      .searchGlobally(
+        keyword,
+        isFirstSearch,
+        searchLimit,
+        messageOffsetId,
+        messageOffsetCreatedAt,
+        userOffsetId,
+        userOffsetFullName,
+        userOffsetEmail
+      )
+      .then((res) => {
+        const { messages, users } = res
+        if (messages && messages.length > 0) {
+          dispatch(addMessages(messages))
+        } else {
+          dispatch(setNoMoreMessages(true))
+        }
+        if (users && users.length > 0) {
+          dispatch(addUsers(users))
+        } else {
+          dispatch(setNoMoreUsers(true))
+        }
+      })
+      .catch((err) => {
+        toast.error(axiosErrorHandler.handleHttpError(err).message)
+      })
+      .finally(() => {
+        setIsSearching(false)
+      })
+  }
+
+  const initLoadMore = () => {
+    const loadMoreEle = loadMoreRef.current
+    if (loadMoreEle) {
+      loadMoreObserver.current = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              loadMore()
+            }
+          })
+        },
+        {
+          threshold: 1.0,
+        }
+      )
+      loadMoreObserver.current.observe(loadMoreEle)
+    }
+  }
+
+  useEffect(() => {
+    initLoadMore()
+  }, [activeTab, searchResult])
+
   useEffect(() => {
     setupActiveTab()
   }, [searchResult])
+
+  useEffect(() => {
+    return () => {
+      if (loadMoreObserver.current) {
+        loadMoreObserver.current.disconnect()
+        loadMoreObserver.current = null
+      }
+    }
+  }, [])
 
   const usersExist = users && users.length > 0
   const messagesExist = messages && messages.length > 0
@@ -189,31 +311,54 @@ const SearchResult = ({ searchResult }: TSearchResultProps) => {
             Messages
           </button>
         </div>
-        <div className="pt-2 px-2 STYLE-styled-scrollbar">
-          <div hidden={activeTab !== "users"} className="w-full">
-            {usersExist &&
-              users.map((user) => (
-                <ResultCard
-                  key={user.id}
-                  avatarUrl={user.Profile.avatar}
-                  convName={user.Profile.fullName || ""}
-                  subtitle={""}
-                  onStartChat={() => startChatHandler("users", EChatType.DIRECT, undefined, user)}
-                />
-              ))}
-          </div>
-          <div hidden={activeTab !== "messages"} className="w-full">
-            {messagesExist &&
-              messages.map((message) => (
-                <ResultCard
-                  key={message.id}
-                  convName={message.conversationName}
-                  subtitle={message.messageContent}
-                  highlights={message.highlights}
-                  onStartChat={() => startChatHandler("messages", message.chatType, message.chatId)}
-                />
-              ))}
-          </div>
+        <div className="pt-2 px-2 STYLE-styled-scrollbar overflow-y-auto">
+          {activeTab === "users" && (
+            <div className="QUERY-users-list w-full">
+              {usersExist &&
+                users.map((user) => (
+                  <ResultCard
+                    key={user.id}
+                    avatarUrl={user.Profile.avatar}
+                    convName={user.Profile.fullName || ""}
+                    subtitle=""
+                    onStartChat={() => startChatHandler("users", EChatType.DIRECT, undefined, user)}
+                    email={user.email}
+                  />
+                ))}
+              {usersExist && !isSearching && !noMoreUsers && (
+                <div
+                  className="QUERY-load-more-users h-5 w-full flex justify-center items-center mt-4"
+                  ref={loadMoreRef}
+                >
+                  {isSearching && <Spinner size="small" className="text-regular-hover-card-cl" />}
+                </div>
+              )}
+            </div>
+          )}
+          {activeTab === "messages" && (
+            <div className="QUERY-messages-list w-full">
+              {messagesExist &&
+                messages.map((message) => (
+                  <ResultCard
+                    key={message.id}
+                    convName={message.conversationName}
+                    subtitle={message.messageContent}
+                    highlights={message.highlights}
+                    onStartChat={() =>
+                      startChatHandler("messages", message.chatType, message.chatId)
+                    }
+                  />
+                ))}
+              {messagesExist && !isSearching && !noMoreMessages && (
+                <div
+                  className="QUERY-load-more-messages h-5 w-full flex justify-center items-center mt-4"
+                  ref={loadMoreRef}
+                >
+                  {isSearching && <Spinner size="small" className="text-regular-hover-card-cl" />}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -222,9 +367,10 @@ const SearchResult = ({ searchResult }: TSearchResultProps) => {
 
 type TSearchSectionProps = {
   inputFocused: boolean
+  globalSearchInputRef: React.RefObject<HTMLInputElement | null>
 }
 
-const SearchSection = ({ inputFocused }: TSearchSectionProps) => {
+const SearchSection = ({ inputFocused, globalSearchInputRef }: TSearchSectionProps) => {
   const globalSearchResult = useAppSelector((state) => state.search.globalSearchResult)
 
   return (
@@ -232,7 +378,10 @@ const SearchSection = ({ inputFocused }: TSearchSectionProps) => {
       className={`${inputFocused ? "animate-super-zoom-out-fade-in" : "animate-super-zoom-in-fade-out"} z-20 pt-2 pb-5 absolute top-0 left-0 box-border w-full h-full overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar`}
     >
       {globalSearchResult ? (
-        <SearchResult searchResult={globalSearchResult} />
+        <SearchResult
+          searchResult={globalSearchResult}
+          globalSearchInputRef={globalSearchInputRef}
+        />
       ) : (
         <div className="flex justify-center items-center h-full w-full">
           <p className="text-regular-icon-cl">No results found</p>
@@ -247,6 +396,7 @@ type TGlobalSearchBarProps = {
   setInputFocused: Dispatch<SetStateAction<boolean>>
   inputFocused: boolean
   isSearching: boolean
+  globalSearchInputRef: React.RefObject<HTMLInputElement | null>
 }
 
 const GlobalSearchBar = ({
@@ -254,36 +404,60 @@ const GlobalSearchBar = ({
   setIsSearching,
   inputFocused,
   isSearching,
+  globalSearchInputRef,
 }: TGlobalSearchBarProps) => {
-  const inputRef = useRef<HTMLInputElement>(null)
   const debounce = useDebounce()
   const dispatch = useAppDispatch()
 
   const searchGlobally = debounce(async (e: ChangeEvent<HTMLInputElement>) => {
     let inputValue = e.target.value.trim()
     if (!inputValue) return
-    setIsSearching(true)
-    searchService
-      .searchGlobally(inputValue)
-      .then((res) => {
-        dispatch(setGlobalSearchResult(res))
-      })
-      .catch((err) => {
-        toast.error(axiosErrorHandler.handleHttpError(err).message)
-      })
-      .finally(() => {
-        setIsSearching(false)
-      })
+    dispatch((dispatch, getState) => {
+      dispatch(resetSearch())
+      const {
+        isFirstSearch,
+        messageOffsetId,
+        messageOffsetCreatedAt,
+        userOffsetId,
+        userOffsetFullName,
+        userOffsetEmail,
+        searchLimit,
+      } = getSearchPayload(getState().search.globalSearchResult)
+      setIsSearching(true)
+      searchService
+        .searchGlobally(
+          inputValue,
+          isFirstSearch,
+          searchLimit,
+          messageOffsetId,
+          messageOffsetCreatedAt,
+          userOffsetId,
+          userOffsetFullName,
+          userOffsetEmail
+        )
+        .then((res) => {
+          dispatch(setGlobalSearchResult(res))
+          const { messages, users } = res
+          if (!messages || messages.length === 0) dispatch(setNoMoreMessages(true))
+          if (!users || users.length === 0) dispatch(setNoMoreUsers(true))
+        })
+        .catch((err) => {
+          toast.error(axiosErrorHandler.handleHttpError(err).message)
+        })
+        .finally(() => {
+          setIsSearching(false)
+        })
+    })
   }, 300)
 
   const closeSearch = () => {
-    if (inputRef.current?.value) inputRef.current.value = ""
+    if (globalSearchInputRef.current?.value) globalSearchInputRef.current.value = ""
     setInputFocused(false)
   }
 
   const clearInput = () => {
-    if (inputRef.current?.value) inputRef.current.value = ""
-    dispatch(clearGlobalSearchResult())
+    if (globalSearchInputRef.current?.value) globalSearchInputRef.current.value = ""
+    dispatch(resetSearch())
   }
 
   return (
@@ -316,7 +490,7 @@ const GlobalSearchBar = ({
           placeholder="Search..."
           onChange={searchGlobally}
           onFocus={() => setInputFocused(true)}
-          ref={inputRef}
+          ref={globalSearchInputRef}
         />
 
         <IconButton
@@ -537,6 +711,7 @@ export const Conversations = () => {
   const [inputFocused, setInputFocused] = useState<boolean>(false)
   const [isSearching, setIsSearching] = useState<boolean>(false)
   const [openGroupChat, setOpenGroupChat] = useState<boolean>(false)
+  const globalSearchInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div className="relative w-convs-list h-full overflow-hidden">
@@ -549,10 +724,11 @@ export const Conversations = () => {
           setIsSearching={setIsSearching}
           inputFocused={inputFocused}
           isSearching={isSearching}
+          globalSearchInputRef={globalSearchInputRef}
         />
 
         <div className="relative z-10 grow overflow-hidden">
-          <SearchSection inputFocused={inputFocused} />
+          <SearchSection inputFocused={inputFocused} globalSearchInputRef={globalSearchInputRef} />
 
           <div
             className={`${inputFocused ? "animate-zoom-fade-out" : "animate-zoom-fade-in"} w-full h-full absolute top-0 left-0 z-30 px-2`}

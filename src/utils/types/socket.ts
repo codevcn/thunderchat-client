@@ -13,7 +13,6 @@ export type TChattingPayload = {
   msgPayload: {
     receiverId: number
     content: string
-    directChatId: number
     token: string
     timestamp: Date
     mediaUrl?: string

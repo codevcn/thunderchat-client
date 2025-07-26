@@ -19,6 +19,7 @@ import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
 import { uploadFile } from "@/apis/upload"
 import { santizeMsgContent } from "@/utils/helpers"
+import { TChattingPayload } from "@/utils/types/socket"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -49,7 +50,7 @@ const ExpressionPicker = ({
   const addEmojiBtnRef = useRef<HTMLButtonElement>(null)
   const appRootEle = useRootLayoutContext().appRootRef!.current!
   const user = useUser()!
-  const { recipientId, creatorId, id } = directChat
+  const { recipientId, creatorId } = directChat
   const handleSelectEmoji = (emojiObject: TEmoji) => {
     const textField = textFieldRef.current
     if (textField) {
@@ -66,7 +67,6 @@ const ExpressionPicker = ({
       {
         content: sticker.imageUrl,
         receiverId: user.id === recipientId ? creatorId : recipientId,
-        directChatId: id,
         token: chattingService.getMessageToken(),
         timestamp: new Date(),
       },
@@ -212,7 +212,7 @@ const MessageTextField = ({
   replyMessage,
   setReplyMessage,
 }: TMessageTextFieldProps) => {
-  const { recipientId, creatorId, id } = directChat
+  const { recipientId, creatorId } = directChat
   const user = useUser()!
   const typingFlagRef = useRef<TTypingFlags | undefined>(undefined)
   const debounce = useCustomDebounce(typingFlagRef)
@@ -239,10 +239,9 @@ const MessageTextField = ({
       return
     }
 
-    const payload: any = {
+    const payload: TChattingPayload["msgPayload"] = {
       content: msgToSend,
       receiverId: user.id === recipientId ? creatorId : recipientId,
-      directChatId: id,
       token: chattingService.getMessageToken(),
       timestamp: new Date(),
     }
@@ -408,7 +407,7 @@ export const TypeMessageBar = memo(
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!user) return
-      const { recipientId, creatorId, id } = directChat
+      const { recipientId, creatorId } = directChat
       const files = Array.from(e.target.files || [])
       if (files.length === 0) return
 
@@ -476,18 +475,14 @@ export const TypeMessageBar = memo(
           else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
           else messageType = EMessageTypes.DOCUMENT
 
-          const msgPayload: any = {
+          const msgPayload: TChattingPayload["msgPayload"] = {
             content: "", // hoặc caption nếu có
             mediaUrl: url,
             fileName,
             fileType,
             receiverId: user.id === recipientId ? creatorId : recipientId,
-            directChatId: id,
             token: chattingService.getMessageToken(),
             timestamp: new Date(),
-          }
-          if (messageType === EMessageTypes.DOCUMENT) {
-            msgPayload.fileSize = file.size
           }
 
           chattingService.sendMessage(messageType, msgPayload, (data) => {
@@ -655,22 +650,18 @@ export const TypeMessageBar = memo(
         const { url, fileName, fileType } = await uploadFile(webmFile)
 
         // Gửi message (BE sẽ nhận type là AUDIO, mediaUrl là link S3 .webm)
-        const { recipientId, creatorId, id } = directChat
+        const { recipientId, creatorId } = directChat
         const msgPayload = {
           content: "", // hoặc chú thích
           mediaUrl: url,
           fileName,
           fileType,
           receiverId: user!.id === recipientId ? creatorId : recipientId,
-          directChatId: id,
           token: chattingService.getMessageToken(),
           timestamp: new Date(),
         }
 
-        console.log("msgPayload", msgPayload)
-
         chattingService.sendMessage(EMessageTypes.AUDIO, msgPayload, (data) => {
-          console.log("data", data)
           if ("success" in data && data.success) {
             chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()

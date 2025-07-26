@@ -12,7 +12,7 @@ import { IconButton } from "@/components/materials/icon-button"
 import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.selectors"
 import { searchService } from "@/services/search.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { extractHighlightOffsets, santizeMsgContent } from "@/utils/helpers"
+import { extractHighlightOffsets, randomInRange, santizeMsgContent } from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
 import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
 import { addConversations } from "@/redux/conversations/conversations.slice"
@@ -176,7 +176,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                 lastSentMessageId: undefined,
               })
             )
-            navToConversation(-1, EChatType.DIRECT)
+            navToConversation(randomInRange(1, 10000), EChatType.DIRECT, true)
           }
         })
         .catch((err) => {
@@ -639,7 +639,7 @@ const ConversationCards = () => {
           </div>
           <div className="w-[195px]">
             <div className="flex justify-between items-center w-full gap-3">
-              <h3 className="truncate font-bold grow text-left">{title}</h3>
+              <h3 className="truncate font-bold grow text-left leading-snug">{title}</h3>
               <div className="text-[10px] w-max text-regular-icon-cl">
                 {dayjs(lastMessageTime).format("MMM D, YYYY")}
               </div>
@@ -650,9 +650,12 @@ const ConversationCards = () => {
                   <span className="text-regular-icon-cl italic">Sticker</span>
                 </p>
               ) : (
-                <p className="truncate text-regular-placeholder-cl text-sm">
-                  {santizeMsgContent(subtitle.content)}
-                </p>
+                <p
+                  dangerouslySetInnerHTML={{
+                    __html: santizeMsgContent(subtitle.content),
+                  }}
+                  className="truncate opacity-60 text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
+                ></p>
               )}
               {!!pinIndex && pinIndex !== -1 && pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
                 <CustomTooltip title="This directChat was pinned" placement="bottom">

@@ -17,20 +17,20 @@ export const SwitchChatbox = () => {
   const checkChatId = () => {
     const directChatId = searchParams.get("cid")
     if (directChatId && validator.isNumeric(directChatId)) {
-      const convId = parseInt(directChatId)
-      if (convId === -1) {
-        setIsTemp(true)
-      } else {
-        setIsTemp(false)
-      }
-      setChatId(convId)
+      setChatId(parseInt(directChatId))
       setType("direct")
+      return
+    }
+    const tempId = searchParams.get("tid")
+    if (tempId && validator.isNumeric(tempId)) {
+      setChatId(parseInt(tempId))
+      setType("direct")
+      setIsTemp(true)
       return
     }
     const groupChatId = searchParams.get("gid")
     if (groupChatId && validator.isNumeric(groupChatId)) {
-      const convId = parseInt(groupChatId)
-      setChatId(convId)
+      setChatId(parseInt(groupChatId))
       setType("group")
     }
   }

@@ -1,22 +1,10 @@
 "use client"
 
 import { CustomTooltip, IconButton } from "@/components/materials"
-import {
-  Download,
-  FileVideo,
-  Mic,
-  Paperclip,
-  Reply,
-  Send,
-  Smile,
-  Sticker,
-  Trash,
-  X,
-} from "lucide-react"
+import { FileVideo, Mic, Paperclip, Reply, Send, Smile, Sticker, Trash, X } from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { AutoResizeTextField } from "@/components/materials"
-import { useAppSelector } from "@/hooks/redux"
 import { memo, useEffect, useRef, useState, Suspense, lazy } from "react"
 import { useRootLayoutContext } from "@/hooks/layout"
 import { createPortal } from "react-dom"
@@ -87,7 +75,6 @@ const ExpressionPicker = ({
           chattingService.setAcknowledgmentFlag(true)
           chattingService.recursiveSendingQueueMessages()
         } else if ("isError" in data && data.isError) {
-          console.log(">>> data err:", data)
           toast.error("Error when sending message")
         }
       }
@@ -247,7 +234,7 @@ const MessageTextField = ({
   }
 
   const sendMessage = (msgToSend: string) => {
-    if (!msgToSend || !msgToSend.trim()) {
+    if (!msgToSend || !msgToSend.trim() || msgToSend.includes("QUERY-empty-placeholder")) {
       toast.error("Message cannot be empty")
       return
     }
@@ -269,7 +256,6 @@ const MessageTextField = ({
         chattingService.setAcknowledgmentFlag(true)
         chattingService.recursiveSendingQueueMessages()
       } else if ("isError" in data && data.isError) {
-        console.log(">>> data err:", data)
         toast.error("Error when sending message")
       }
     })
@@ -400,13 +386,11 @@ export const TypeMessageBar = memo(
     }
 
     const handleFileMenuSelect = (type: string) => {
-      console.log("FileTypeMenu selected:", type, fileInputRef.current)
       if (type === "photo") {
         setFileAccept("image/*,video/*")
         setFileMode("media")
         setFileInputKey((prev) => prev + 1)
         setTimeout(() => {
-          console.log("Try to click file input:", fileInputRef.current)
           fileInputRef.current?.click()
         }, 0)
       } else if (type === "document") {
@@ -416,7 +400,6 @@ export const TypeMessageBar = memo(
         setFileMode("document")
         setFileInputKey((prev) => prev + 1)
         setTimeout(() => {
-          console.log("Try to click file input:", fileInputRef.current)
           fileInputRef.current?.click()
         }, 0)
       }
@@ -549,7 +532,6 @@ export const TypeMessageBar = memo(
     }
 
     function renderReplyPreview(msg: TStateDirectMessage) {
-      console.log(">>> reply msg:", msg)
       const type = msg.type.toUpperCase()
       switch (type) {
         case EMessageTypes.IMAGE:
@@ -800,7 +782,6 @@ export const TypeMessageBar = memo(
               <span
                 className={`${isUploading ? "text-gray-400 cursor-not-allowed" : "text-gray-500 hover:text-regular-violet-cl cursor-pointer"} relative bottom-0 right-0`}
                 onClick={() => {
-                  console.log("Paperclip clicked", { isUploading, showFileMenu })
                   if (!isUploading) setShowFileMenu((v) => !v)
                 }}
                 role="button"
@@ -837,7 +818,6 @@ export const TypeMessageBar = memo(
               style={{ display: "none" }}
               ref={fileInputRef}
               onChange={handleFileSelect}
-              onClick={() => console.log("Input file clicked")}
             />
           </div>
         </div>

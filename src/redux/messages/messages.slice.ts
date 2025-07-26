@@ -91,6 +91,15 @@ export const messagesSlice = createSlice({
     setTempChatData: (state, action: PayloadAction<TDirectChatData>) => {
       state.tempChatData = action.payload
     },
+    resetAllChatData: (state) => {
+      // set all data to null except tempChatData
+      state.directChat = null
+      state.groupChat = null
+      state.groupChatMembers = null
+      state.directMessages = null
+      state.groupMessages = null
+      state.fetchedMsgs = false
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(
@@ -144,4 +153,5 @@ export const {
   removeGroupChatMember,
   setDirectChat,
   setTempChatData,
+  resetAllChatData,
 } = messagesSlice.actions

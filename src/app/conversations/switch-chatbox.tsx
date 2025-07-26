@@ -4,20 +4,24 @@ import { useState, useEffect } from "react"
 import { DirectChatbox } from "./direct-chat/chatbox"
 import { GroupChatbox } from "./group/group-chatbox"
 import type { TChatType } from "@/utils/types/global"
+import { resetAllChatData } from "@/redux/messages/messages.slice"
+import { useAppDispatch } from "@/hooks/redux"
 
 export const SwitchChatbox = () => {
   const [chatId, setChatId] = useState<number>()
   const [type, setType] = useState<TChatType>()
   const [isTemp, setIsTemp] = useState<boolean>(false)
   const searchParams = useSearchParams()
+  const dispatch = useAppDispatch()
 
   const checkChatId = () => {
     const directChatId = searchParams.get("cid")
     if (directChatId && validator.isNumeric(directChatId)) {
-      console.log(">>> c id :", directChatId)
       const convId = parseInt(directChatId)
       if (convId === -1) {
         setIsTemp(true)
+      } else {
+        setIsTemp(false)
       }
       setChatId(convId)
       setType("direct")
@@ -33,6 +37,7 @@ export const SwitchChatbox = () => {
 
   useEffect(() => {
     checkChatId()
+    dispatch(resetAllChatData())
   }, [searchParams])
 
   return (

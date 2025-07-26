@@ -147,36 +147,41 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
       navToConversation(chatId, chatType)
     } else if (type === "users" && otherUser) {
       const otherUserId = otherUser.id
-      directChatService.findConversationWithOtherUser(otherUserId).then((directChat) => {
-        if (directChat) {
-          navToConversation(directChat.id, EChatType.DIRECT)
-        } else {
-          dispatch(
-            setTempChatData({
-              id: -1,
-              createdAt: new Date().toISOString(),
-              creatorId: user.id,
-              recipientId: otherUserId,
-              Creator: {
-                id: user.id,
-                email: user.email,
-                password: user.password,
-                createdAt: user.createdAt,
-                Profile: user.Profile,
-              },
-              Recipient: {
-                id: otherUserId,
-                email: "",
-                password: "",
-                createdAt: "",
-                Profile: otherUser.Profile,
-              },
-              lastSentMessageId: undefined,
-            })
-          )
-          navToConversation(-1, EChatType.DIRECT)
-        }
-      })
+      directChatService
+        .findConversationWithOtherUser(otherUserId)
+        .then((directChat) => {
+          if (directChat) {
+            navToConversation(directChat.id, EChatType.DIRECT)
+          } else {
+            dispatch(
+              setTempChatData({
+                id: -1,
+                createdAt: new Date().toISOString(),
+                creatorId: user.id,
+                recipientId: otherUserId,
+                Creator: {
+                  id: user.id,
+                  email: user.email,
+                  password: user.password,
+                  createdAt: user.createdAt,
+                  Profile: user.Profile,
+                },
+                Recipient: {
+                  id: otherUserId,
+                  email: otherUser.email,
+                  password: otherUser.password,
+                  createdAt: otherUser.createdAt,
+                  Profile: otherUser.Profile,
+                },
+                lastSentMessageId: undefined,
+              })
+            )
+            navToConversation(-1, EChatType.DIRECT)
+          }
+        })
+        .catch((err) => {
+          toast.error(axiosErrorHandler.handleHttpError(err).message)
+        })
     }
   }
 
@@ -311,7 +316,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
             Messages
           </button>
         </div>
-        <div className="pt-2 px-2 STYLE-styled-scrollbar overflow-y-auto">
+        <div className="pb-2 px-2 STYLE-styled-scrollbar overflow-y-auto">
           {activeTab === "users" && (
             <div className="QUERY-users-list w-full">
               {usersExist &&

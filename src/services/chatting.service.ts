@@ -24,7 +24,6 @@ class ChattingService {
     message: TChattingPayload["msgPayload"],
     callback: TSendMessageCallback
   ): Promise<void> {
-    console.log(">>> SEND MESSAGE:", { type, message })
     if (clientSocket.socket.connected) {
       if (this.getAcknowledgmentFlag()) {
         this.setAcknowledgmentFlag(false)
@@ -36,8 +35,12 @@ class ChattingService {
           },
           (error, data) => {
             if (error) {
+              console.error(">>> error when sending message & save offline message:", error)
               this.saveOfflineMessage({ type, msgPayload: message })
             } else {
+              if (data && "isError" in data) {
+                console.error(">>> error when sending message & callback:", data)
+              }
               callback(data)
             }
           }

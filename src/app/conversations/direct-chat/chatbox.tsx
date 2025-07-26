@@ -194,11 +194,11 @@ export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => 
   const dispatch = useAppDispatch()
 
   const fetchDirectChat = () => {
-    if (isTemp && tempChatData) {
-      dispatch(setDirectChat(tempChatData))
-      return
+    if (isTemp) {
+      if (tempChatData) dispatch(setDirectChat(tempChatData))
+    } else {
+      dispatch(fetchDirectChatThunk(directChatId))
     }
-    dispatch(fetchDirectChatThunk(directChatId))
   }
 
   useEffect(() => {

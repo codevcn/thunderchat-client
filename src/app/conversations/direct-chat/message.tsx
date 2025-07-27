@@ -379,7 +379,16 @@ type TMessageProps = {
 }
 
 const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
-  const { type, mediaUrl, fileName, stickerUrl, content } = replyTo
+  const { type, mediaUrl, fileName, stickerUrl, content, isDeleted } = replyTo
+
+  // Nếu tin nhắn gốc đã bị thu hồi, hiển thị thông báo thu hồi
+  if (isDeleted) {
+    return (
+      <span className="text-xs rounded mt-0.5 inline-block text-gray-400 italic">
+        Tin nhắn này đã được thu hồi
+      </span>
+    )
+  }
 
   // Nếu là ảnh
   if (type === EMessageTypes.IMAGE && mediaUrl) {
@@ -511,18 +520,20 @@ export const Message = forwardRef<
               className="max-w-[300px] text-sm truncate"
               dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
             ></div>
-            {/* Nút xem nếu có ReplyTo */}
-            {message.ReplyTo && typeof message.ReplyTo.id !== "undefined" && (
-              <button
-                className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
-                onClick={() => {
-                  if (message.ReplyTo && onReplyPreviewClick)
-                    onReplyPreviewClick(message.ReplyTo.id)
-                }}
-              >
-                Xem
-              </button>
-            )}
+            {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi */}
+            {message.ReplyTo &&
+              typeof message.ReplyTo.id !== "undefined" &&
+              !message.ReplyTo.isDeleted && (
+                <button
+                  className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
+                  onClick={() => {
+                    if (message.ReplyTo && onReplyPreviewClick)
+                      onReplyPreviewClick(message.ReplyTo.id)
+                  }}
+                >
+                  Xem
+                </button>
+              )}
           </div>
         </div>
       )
@@ -595,7 +606,11 @@ export const Message = forwardRef<
           {user.id === authorId ? (
             <div className={`QUERY-user-message-${id} flex justify-end w-full`} data-msg-id={id}>
               <div
-                className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "bg-regular-violet-cl"} group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
+                className={
+                  `${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
+                  `${stickerUrl ? "" : message.isDeleted ? "bg-regular-violet-cl opacity-60 text-white italic" : "bg-regular-violet-cl"} ` +
+                  "group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1"
+                }
               >
                 <div
                   className={
@@ -710,7 +725,7 @@ export const Message = forwardRef<
                   </button>
                 </div>
 
-                {ReplyTo && (
+                {ReplyTo && !message.isDeleted && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -758,7 +773,11 @@ export const Message = forwardRef<
               data-msg-id={id}
             >
               <div
-                className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
+                className={
+                  `group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
+                  `${stickerUrl ? "" : message.isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white italic" : "w-max bg-regular-dark-gray-cl"} ` +
+                  "max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative"
+                }
               >
                 <div
                   className={
@@ -873,7 +892,7 @@ export const Message = forwardRef<
                   </button>
                 </div>
 
-                {ReplyTo && (
+                {ReplyTo && !message.isDeleted && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"

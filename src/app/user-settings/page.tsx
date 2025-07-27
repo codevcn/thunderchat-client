@@ -3,25 +3,11 @@
 import React, { useState, useEffect } from "react"
 import { Lock, ArrowLeft } from "lucide-react"
 import { AppNavigation } from "@/components/layout/app-navigation"
-import {
-  Monitor,
-  Bell,
-  MessageCircle,
-  Settings as SettingsIcon,
-  UserCog,
-  Puzzle,
-} from "lucide-react"
+import { Settings as SettingsIcon, UserCog } from "lucide-react"
 import { fetchUserSettings, updateUserSettingsService } from "@/services/user-setting.service"
 import { toast } from "sonner" // Nếu đã có thư viện toast, nếu chưa có thì dùng alert
 
-const sidebarOptions = [
-  { key: "general", label: "Cài đặt chung", icon: <SettingsIcon size={20} /> },
-  { key: "privacy", label: "Quyền riêng tư", icon: <UserCog size={20} /> },
-  { key: "appearance", label: "Giao diện", icon: <Monitor size={20} />, badge: "Beta" },
-  { key: "notification", label: "Thông báo", icon: <Bell size={20} /> },
-  { key: "message", label: "Tin nhắn", icon: <MessageCircle size={20} /> },
-  { key: "utility", label: "Tiện ích", icon: <Puzzle size={20} /> },
-]
+const sidebarOptions = [{ key: "privacy", label: "Privacy", icon: <UserCog size={20} /> }]
 
 // Toggle switch component chuẩn Tailwind
 function ToggleSwitch({
@@ -54,12 +40,9 @@ function ToggleSwitch({
 }
 
 export default function UserSettingsPage() {
-  const [selectedTab, setSelectedTab] = useState("general")
+  const [selectedTab, setSelectedTab] = useState("privacy")
   const [onlyReceiveFriendMessage, setOnlyReceiveFriendMessage] = useState(false)
-  const [suggestMention, setSuggestMention] = useState(true)
-  const [findSticker, setFindSticker] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [suggestSticker, setSuggestSticker] = useState(true) // Để riêng cho tab Tiện ích
 
   // Lấy trạng thái ban đầu khi mở tab Quyền riêng tư
   useEffect(() => {
@@ -90,84 +73,14 @@ export default function UserSettingsPage() {
       })
   }
 
-  // UI cho tab Tiện ích
-  const utilityContent = (
-    <div className="flex-1 flex items-center justify-center bg-regular-black-cl min-h-screen">
-      <div className="w-full max-w-[600px] min-w-[320px] min-h-[340px] max-h-[90vh] bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl p-8 shadow-lg flex flex-col gap-8 overflow-auto">
-        {/* Group: Gợi ý Sticker */}
-        <div className="mb-2">
-          <div className="font-bold text-lg text-regular-white-cl mb-2">Gợi ý Sticker</div>
-          <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between mb-2 gap-4">
-            <span className="text-base text-regular-white-cl font-medium">
-              Hiện gợi ý Sticker phù hợp với nội dung tin nhắn đang soạn
-            </span>
-            <ToggleSwitch
-              checked={suggestSticker}
-              onChange={(v) => setSuggestSticker(v)}
-              labelId="toggle-suggest-sticker"
-            />
-          </div>
-        </div>
-        {/* Group: Gợi ý @ */}
-        <div>
-          <div className="font-bold text-lg text-regular-white-cl mb-2">Gợi ý @</div>
-          <div className="flex flex-col gap-4">
-            {/* Option: Gợi ý nhắc tên */}
-            <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center gap-4">
-              <span
-                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: "#e74c3c" }}
-              >
-                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-base text-regular-white-cl">Gợi ý nhắc tên</div>
-                <div className="text-sm text-gray-400 mt-1">
-                  Gợi ý nhắc tên theo nội dung đang soạn
-                </div>
-              </div>
-              <ToggleSwitch
-                checked={suggestMention}
-                onChange={(v) => setSuggestMention(v)}
-                labelId="toggle-suggest-mention"
-              />
-            </div>
-            {/* Option: Tìm sticker */}
-            <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center gap-4">
-              <span className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-regular-violet-cl">
-                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <text x="12" y="16" textAnchor="middle" fontSize="12" fill="#fff">
-                    :)
-                  </text>
-                </svg>
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-base text-regular-white-cl">Tìm sticker</div>
-                <div className="text-sm text-gray-400 mt-1">Gõ từ khóa để tìm Sticker</div>
-              </div>
-              <ToggleSwitch
-                checked={findSticker}
-                onChange={(v) => setFindSticker(v)}
-                labelId="toggle-find-sticker"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-
   // UI cho tab Quyền riêng tư
   const privacyContent = (
     <div className="flex-1 flex items-center justify-center bg-regular-black-cl min-h-screen">
       <div className="w-full max-w-[600px] min-w-[320px] min-h-[340px] max-h-[90vh] bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl p-8 shadow-lg flex flex-col gap-8 overflow-auto">
-        <div className="font-bold text-xl text-regular-white-cl mb-4">Quyền riêng tư</div>
+        <div className="font-bold text-xl text-regular-white-cl mb-4">Privacy</div>
         <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-4">
           <span className="text-base text-regular-white-cl font-medium">
-            Chặn tin nhắn từ người lạ
+            Block messages from strangers
           </span>
           <ToggleSwitch
             checked={onlyReceiveFriendMessage}
@@ -213,7 +126,7 @@ export default function UserSettingsPage() {
             letterSpacing: 1,
           }}
         >
-          Cài đặt
+          Settings
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {sidebarOptions.map((opt) => (
@@ -242,28 +155,11 @@ export default function UserSettingsPage() {
             >
               {opt.icon}
               {opt.label}
-              {opt.badge && (
-                <span
-                  style={{
-                    background: "var(--tdc-regular-violet-cl)",
-                    color: "white",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    borderRadius: 6,
-                    padding: "2px 8px",
-                    marginLeft: 8,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  Beta
-                </span>
-              )}
             </div>
           ))}
         </div>
       </div>
       {/* MAIN CONTENT */}
-      {selectedTab === "utility" && utilityContent}
       {selectedTab === "privacy" && privacyContent}
     </div>
   )

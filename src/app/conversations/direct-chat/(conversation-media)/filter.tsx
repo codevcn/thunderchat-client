@@ -74,7 +74,7 @@ const Filters = ({
 
   // Hàm format ngày hiển thị
   const getDateDisplayText = () => {
-    if (!dateFilterApplied || !fromDate || !toDate) return "Ngày gửi"
+    if (!dateFilterApplied || !fromDate || !toDate) return "Send date"
 
     const from = dayjs(fromDate)
     const to = dayjs(toDate)
@@ -137,9 +137,7 @@ const Filters = ({
           onClick={() => setIsSenderPopupOpen(!isSenderPopupOpen)}
           type="button"
         >
-          <span className="font-medium truncate text-xs">
-            {getSelectedUserName() || "Người gửi"}
-          </span>
+          <span className="font-medium truncate text-xs">{getSelectedUserName() || "Sender"}</span>
           {senderFilter !== "all" ? (
             <X
               className="w-4 h-4 text-gray-400 hover:text-white transition-colors"
@@ -157,10 +155,10 @@ const Filters = ({
             className="absolute left-0 top-[110%] z-20 bg-[#202124] min-w-[280px] rounded-xl shadow-lg border border-[#222] p-2 animate-fade-in"
           >
             <div className="px-2 py-2">
-              <div className="font-semibold text-white mb-2 text-[15px]">Tìm kiếm</div>
+              <div className="font-semibold text-white mb-2 text-[15px]">Search</div>
               <input
                 type="text"
-                placeholder="Tìm kiếm"
+                placeholder="Search"
                 className="w-full bg-[#232526] text-white rounded px-3 py-2 outline-none border border-[#333] text-sm"
                 value={senderSearch}
                 onChange={(e) => setSenderSearch(e.target.value)}
@@ -273,7 +271,7 @@ const Filters = ({
                 onMouseLeave={() => setIsSuggestionOpen(false)}
                 type="button"
               >
-                <span>Gợi ý thời gian</span>
+                <span>Time suggestions</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
               {isSuggestionOpen && (

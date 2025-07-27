@@ -14,9 +14,9 @@ const Header = ({ onClose }: { onClose: () => void }) => (
     >
       <ChevronLeft className="w-5 h-5" />
     </button>
-    <span className="text-lg font-semibold text-white">Kho lưu trữ</span>
+    <span className="text-lg font-semibold text-white">Archive</span>
     <button className="text-white text-sm hover:text-gray-300 transition-colors duration-200">
-      Chọn
+      Select
     </button>
   </div>
 )
@@ -26,17 +26,17 @@ const Tabs = ({
   tab,
   setTab,
 }: {
-  tab: "Ảnh/Video" | "files" | "voices" | "links"
-  setTab: Dispatch<SetStateAction<"Ảnh/Video" | "files" | "voices" | "links">>
+  tab: "Images/Video" | "files" | "voices" | "links"
+  setTab: Dispatch<SetStateAction<"Images/Video" | "files" | "voices" | "links">>
 }) => (
   <div className="flex px-2 pt-1 pb-1">
     <button
       className={`flex-1 py-2 px-2 text-sm font-medium transition-all duration-200 ${
-        tab === "Ảnh/Video" ? "text-purple-400" : "text-gray-400 hover:text-gray-300"
+        tab === "Images/Video" ? "text-purple-400" : "text-gray-400 hover:text-gray-300"
       }`}
-      onClick={() => setTab("Ảnh/Video")}
+      onClick={() => setTab("Images/Video")}
     >
-      Ảnh/Video
+      Images/Video
     </button>
     <button
       className={`flex-1 py-2 px-2 text-sm font-medium transition-all duration-200 ${
@@ -70,16 +70,16 @@ const MediaArchivePanel = ({
   mediaData,
   creator,
   recipient,
-  initialTab = "Ảnh/Video",
+  initialTab = "Images/Video",
 }: {
   onClose: () => void
   mediaData: any
   allMediaItems: any[]
   creator: any
   recipient: any
-  initialTab?: "Ảnh/Video" | "files" | "voices" | "links"
+  initialTab?: "Images/Video" | "files" | "voices" | "links"
 }) => {
-  const [tab, setTab] = useState<"Ảnh/Video" | "files" | "voices" | "links">(initialTab)
+  const [tab, setTab] = useState<"Images/Video" | "files" | "voices" | "links">(initialTab)
   const [senderFilter, setSenderFilter] = useState("all")
   const [dateSort, setDateSort] = useState("desc")
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false)
@@ -144,7 +144,7 @@ const MediaArchivePanel = ({
 
   // Lọc dữ liệu theo tab và filter
   let items: any[] = []
-  if (tab === "Ảnh/Video") {
+  if (tab === "Images/Video") {
     items = filterItems(mixedMedia)
   }
   if (tab === "files") items = filterItems(mediaData.files)

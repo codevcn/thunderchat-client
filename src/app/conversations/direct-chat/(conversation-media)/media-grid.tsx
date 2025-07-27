@@ -326,6 +326,7 @@ export const AudioList = ({ items }: { items: any[] }) => {
       directChatId: voiceMessage.directChatId || 0,
       status: "SENT" as any,
       isNewMsg: false,
+      isDeleted: false, // Thêm property thiếu
       Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
       ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
     }
@@ -452,7 +453,7 @@ export const MediaGridContent = ({
   setIsMediaViewerOpen,
 }: {
   grouped: [string, any[]][]
-  tab: "Ảnh/Video" | "files" | "voices" | "links"
+  tab: "Images/Video" | "files" | "voices" | "links"
   mixedMedia: any[]
   setSelectedMediaIndex: (idx: number) => void
   setIsMediaViewerOpen: (open: boolean) => void
@@ -462,11 +463,9 @@ export const MediaGridContent = ({
     {grouped.map(([date, items]) => (
       <div key={date} className="mb-6">
         <div className="text-base font-semibold text-white mb-2">
-          {date === "unknown"
-            ? "Không rõ ngày"
-            : `Ngày ${dayjs(date, "YYYY-MM-DD").format("DD [Tháng] MM")}`}
+          {date === "unknown" ? "Unknown date" : `${dayjs(date, "YYYY-MM-DD").format("MMM DD")}`}
         </div>
-        {tab === "Ảnh/Video" && (
+        {tab === "Images/Video" && (
           <MediaGrid
             items={items}
             mixedMedia={mixedMedia}

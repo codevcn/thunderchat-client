@@ -3,9 +3,9 @@
 import React, { createContext, useContext, useState, useRef, useCallback } from "react"
 import type { TStateDirectMessage } from "@/utils/types/global"
 
-// Hàm preload metadata của audio
+// Hàm preload metadata của audio với fallback graceful
 const preloadAudioMetadata = (url: string): Promise<number> => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const audio = new Audio()
 
     const handleLoadedMetadata = () => {
@@ -18,14 +18,22 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
         audio.addEventListener(
           "canplaythrough",
           () => {
-            resolve(audio.duration)
+            const seekedDuration = audio.duration
+            if (isFinite(seekedDuration) && seekedDuration > 0) {
+              resolve(seekedDuration)
+            } else {
+              // Nếu vẫn không load được, trả về 0 để hiển thị "--:--"
+              console.warn("Could not load audio duration, using fallback")
+              resolve(0)
+            }
           },
           { once: true }
         )
         audio.addEventListener(
           "error",
           () => {
-            reject(new Error("Failed to load audio metadata"))
+            console.warn("Audio metadata loading failed, using fallback")
+            resolve(0)
           },
           { once: true }
         )
@@ -33,7 +41,8 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
     }
 
     const handleError = () => {
-      reject(new Error("Failed to load audio"))
+      console.warn("Audio loading failed, using fallback")
+      resolve(0)
     }
 
     audio.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true })
@@ -42,12 +51,13 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
     audio.src = url
     audio.load()
 
-    // Timeout fallback
+    // Timeout fallback - không reject, chỉ resolve với 0
     setTimeout(() => {
       if (isFinite(audio.duration) && audio.duration > 0) {
         resolve(audio.duration)
       } else {
-        reject(new Error("Audio metadata loading timeout"))
+        console.warn("Audio metadata loading timeout, using fallback")
+        resolve(0)
       }
     }, 5000)
   })
@@ -116,124 +126,68 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setCurrentAudioUrl(message.mediaUrl)
       setShowPlayer(true)
 
-      try {
-        // Preload metadata trước
-        const audioDuration = await preloadAudioMetadata(message.mediaUrl)
-        setDuration(audioDuration)
+      // Preload metadata trước
+      const audioDuration = await preloadAudioMetadata(message.mediaUrl)
+      setDuration(audioDuration)
 
-        // Tạo audio element mới nếu cần
-        if (!audioRef.current) {
-          audioRef.current = new Audio()
-        }
-
-        audioRef.current.src = message.mediaUrl
-        audioRef.current.playbackRate = playbackRate // Áp dụng playback rate hiện tại
-
-        // Nếu là cùng audio và đã có vị trí pause, tiếp tục từ đó
-        if (currentAudioUrl === message.mediaUrl && lastPausedTimeRef.current > 0) {
-          audioRef.current.currentTime = lastPausedTimeRef.current
-          setCurrentTime(lastPausedTimeRef.current)
-        } else {
-          // Audio mới hoặc chưa có vị trí pause, bắt đầu từ đầu
-          audioRef.current.currentTime = 0
-          setCurrentTime(0)
-          lastPausedTimeRef.current = 0
-        }
-
-        // Event listeners
-        audioRef.current.addEventListener("timeupdate", () => {
-          const time = audioRef.current?.currentTime || 0
-          setCurrentTime(time)
-          // Cập nhật vị trí pause khi đang phát
-          if (isPlaying) {
-            lastPausedTimeRef.current = time
-          }
-        })
-
-        audioRef.current.addEventListener("ended", () => {
-          setIsPlaying(false)
-          setCurrentTime(0)
-          lastPausedTimeRef.current = 0 // Reset khi kết thúc
-        })
-
-        audioRef.current.addEventListener("pause", () => {
-          setIsPlaying(false)
-          // Lưu vị trí hiện tại khi pause
-          lastPausedTimeRef.current = audioRef.current?.currentTime || 0
-        })
-
-        audioRef.current.addEventListener("play", () => {
-          setIsPlaying(true)
-        })
-
-        // Bắt đầu phát
-        audioRef.current
-          .play()
-          .then(() => {
-            setIsPlaying(true)
-          })
-          .catch((error) => {
-            console.error("Error playing audio:", error)
-          })
-      } catch (error) {
-        console.error("Error preloading audio metadata:", error)
-        // Fallback: vẫn thử phát audio
-        if (!audioRef.current) {
-          audioRef.current = new Audio()
-        }
-        audioRef.current.src = message.mediaUrl
-        audioRef.current.playbackRate = playbackRate // Áp dụng playback rate hiện tại
-
-        // Nếu là cùng audio và đã có vị trí pause, tiếp tục từ đó
-        if (currentAudioUrl === message.mediaUrl && lastPausedTimeRef.current > 0) {
-          audioRef.current.currentTime = lastPausedTimeRef.current
-          setCurrentTime(lastPausedTimeRef.current)
-        } else {
-          // Audio mới hoặc chưa có vị trí pause, bắt đầu từ đầu
-          audioRef.current.currentTime = 0
-          setCurrentTime(0)
-          lastPausedTimeRef.current = 0
-        }
-
-        // Event listeners
-        audioRef.current.addEventListener("loadedmetadata", () => {
-          setDuration(audioRef.current?.duration || 0)
-        })
-
-        audioRef.current.addEventListener("timeupdate", () => {
-          const time = audioRef.current?.currentTime || 0
-          setCurrentTime(time)
-          // Cập nhật vị trí pause khi đang phát
-          if (isPlaying) {
-            lastPausedTimeRef.current = time
-          }
-        })
-
-        audioRef.current.addEventListener("ended", () => {
-          setIsPlaying(false)
-          setCurrentTime(0)
-          lastPausedTimeRef.current = 0 // Reset khi kết thúc
-        })
-
-        audioRef.current.addEventListener("pause", () => {
-          setIsPlaying(false)
-          // Lưu vị trí hiện tại khi pause
-          lastPausedTimeRef.current = audioRef.current?.currentTime || 0
-        })
-
-        audioRef.current.addEventListener("play", () => {
-          setIsPlaying(true)
-        })
-
-        audioRef.current
-          .play()
-          .then(() => {
-            setIsPlaying(true)
-          })
-          .catch((error) => {
-            console.error("Error playing audio:", error)
-          })
+      // Tạo audio element mới nếu cần
+      if (!audioRef.current) {
+        audioRef.current = new Audio()
       }
+
+      audioRef.current.src = message.mediaUrl
+      audioRef.current.playbackRate = playbackRate // Áp dụng playback rate hiện tại
+
+      // Nếu là cùng audio và đã có vị trí pause, tiếp tục từ đó
+      if (currentAudioUrl === message.mediaUrl && lastPausedTimeRef.current > 0) {
+        audioRef.current.currentTime = lastPausedTimeRef.current
+        setCurrentTime(lastPausedTimeRef.current)
+      } else {
+        // Audio mới hoặc chưa có vị trí pause, bắt đầu từ đầu
+        audioRef.current.currentTime = 0
+        setCurrentTime(0)
+        lastPausedTimeRef.current = 0
+      }
+
+      // Event listeners
+      audioRef.current.addEventListener("loadedmetadata", () => {
+        setDuration(audioRef.current?.duration || 0)
+      })
+
+      audioRef.current.addEventListener("timeupdate", () => {
+        const time = audioRef.current?.currentTime || 0
+        setCurrentTime(time)
+        // Cập nhật vị trí pause khi đang phát
+        if (isPlaying) {
+          lastPausedTimeRef.current = time
+        }
+      })
+
+      audioRef.current.addEventListener("ended", () => {
+        setIsPlaying(false)
+        setCurrentTime(0)
+        lastPausedTimeRef.current = 0 // Reset khi kết thúc
+      })
+
+      audioRef.current.addEventListener("pause", () => {
+        setIsPlaying(false)
+        // Lưu vị trí hiện tại khi pause
+        lastPausedTimeRef.current = audioRef.current?.currentTime || 0
+      })
+
+      audioRef.current.addEventListener("play", () => {
+        setIsPlaying(true)
+      })
+
+      // Bắt đầu phát
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true)
+        })
+        .catch((error) => {
+          console.error("Error playing audio:", error)
+        })
     },
     [currentAudioUrl, isPlaying, playbackRate, audioMessages]
   )

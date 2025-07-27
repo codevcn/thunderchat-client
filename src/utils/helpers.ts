@@ -176,22 +176,28 @@ export function unescapeHtml(html: string): string {
 }
 
 export function extractEmojisFromMessage(message: string): TEmoji[] {
-  // Tìm tất cả các thẻ <img> có class "STYLE-emoji-img"
-  const imgTagRegex = /<img[^>]*class="STYLE-emoji-img"[^>]*>/g
-  const emojiTags = message.match(imgTagRegex) || []
+  // Decode HTML entities trước khi xử lý
+  const decodedMessage = unescapeHtml(message)
 
-  // Hàm tách src và alt từ 1 thẻ img
+  const imgTagRegex = /<img[^>]*class="STYLE-emoji-img"[^>]*>/g
+  const emojiTags = decodedMessage.match(imgTagRegex) || []
+
   function parseEmojiTag(tag: string): TEmoji | null {
     const srcMatch = tag.match(/src="([^"]+)"/)
     const altMatch = tag.match(/alt="([^"]+)"/)
-    if (!srcMatch || !altMatch) return null
-    return {
+
+    if (!srcMatch || !altMatch) {
+      return null
+    }
+
+    const emoji = {
       src: srcMatch[1],
       name: altMatch[1].replace(/\.webp$/i, ""),
     }
+
+    return emoji
   }
 
-  // Lặp qua từng thẻ img tìm được để tạo array emoji
   const emojis: TEmoji[] = []
   for (const tag of emojiTags) {
     const emoji = parseEmojiTag(tag)

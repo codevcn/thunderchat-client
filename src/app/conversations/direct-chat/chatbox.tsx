@@ -256,8 +256,17 @@ const Main = ({ directChat, canSend }: TMainProps) => {
           canSend={canSend}
         />
 
+        {/* Hiển thị thông báo khi không thể gửi tin nhắn */}
+        {canSend === false && (
+          <div className="flex-1 flex items-center justify-center w-full">
+            <div className="system-message text-center text-gray-500 py-4 w-full">
+              Người này chỉ nhận tin nhắn từ bạn bè. Bạn không thể gửi tin nhắn.
+            </div>
+          </div>
+        )}
+
         {/* Box pinned messages ngay dưới header */}
-        {pinnedMessages.length > 0 && (
+        {pinnedMessages.length > 0 && canSend !== false && (
           <div
             className={`
               w-full px-6 mt-1
@@ -294,42 +303,45 @@ const Main = ({ directChat, canSend }: TMainProps) => {
           </div>
         )}
 
-        <div
-          className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden relative`}
-        >
-          {/* Voice Player floating layer */}
-          {showPlayer && (
-            <div
-              className="absolute top-0 left-0 right-0 z-[70] flex justify-center"
-              style={{ pointerEvents: "none" }}
-            >
-              <div className="w-full max-w-[480px] px-4" style={{ pointerEvents: "auto" }}>
-                <VoiceMessagePlayer />
+        {/* Chỉ hiển thị chat content khi có thể gửi tin nhắn */}
+        {canSend !== false && (
+          <div
+            className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden relative`}
+          >
+            {/* Voice Player floating layer */}
+            {showPlayer && (
+              <div
+                className="absolute top-0 left-0 right-0 z-[70] flex justify-center"
+                style={{ pointerEvents: "none" }}
+              >
+                <div className="w-full max-w-[480px] px-4" style={{ pointerEvents: "auto" }}>
+                  <VoiceMessagePlayer />
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col flex-1 w-full justify-between h-0">
+              <div className="flex-1 w-full overflow-y-auto">
+                <Messages
+                  directChat={directChat}
+                  onReply={handleSetReplyMessage}
+                  pinnedMessages={pinnedMessages}
+                  setPinnedMessages={setPinnedMessages}
+                  showPinnedModal={showPinnedModal}
+                  setShowPinnedModal={setShowPinnedModal}
+                  canSend={canSend}
+                />
+              </div>
+              <div className="w-full flex justify-center">
+                <TypeMessageBar
+                  directChat={directChat}
+                  replyMessage={replyMessage}
+                  setReplyMessage={handleSetReplyMessage}
+                  canSend={canSend}
+                />
               </div>
             </div>
-          )}
-          <div className="flex flex-col flex-1 w-full justify-between h-0">
-            <div className="flex-1 w-full overflow-y-auto">
-              <Messages
-                directChat={directChat}
-                onReply={handleSetReplyMessage}
-                pinnedMessages={pinnedMessages}
-                setPinnedMessages={setPinnedMessages}
-                showPinnedModal={showPinnedModal}
-                setShowPinnedModal={setShowPinnedModal}
-                canSend={canSend}
-              />
-            </div>
-            <div className="w-full flex justify-center">
-              <TypeMessageBar
-                directChat={directChat}
-                replyMessage={replyMessage}
-                setReplyMessage={handleSetReplyMessage}
-                canSend={canSend}
-              />
-            </div>
           </div>
-        </div>
+        )}
       </div>
       <InfoBar friendInfo={friendInfo} />
     </div>

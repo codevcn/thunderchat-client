@@ -170,6 +170,9 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
   // Luôn lấy currentTime từ context nếu đây là audio đang được quản lý
   const displayCurrentTime = currentAudioUrl === audioUrl ? currentTime : 0
 
+  // Tính progress cho waveform
+  const progress = displayDuration > 0 ? displayCurrentTime / displayDuration : 0
+
   return (
     <div className="max-w-[370px] rounded-2xl flex min-w-[230px]">
       {/* Nút phát/dừng */}
@@ -197,7 +200,7 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
           <div className="flex-1 flex items-center h-8 overflow-hidden relative">
             <Waveform
               data={waveform.length ? waveform : Array(36).fill(12)}
-              progress={displayDuration > 0 ? displayCurrentTime / displayDuration : 0}
+              progress={progress}
               color="#fff"
               progressColor="#f1d0ff"
             />

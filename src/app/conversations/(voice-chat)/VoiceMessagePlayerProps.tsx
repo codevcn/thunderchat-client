@@ -1,5 +1,5 @@
 import React from "react"
-import { StepBack, StepForward, Play, Pause, Volume2, X } from "lucide-react"
+import { StepBack, StepForward, Play, Pause, Volume2, VolumeX, X } from "lucide-react"
 import { useVoicePlayer } from "@/contexts/voice-player.context"
 import { useUser } from "@/hooks/user"
 import dayjs from "dayjs"
@@ -12,6 +12,7 @@ export const VoiceMessagePlayer: React.FC = () => {
     currentMessage,
     showPlayer,
     playbackRate,
+    volume,
     audioMessages,
     currentAudioIndex,
     playAudio,
@@ -19,6 +20,7 @@ export const VoiceMessagePlayer: React.FC = () => {
     seekAudio,
     stopAudio,
     setPlaybackRate,
+    setVolume,
     playNext,
     playPrevious,
     setShowPlayer,
@@ -52,6 +54,11 @@ export const VoiceMessagePlayer: React.FC = () => {
     setPlaybackRate(newRate)
   }
 
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = Number(e.target.value)
+    setVolume(newVolume)
+  }
+
   const formatTime = (time: number) => {
     if (!isFinite(time) || isNaN(time) || time < 0) return "00:00"
     const minutes = Math.floor(time / 60)
@@ -59,12 +66,14 @@ export const VoiceMessagePlayer: React.FC = () => {
     return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
   }
 
+  // Đảm bảo max value cho progress bar luôn hợp lệ
+  const progressMax = isFinite(duration) && duration > 0 ? duration : 1
+  const progressValue = Math.min(currentTime, progressMax)
+
   // Xác định người gửi
   const isCurrentUser = currentMessage.authorId === currentUser?.id
   let senderName = "Bạn"
   if (!isCurrentUser) {
-    console.log("currentMessage", currentMessage.Author)
-    console.log("currentMessage", currentMessage.Author?.Profile?.fullName)
     senderName = currentMessage.Author?.Profile?.fullName || "Người dùng"
   }
   const sentTime = dayjs(currentMessage.createdAt).format("MMM D [at] HH:mm")
@@ -120,13 +129,18 @@ export const VoiceMessagePlayer: React.FC = () => {
 
         {/* Volume */}
         <div className="flex items-center mx-2">
-          <Volume2 size={18} className="mr-1" />
+          {volume === 0 ? (
+            <VolumeX size={18} className="mr-1" />
+          ) : (
+            <Volume2 size={18} className="mr-1" />
+          )}
           <input
             type="range"
             min={0}
             max={1}
             step={0.01}
-            defaultValue={1}
+            value={volume}
+            onChange={handleVolumeChange}
             className="w-14 accent-[#766AC8]"
           />
         </div>
@@ -158,11 +172,15 @@ export const VoiceMessagePlayer: React.FC = () => {
       <input
         type="range"
         min={0}
-        max={isFinite(duration) && duration > 0 ? duration : 100}
+        max={progressMax}
         step={0.01}
-        value={currentTime}
+        value={progressValue}
         onChange={handleSeek}
         className="w-full mt-2 accent-[#766AC8]"
+        style={{
+          // Đảm bảo progress bar hiển thị đúng
+          background: `linear-gradient(to right, #766AC8 0%, #766AC8 ${(progressValue / progressMax) * 100}%, #444 0%)`,
+        }}
       />
     </div>
   )

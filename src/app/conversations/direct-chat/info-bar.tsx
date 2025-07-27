@@ -107,7 +107,7 @@ export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
           <X />
         </IconButton>
         <div className="text-xl">
-          <h2>Thông tin hội thoại</h2>
+          <h2>Conversation information</h2>
         </div>
       </div>
 

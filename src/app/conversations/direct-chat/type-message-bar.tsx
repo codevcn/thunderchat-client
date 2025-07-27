@@ -843,7 +843,6 @@ export const TypeMessageBar = memo(
     {
       /* Hiển thị thông báo khi không thể gửi tin nhắn */
     }
-    console.log("canSend", canSend)
     if (canSend === false) {
       return (
         <div className="flex-1 flex items-center justify-center w-full py-10">

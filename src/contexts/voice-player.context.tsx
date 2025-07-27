@@ -53,8 +53,9 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
 
     // Timeout fallback - không reject, chỉ resolve với 0
     setTimeout(() => {
-      if (isFinite(audio.duration) && audio.duration > 0) {
-        resolve(audio.duration)
+      const timeoutDuration = audio.duration
+      if (isFinite(timeoutDuration) && timeoutDuration > 0) {
+        resolve(timeoutDuration)
       } else {
         console.warn("Audio metadata loading timeout, using fallback")
         resolve(0)
@@ -71,6 +72,7 @@ type VoicePlayerContextType = {
   currentAudioUrl: string | null
   currentMessage: TStateDirectMessage | null
   playbackRate: number
+  volume: number
   audioMessages: TStateDirectMessage[] // Danh sách tất cả audio messages
   currentAudioIndex: number // Vị trí hiện tại trong danh sách
 
@@ -80,6 +82,7 @@ type VoicePlayerContextType = {
   seekAudio: (time: number) => void
   stopAudio: () => void
   setPlaybackRate: (rate: number) => void
+  setVolume: (volume: number) => void
   playNext: () => void
   playPrevious: () => void
   setAudioMessages: (messages: TStateDirectMessage[]) => void
@@ -101,6 +104,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [playbackRate, setPlaybackRate] = useState(1)
   const [audioMessages, setAudioMessages] = useState<TStateDirectMessage[]>([])
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0)
+  const [volume, setVolume] = useState(1)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const lastPausedTimeRef = useRef<number>(0) // Lưu vị trí khi pause
@@ -135,8 +139,16 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         audioRef.current = new Audio()
       }
 
+      // Remove event listeners cũ để tránh duplicate
+      audioRef.current.removeEventListener("loadedmetadata", () => {})
+      audioRef.current.removeEventListener("timeupdate", () => {})
+      audioRef.current.removeEventListener("ended", () => {})
+      audioRef.current.removeEventListener("pause", () => {})
+      audioRef.current.removeEventListener("play", () => {})
+
       audioRef.current.src = message.mediaUrl
       audioRef.current.playbackRate = playbackRate // Áp dụng playback rate hiện tại
+      audioRef.current.volume = volume // Áp dụng volume hiện tại
 
       // Nếu là cùng audio và đã có vị trí pause, tiếp tục từ đó
       if (currentAudioUrl === message.mediaUrl && lastPausedTimeRef.current > 0) {
@@ -150,34 +162,44 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
 
       // Event listeners
-      audioRef.current.addEventListener("loadedmetadata", () => {
-        setDuration(audioRef.current?.duration || 0)
-      })
+      const handleLoadedMetadata = () => {
+        const loadedDuration = audioRef.current?.duration || 0
+        // Chỉ set duration nếu preloaded duration không hợp lệ
+        if (!isFinite(audioDuration) || audioDuration <= 0) {
+          setDuration(loadedDuration)
+        }
+      }
 
-      audioRef.current.addEventListener("timeupdate", () => {
+      const handleTimeUpdate = () => {
         const time = audioRef.current?.currentTime || 0
         setCurrentTime(time)
         // Cập nhật vị trí pause khi đang phát
         if (isPlaying) {
           lastPausedTimeRef.current = time
         }
-      })
+      }
 
-      audioRef.current.addEventListener("ended", () => {
+      const handleEnded = () => {
         setIsPlaying(false)
         setCurrentTime(0)
         lastPausedTimeRef.current = 0 // Reset khi kết thúc
-      })
+      }
 
-      audioRef.current.addEventListener("pause", () => {
+      const handlePause = () => {
         setIsPlaying(false)
         // Lưu vị trí hiện tại khi pause
         lastPausedTimeRef.current = audioRef.current?.currentTime || 0
-      })
+      }
 
-      audioRef.current.addEventListener("play", () => {
+      const handlePlay = () => {
         setIsPlaying(true)
-      })
+      }
+
+      audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata)
+      audioRef.current.addEventListener("timeupdate", handleTimeUpdate)
+      audioRef.current.addEventListener("ended", handleEnded)
+      audioRef.current.addEventListener("pause", handlePause)
+      audioRef.current.addEventListener("play", handlePlay)
 
       // Bắt đầu phát
       audioRef.current
@@ -189,7 +211,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           console.error("Error playing audio:", error)
         })
     },
-    [currentAudioUrl, isPlaying, playbackRate, audioMessages]
+    [currentAudioUrl, isPlaying, playbackRate, audioMessages, volume]
   )
 
   const pauseAudio = useCallback(() => {
@@ -228,6 +250,13 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (audioRef.current) {
       audioRef.current.playbackRate = rate
       setPlaybackRate(rate)
+    }
+  }, [])
+
+  const handleSetVolume = useCallback((volume: number) => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume
+      setVolume(volume)
     }
   }, [])
 
@@ -272,6 +301,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     currentAudioUrl,
     currentMessage,
     playbackRate,
+    volume,
     audioMessages,
     currentAudioIndex,
     playAudio,
@@ -279,6 +309,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     seekAudio,
     stopAudio,
     setPlaybackRate: handleSetPlaybackRate,
+    setVolume: handleSetVolume,
     playNext,
     playPrevious,
     setAudioMessages: handleSetAudioMessages,

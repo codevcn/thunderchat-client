@@ -383,11 +383,9 @@ export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => 
     if (!directChat) return
     const receiverId =
       user?.id === directChat.recipientId ? directChat.creatorId : directChat.recipientId
-    console.log("[DEBUG] Checking canSend for receiverId:", receiverId)
     directChatService
       .checkCanSendMessage(receiverId)
       .then((result) => {
-        console.log("[DEBUG] canSend result:", result)
         setCanSend(result)
       })
       .catch((error) => {

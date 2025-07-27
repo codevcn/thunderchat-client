@@ -38,7 +38,13 @@ class ChattingService {
               console.error(">>> error when sending message & save offline message:", error)
               this.saveOfflineMessage({ type, msgPayload: message })
             } else {
-              if (data && "isError" in data) {
+              // Kiểm tra data có tồn tại và có thuộc tính isError không
+              if (
+                data &&
+                typeof data === "object" &&
+                Object.keys(data).length > 0 &&
+                "isError" in data
+              ) {
                 console.error(">>> error when sending message & callback:", data)
               }
               callback(data)

@@ -25,3 +25,19 @@ export const searchGlobally = async (
     },
     { ...requestConfig }
   )
+
+export const searchConversations = async (keyword: string): Promise<any[]> => {
+  try {
+    const response = await clientAxios.post(
+      "/search/conversations",
+      {
+        keyword,
+      },
+      { ...requestConfig }
+    )
+    return response.data
+  } catch (error) {
+    console.error("Error searching conversations:", error)
+    throw error
+  }
+}

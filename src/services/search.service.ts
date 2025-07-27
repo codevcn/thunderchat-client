@@ -1,5 +1,5 @@
 import type { TGlobalSearchData } from "@/utils/types/be-api"
-import { searchGlobally } from "@/apis/search"
+import { searchGlobally, searchConversations as searchConversationsAPI } from "@/apis/search"
 
 class SearchService {
   async searchGlobally(
@@ -27,3 +27,13 @@ class SearchService {
 }
 
 export const searchService = new SearchService()
+
+export const searchConversations = async (keyword: string) => {
+  try {
+    const response = await searchConversationsAPI(keyword)
+    return response
+  } catch (error) {
+    console.error("Error in searchConversations service:", error)
+    throw error
+  }
+}

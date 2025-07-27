@@ -11,7 +11,7 @@ export const sortDirectChatsByPinned = createSelector(
   ({ conversations }: RootState) => conversations.conversations,
   (directChats) => {
     if (directChats && directChats.length > 0) {
-      return [...directChats].sort((next, current) => current.pinIndex - next.pinIndex)
+      return directChats // Return conversations as they are, sorting is handled in component
     }
     return null
   }

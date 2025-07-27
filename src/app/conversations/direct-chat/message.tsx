@@ -133,12 +133,10 @@ const ImageModal = ({
             </button>
           </div>
         </div>
-        <Image
+        <img
           src={imageUrl}
           alt="Zoomed image"
-          width={800}
-          height={600}
-          className="max-w-full max-h-full object-contain rounded-lg"
+          className="max-w-full max-h-full object-contain rounded-l min-h-[300px] max-h-[90vh]"
           style={{ transform: `rotate(${rotation}deg)` }}
           onClick={(e) => e.stopPropagation()}
         />
@@ -629,57 +627,15 @@ export const Message = forwardRef<
                       <ShareMessageModal
                         open={showShareModal}
                         onClose={() => setShowShareModal(false)}
-                        onSelectFriend={async (friend: TGetFriendsData) => {
-                          // setShowShareModal(false)
-                          // try {
-                          //   if (!reactUser) throw new Error("No user")
-                          //   // Xác định đúng user bạn bè
-                          //   const getFriendUser = (friend: TGetFriendsData, userId: number) => {
-                          //     if (friend.senderId === userId) return friend.Recipient
-                          //     return (friend as any).Sender
-                          //   }
-                          //   const friendUser = getFriendUser(friend, reactUser.id)
-                          //   if (!friendUser) throw new Error("Không xác định được bạn bè")
-                          //   // 1. Tạo/lấy direct chat với bạn bè
-                          //   const directChat = await directChatService.createOrGetDirectChat(
-                          //     friendUser.id
-                          //   )
-                          //   if (!directChat || !directChat.id)
-                          //     throw new Error("Không lấy được directChatId")
-                          //   const directChatId = directChat.id
-                          //   // 2. Chuẩn bị payload gửi lại tin nhắn
-                          //   const token = chattingService.getMessageToken()
-                          //   const payload: any = {
-                          //     content: message.content,
-                          //     mediaUrl: message.mediaUrl,
-                          //     fileName: message.fileName,
-                          //     fileType: message.fileType,
-                          //     fileSize: message.fileSize,
-                          //     stickerUrl: message.stickerUrl,
-                          //     type: message.type,
-                          //     receiverId: friendUser.id,
-                          //     directChatId,
-                          //     token,
-                          //     timestamp: new Date(),
-                          //   }
-                          //   // 3. Gửi lại tin nhắn
-                          //   chattingService.sendMessage(message.type, payload, (res) => {
-                          //     chattingService.setAcknowledgmentFlag(true)
-                          //     chattingService.recursiveSendingQueueMessages()
-                          //     if ("success" in res && res.success)
-                          //       toast.success("Đã chia sẻ tin nhắn!")
-                          //     else toast.error("Chia sẻ thất bại!")
-                          //   })
-                          // } catch (err) {
-                          //   console.error("[SHARE-DEBUG] Lỗi chia sẻ:", err)
-                          //   toast.error("Không thể chia sẻ tin nhắn!")
-                          // }
+                        messageToShare={message}
+                        onSelectConversation={async (conversation: any) => {
+                          // Logic đã được xử lý trong ShareMessageModal
                         }}
                       />,
                       document.body
                     )}
                   <button
-                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-purple-400/80 text-purple-700" : "bg-white/20"}`}
                     title={
                       isPinned
                         ? "Bỏ ghim tin nhắn"
@@ -792,51 +748,9 @@ export const Message = forwardRef<
                       <ShareMessageModal
                         open={showShareModal}
                         onClose={() => setShowShareModal(false)}
-                        onSelectFriend={async (friend: TGetFriendsData) => {
-                          // setShowShareModal(false)
-                          // try {
-                          //   if (!reactUser) throw new Error("No user")
-                          //   // Xác định đúng user bạn bè
-                          //   const getFriendUser = (friend: TGetFriendsData, userId: number) => {
-                          //     if (friend.senderId === userId) return friend.Recipient
-                          //     return (friend as any).Sender
-                          //   }
-                          //   const friendUser = getFriendUser(friend, reactUser.id)
-                          //   if (!friendUser) throw new Error("Không xác định được bạn bè")
-                          //   // 1. Tạo/lấy direct chat với bạn bè
-                          //   const directChat = await directChatService.createOrGetDirectChat(
-                          //     friendUser.id
-                          //   )
-                          //   if (!directChat || !directChat.id)
-                          //     throw new Error("Không lấy được directChatId")
-                          //   const directChatId = directChat.id
-                          //   // 2. Chuẩn bị payload gửi lại tin nhắn
-                          //   const token = chattingService.getMessageToken()
-                          //   const payload: any = {
-                          //     content: message.content,
-                          //     mediaUrl: message.mediaUrl,
-                          //     fileName: message.fileName,
-                          //     fileType: message.fileType,
-                          //     fileSize: message.fileSize,
-                          //     stickerUrl: message.stickerUrl,
-                          //     type: message.type,
-                          //     receiverId: friendUser.id,
-                          //     directChatId,
-                          //     token,
-                          //     timestamp: new Date(),
-                          //   }
-                          //   // 3. Gửi lại tin nhắn
-                          //   chattingService.sendMessage(message.type, payload, (res) => {
-                          //     chattingService.setAcknowledgmentFlag(true)
-                          //     chattingService.recursiveSendingQueueMessages()
-                          //     if ("success" in res && res.success)
-                          //       toast.success("Đã chia sẻ tin nhắn!")
-                          //     else toast.error("Chia sẻ thất bại!")
-                          //   })
-                          // } catch (err) {
-                          //   console.error("[SHARE-DEBUG] Lỗi chia sẻ:", err)
-                          //   toast.error("Không thể chia sẻ tin nhắn!")
-                          // }
+                        messageToShare={message}
+                        onSelectConversation={async (conversation: any) => {
+                          // Logic đã được xử lý trong ShareMessageModal
                         }}
                       />,
                       document.body

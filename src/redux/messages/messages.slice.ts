@@ -14,7 +14,6 @@ import type {
   TGroupChatMemberWithUser,
 } from "@/utils/types/be-api"
 import {
-  fetchDirectChatThunk,
   fetchGroupChatMembersThunk,
   fetchGroupChatThunk,
 } from "../conversations/conversations.thunks"
@@ -114,12 +113,6 @@ export const messagesSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(
-      fetchDirectChatThunk.fulfilled,
-      (state, action: PayloadAction<TDirectChatData>) => {
-        state.directChat = action.payload
-      }
-    )
     builder.addCase(
       fetchDirectMessagesThunk.fulfilled,
       (state, action: PayloadAction<TGetDirectMessagesData>) => {

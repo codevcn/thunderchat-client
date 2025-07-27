@@ -11,7 +11,12 @@ import {
 import { Search as SearchIcon, ArrowLeft, X, Pin, Menu, Users } from "lucide-react"
 import dayjs from "dayjs"
 import { useDebounce } from "@/hooks/debounce"
-import type { TGlobalSearchData, TUserWithProfile } from "@/utils/types/be-api"
+import type {
+  TGlobalSearchData,
+  TUserSearchOffset,
+  TMessageSearchOffset,
+  TUserWithProfile,
+} from "@/utils/types/be-api"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
 import { Spinner } from "@/components/materials/spinner"
@@ -86,11 +91,13 @@ const ResultCard = ({
           <div className="flex flex-col gap-1 max-w-[calc(100%-62px)]">
             <span className="font-bold text-base w-fit">{convName}</span>
             {highlights && highlights.length > 0 ? (
-              <span className="text-xs text-regular-icon-cl truncate w-full">
+              <span className="text-xs text-regular-icon-cl text-left truncate w-full">
                 {renderHighlightedContent(subtitle, extractHighlightOffsets(subtitle, highlights))}
               </span>
             ) : (
-              <span className="text-sm text-regular-icon-cl truncate w-full">{email}</span>
+              <span className="text-sm text-regular-icon-cl truncate w-full text-left">
+                {email}
+              </span>
             )}
           </div>
         </div>
@@ -100,29 +107,16 @@ const ResultCard = ({
 }
 
 const getSearchPayload = (globalSearchResult: TGlobalSearchData | null) => {
-  const isFirstSearch = !globalSearchResult
-  let messageOffsetId: number | undefined
-  let messageOffsetCreatedAt: string | undefined
-  let userOffsetId: number | undefined
-  let userOffsetFullName: string | undefined
-  let userOffsetEmail: string | undefined
+  let messageSearchOffset: TMessageSearchOffset | undefined
+  let userSearchOffset: TUserSearchOffset | undefined
   if (globalSearchResult) {
-    const { messages, users } = globalSearchResult
-    const lastMessage = messages.at(-1)
-    const lastUser = users.at(-1)
-    messageOffsetId = lastMessage?.id
-    messageOffsetCreatedAt = lastMessage ? dayjs(lastMessage.createdAt).toISOString() : undefined
-    userOffsetId = lastUser?.id
-    userOffsetFullName = lastUser?.Profile.fullName
-    userOffsetEmail = lastUser?.email
+    const { nextSearchOffset } = globalSearchResult
+    messageSearchOffset = nextSearchOffset.messageSearchOffset
+    userSearchOffset = nextSearchOffset.userSearchOffset
   }
   return {
-    isFirstSearch,
-    messageOffsetId,
-    messageOffsetCreatedAt,
-    userOffsetId,
-    userOffsetFullName,
-    userOffsetEmail,
+    messageSearchOffset,
+    userSearchOffset,
     searchLimit: SEARCH_LIMIT,
   }
 }
@@ -187,7 +181,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                 lastSentMessageId: undefined,
               })
             )
-            navToConversation(randomInRange(1, 10000), EChatType.DIRECT, true)
+            navToConversation(randomInRange(1, 100000), EChatType.DIRECT, true)
           }
         })
         .catch((err) => {
@@ -223,29 +217,13 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
   }
 
   const loadMore = () => {
-    const {
-      isFirstSearch,
-      messageOffsetId,
-      messageOffsetCreatedAt,
-      userOffsetId,
-      userOffsetFullName,
-      userOffsetEmail,
-      searchLimit,
-    } = getSearchPayload(globalSearchResult)
+    const { messageSearchOffset, userSearchOffset, searchLimit } =
+      getSearchPayload(globalSearchResult)
     const keyword = globalSearchInputRef.current?.value
     if (!keyword) return
     setIsSearching(true)
     searchService
-      .searchGlobally(
-        keyword,
-        isFirstSearch,
-        searchLimit,
-        messageOffsetId,
-        messageOffsetCreatedAt,
-        userOffsetId,
-        userOffsetFullName,
-        userOffsetEmail
-      )
+      .searchGlobally(keyword, searchLimit, messageSearchOffset, userSearchOffset)
       .then((res) => {
         const { messages, users } = res
         if (messages && messages.length > 0) {
@@ -430,27 +408,12 @@ const GlobalSearchBar = ({
     if (!inputValue) return
     dispatch((dispatch, getState) => {
       dispatch(resetSearch())
-      const {
-        isFirstSearch,
-        messageOffsetId,
-        messageOffsetCreatedAt,
-        userOffsetId,
-        userOffsetFullName,
-        userOffsetEmail,
-        searchLimit,
-      } = getSearchPayload(getState().search.globalSearchResult)
+      const { messageSearchOffset, userSearchOffset, searchLimit } = getSearchPayload(
+        getState().search.globalSearchResult
+      )
       setIsSearching(true)
       searchService
-        .searchGlobally(
-          inputValue,
-          isFirstSearch,
-          searchLimit,
-          messageOffsetId,
-          messageOffsetCreatedAt,
-          userOffsetId,
-          userOffsetFullName,
-          userOffsetEmail
-        )
+        .searchGlobally(inputValue, searchLimit, messageSearchOffset, userSearchOffset)
         .then((res) => {
           dispatch(setGlobalSearchResult(res))
           const { messages, users } = res
@@ -734,7 +697,7 @@ const ConversationCards = () => {
       ))}
     </div>
   ) : conversations && conversations.length > 0 ? (
-    <div className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar">
+    <div className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar pr-1 pb-4">
       {conversations.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type }) => {
         const isPinned = type === EChatType.DIRECT ? isDirectChatPinned(id) : false
 
@@ -872,7 +835,7 @@ export const Conversations = () => {
           <SearchSection inputFocused={inputFocused} globalSearchInputRef={globalSearchInputRef} />
 
           <div
-            className={`${inputFocused ? "animate-zoom-fade-out" : "animate-zoom-fade-in"} w-full h-full absolute top-0 left-0 z-30 px-2`}
+            className={`${inputFocused ? "animate-zoom-fade-out" : "animate-zoom-fade-in"} w-full h-full absolute top-0 left-0 z-30 px-2 pr-0`}
           >
             <ConversationCards />
           </div>

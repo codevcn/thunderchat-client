@@ -17,7 +17,7 @@ import { ArrowLeft, ArrowRight, Camera, X, Plus, RefreshCw } from "lucide-react"
 import { groupChatService } from "@/services/group-chat.service"
 import { useAppDispatch } from "@/hooks/redux"
 import { addConversations } from "@/redux/conversations/conversations.slice"
-import { EMessageTypes } from "@/utils/enums"
+import { EChatType, EMessageTypes } from "@/utils/enums"
 
 type TPrepareNewGroupProps = {
   pickedUsers: TSearchUsersData[]
@@ -91,7 +91,7 @@ const PrepareNewGroup = ({
           lastMessageTime: new Date().toISOString(),
           pinIndex: 0,
           id: groupChatId,
-          type: "group",
+          type: EChatType.GROUP,
           createdAt: new Date().toISOString(),
         },
       ])

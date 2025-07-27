@@ -12,23 +12,23 @@ export const SwitchChatbox = () => {
   const [type, setType] = useState<TChatType>()
   const [isTemp, setIsTemp] = useState<boolean>(false)
   const searchParams = useSearchParams()
+  const directChatId = searchParams.get("cid")
+  const tempId = searchParams.get("tid")
+  const groupChatId = searchParams.get("gid")
   const dispatch = useAppDispatch()
 
   const checkChatId = () => {
-    const directChatId = searchParams.get("cid")
     if (directChatId && validator.isNumeric(directChatId)) {
       setChatId(parseInt(directChatId))
       setType("direct")
       return
     }
-    const tempId = searchParams.get("tid")
     if (tempId && validator.isNumeric(tempId)) {
       setChatId(parseInt(tempId))
       setType("direct")
       setIsTemp(true)
       return
     }
-    const groupChatId = searchParams.get("gid")
     if (groupChatId && validator.isNumeric(groupChatId)) {
       setChatId(parseInt(groupChatId))
       setType("group")
@@ -38,15 +38,15 @@ export const SwitchChatbox = () => {
   useEffect(() => {
     checkChatId()
     dispatch(resetAllChatData())
-  }, [searchParams])
+  }, [directChatId, tempId, groupChatId])
 
   return (
     chatId &&
     type &&
     (type === "direct" ? (
-      <DirectChatbox directChatId={chatId} isTemp={isTemp} />
+      <DirectChatbox key={chatId} directChatId={chatId} isTemp={isTemp} />
     ) : (
-      <GroupChatbox groupChatId={chatId} />
+      <GroupChatbox key={chatId} groupChatId={chatId} />
     ))
   )
 }

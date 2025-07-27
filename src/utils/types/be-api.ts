@@ -185,6 +185,7 @@ export type TGetFriendsData = {
   senderId: number
   createdAt: string
   Recipient: TUserWithProfile
+  Sender: TUserWithProfile
 }
 
 export type TGetFriendsParams = {
@@ -228,6 +229,10 @@ export type TGlobalSearchData = {
     chatId: number
     createdAt: string
   }[]
+  nextSearchOffset: {
+    messageSearchOffset?: TMessageSearchOffset
+    userSearchOffset?: TUserSearchOffset
+  }
 }
 
 export type TFetchDirectChatsData = TDirectChat & {
@@ -283,3 +288,7 @@ export type TDeleteDirectMessageRes = {
   isDeleted: boolean
   content: string
 }
+
+export type TMessageSearchOffset = [string, string]
+
+export type TUserSearchOffset = [string, string, string]

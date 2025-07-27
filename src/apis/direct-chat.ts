@@ -1,8 +1,11 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
 import type { TDirectChat, TFetchDirectChatsData } from "../utils/types/be-api"
 
-export const getFetchDirectChat = (id: number) =>
-  clientAxios.get<TFetchDirectChatsData>("/direct-chat/fetch/" + id, requestConfig)
+export const getFetchDirectChat = (id: number, signal?: AbortSignal) =>
+  clientAxios.get<TFetchDirectChatsData>("/direct-chat/fetch/" + id, {
+    ...requestConfig,
+    signal,
+  })
 
 export const getFetchDirectChats = (limit: number, lastId?: number) =>
   clientAxios.get<TFetchDirectChatsData[]>("/direct-chat/fetch-direct-chats", {

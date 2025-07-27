@@ -1,26 +1,22 @@
-import type { TGlobalSearchData } from "@/utils/types/be-api"
+import type {
+  TGlobalSearchData,
+  TMessageSearchOffset,
+  TUserSearchOffset,
+} from "@/utils/types/be-api"
 import { searchGlobally } from "@/apis/search"
 
 class SearchService {
   async searchGlobally(
     keyword: string,
-    isFirstSearch: boolean,
     searchLimit: number,
-    messageOffsetId?: number,
-    messageOffsetCreatedAt?: string,
-    userOffsetId?: number,
-    userOffsetFullName?: string,
-    userOffsetEmail?: string
+    messageSearchOffset?: TMessageSearchOffset,
+    userSearchOffset?: TUserSearchOffset
   ): Promise<TGlobalSearchData> {
     const { data } = await searchGlobally(
       keyword,
-      isFirstSearch,
       searchLimit,
-      messageOffsetId,
-      messageOffsetCreatedAt,
-      userOffsetId,
-      userOffsetFullName,
-      userOffsetEmail
+      messageSearchOffset,
+      userSearchOffset
     )
     return data
   }

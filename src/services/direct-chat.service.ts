@@ -14,8 +14,8 @@ import type { TDirectChat, TDirectChatData, TUserWithProfile } from "@/utils/typ
 import type { TConversationCard } from "@/utils/types/global"
 
 class DirectChatService {
-  async fetchDirectChat(directChatId: number): Promise<TDirectChatData> {
-    const { data } = await getFetchDirectChat(directChatId)
+  async fetchDirectChat(directChatId: number, signal?: AbortSignal): Promise<TDirectChatData> {
+    const { data } = await getFetchDirectChat(directChatId, signal)
     if (!data) {
       throw new DirectChatError(EDirectChatErrMsgs.CONV_NOT_FOUND)
     }

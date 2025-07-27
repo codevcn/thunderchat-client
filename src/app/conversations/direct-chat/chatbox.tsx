@@ -2,16 +2,15 @@
 
 import { dev_test_values } from "../../../../temp/test"
 
-import { CustomAvatar, CustomTooltip } from "@/components/materials"
+import { CustomAvatar, CustomTooltip, toast } from "@/components/materials"
 import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { useEffect, useMemo, useState, useRef } from "react"
+import { useEffect, useMemo, useState, useRef, use } from "react"
 import { Search, Phone, MoreVertical, Pin } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { setLastSeen } from "@/utils/helpers"
-import { fetchDirectChatThunk } from "@/redux/conversations/conversations.thunks"
 import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
@@ -26,6 +25,8 @@ import type { TPinMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
 import { renderMessageContent } from "./pin-message"
+import { CanceledError } from "axios"
+import axiosErrorHandler from "@/utils/axios-error-handler"
 
 const TypingIndicator = () => {
   return (
@@ -340,6 +341,8 @@ type TDirectChatboxProps = {
   isTemp: boolean
 }
 
+let fetchDirectChatAbortController: AbortController = new AbortController()
+
 export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => {
   const { directChat, tempChatData } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
@@ -347,16 +350,33 @@ export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => 
   const user = useUser()
 
   const fetchDirectChat = () => {
+    fetchDirectChatAbortController.abort()
+    fetchDirectChatAbortController = new AbortController()
     if (isTemp) {
       if (tempChatData) dispatch(setDirectChat(tempChatData))
     } else {
-      dispatch(fetchDirectChatThunk(directChatId))
+      directChatService
+        .fetchDirectChat(directChatId, fetchDirectChatAbortController.signal)
+        .then((directChat) => {
+          dispatch(setDirectChat(directChat))
+        })
+        .catch((err) => {
+          if (!(err instanceof CanceledError)) {
+            toast.error(axiosErrorHandler.handleHttpError(err).message)
+          }
+        })
     }
   }
 
   useEffect(() => {
+    return () => {
+      fetchDirectChatAbortController.abort()
+    }
+  }, [])
+
+  useEffect(() => {
     fetchDirectChat()
-  }, [directChatId])
+  }, [directChatId, isTemp, tempChatData])
 
   useEffect(() => {
     if (!directChat) return

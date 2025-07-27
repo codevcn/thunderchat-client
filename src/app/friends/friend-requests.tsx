@@ -311,6 +311,10 @@ export const FriendRequests = () => {
     updateRequest(requestId, action)
   }
 
+  const listenFriendRemoved = (friendId: number) => {
+    setRequests((pre) => pre.filter((req) => req.Sender.id !== friendId))
+  }
+
   useEffect(() => {
     if (tempFlagUseEffectRef.current) {
       tempFlagUseEffectRef.current = false
@@ -320,8 +324,10 @@ export const FriendRequests = () => {
     }
     clientSocket.socket.on(ESocketEvents.friend_request_action, listenFriendRequestAction)
     eventEmitter.on(EInternalEvents.SEND_FRIEND_REQUEST, listenSendFriendRequest)
+    eventEmitter.on(EInternalEvents.FRIEND_REMOVED, listenFriendRemoved)
     return () => {
       eventEmitter.removeListener(EInternalEvents.SEND_FRIEND_REQUEST, listenSendFriendRequest)
+      eventEmitter.removeListener(EInternalEvents.FRIEND_REMOVED, listenFriendRemoved)
     }
   }, [])
 

@@ -41,15 +41,15 @@ const ChangePasswordModal = ({ open, onClose, onSave }: ChangePasswordModalProps
     setConfirmPasswordError("")
 
     if (!oldPassword) {
-      setOldPasswordError("Vui lòng nhập mật khẩu cũ")
+      setOldPasswordError("Please enter your current password")
       valid = false
     }
     if (!newPassword || newPassword.length < 8) {
-      setNewPasswordError("Mật khẩu mới phải từ 8 ký tự trở lên")
+      setNewPasswordError("New password must be at least 8 characters")
       valid = false
     }
     if (confirmPassword !== newPassword) {
-      setConfirmPasswordError("Xác nhận mật khẩu không khớp")
+      setConfirmPasswordError("Password confirmation does not match")
       valid = false
     }
     return valid
@@ -71,10 +71,12 @@ const ChangePasswordModal = ({ open, onClose, onSave }: ChangePasswordModalProps
         <button className="absolute top-2 right-2 text-white" onClick={onClose}>
           ✕
         </button>
-        <h2 className="text-xl font-bold text-white mb-4">Đổi mật khẩu</h2>
+        <h2 className="text-xl font-bold text-white mb-4">Change Password</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">Mật khẩu cũ</label>
+            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">
+              Current Password
+            </label>
             <div className="relative">
               <input
                 type={showOldPassword ? "text" : "password"}
@@ -100,7 +102,7 @@ const ChangePasswordModal = ({ open, onClose, onSave }: ChangePasswordModalProps
             )}
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">Mật khẩu mới</label>
+            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">New Password</label>
             <div className="relative">
               <input
                 type={showNewPassword ? "text" : "password"}
@@ -127,7 +129,7 @@ const ChangePasswordModal = ({ open, onClose, onSave }: ChangePasswordModalProps
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">
-              Xác nhận mật khẩu mới
+              Confirm New Password
             </label>
             <div className="relative">
               <input
@@ -158,7 +160,7 @@ const ChangePasswordModal = ({ open, onClose, onSave }: ChangePasswordModalProps
             className="w-full bg-gradient-to-r from-violet-600 to-indigo-500 hover:from-violet-500 hover:to-indigo-400 transition text-white font-bold py-2.5 rounded-xl mt-2 shadow-lg shadow-violet-800/30 disabled:opacity-60"
             disabled={submitting}
           >
-            Đổi mật khẩu
+            Change Password
           </button>
         </form>
       </div>

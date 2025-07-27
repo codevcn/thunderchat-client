@@ -109,7 +109,7 @@ const AccountPage = ({
 
       // Check file size (limit to 5MB for avatar)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("Ảnh avatar không được vượt quá 5MB!")
+        toast.error("Avatar image cannot exceed 5MB!")
         return
       }
 
@@ -121,10 +121,10 @@ const AccountPage = ({
       setShowCropper(false)
       setSelectedImage(null)
 
-      toast.success("Cập nhật avatar thành công!")
+      toast.success("Avatar updated successfully!")
     } catch (error) {
       console.error("Upload avatar error:", error)
-      toast.error("Lỗi khi upload avatar!")
+      toast.error("Error uploading avatar!")
     } finally {
       setUploadingAvatar(false)
     }
@@ -140,7 +140,7 @@ const AccountPage = ({
     setFullnameError("")
     setBirthdayError("")
     if (!fullname.trim()) {
-      setFullnameError("Họ và tên không được để trống")
+      setFullnameError("Full name cannot be empty")
       valid = false
     }
     if (birthday) {
@@ -151,11 +151,11 @@ const AccountPage = ({
         birthDate.getFullYear() -
         (now < new Date(birthDate.setFullYear(now.getFullYear())) ? 1 : 0)
       if (age < 18) {
-        setBirthdayError("Bạn phải trên 18 tuổi")
+        setBirthdayError("You must be over 18 years old")
         valid = false
       }
     } else {
-      setBirthdayError("Vui lòng chọn ngày sinh")
+      setBirthdayError("Please select your date of birth")
       valid = false
     }
     return valid
@@ -180,20 +180,20 @@ const AccountPage = ({
       ).unwrap()
       await dispatch(fetchProfile())
 
-      // Cập nhật refreshKey để ép hook refetch dữ liệu mới
+      // Update refreshKey to force hook refetch new data
       setRefreshKey((prev) => prev + 1)
 
       setIsEditing(false)
-      toast.success("Cập nhật thành công!")
+      toast.success("Updated successfully!")
     } catch (err) {
       console.log(err)
-      toast.error("Cập nhật thất bại!")
+      toast.error("Update failed!")
     } finally {
       setLoading(false)
     }
   }
 
-  // Hàm cập nhật profile (có thể dùng lại handleSave hoặc viết mới)
+  // Profile update function (can reuse handleSave or write new)
   const handleEditProfileSave = async ({
     avatar,
     fullname,
@@ -218,16 +218,16 @@ const AccountPage = ({
       ).unwrap()
       await dispatch(fetchProfile())
 
-      // Cập nhật refreshKey để ép hook refetch dữ liệu mới
+      // Update refreshKey to force hook refetch new data
       setRefreshKey((prev) => prev + 1)
 
-      // Đóng modal sau khi lưu thành công
+      // Close modal after successful save
       setShowEditModal(false)
 
-      toast.success("Cập nhật thành công!")
+      toast.success("Updated successfully!")
     } catch (err) {
       console.log(err)
-      toast.error("Cập nhật thất bại!")
+      toast.error("Update failed!")
     } finally {
       setLoading(false)
     }
@@ -250,7 +250,7 @@ const AccountPage = ({
         className="relative flex items-center px-4 py-3 border-b border-[#35363A] bg-[#232526] z-10"
         style={{ position: "sticky", top: 0 }}
       >
-        {/* Nút back bên trái */}
+        {/* Back button on the left */}
         {showBackButton && (
           <button
             onClick={onBack}
@@ -266,14 +266,14 @@ const AccountPage = ({
             <ArrowLeft size={22} color="#CFCFCF" />
           </button>
         )}
-        {/* Tiêu đề absolute giữa */}
+        {/* Absolute centered title */}
         <span
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold text-white pointer-events-none"
           style={{ whiteSpace: "nowrap" }}
         >
           Settings
         </span>
-        {/* Icon bên phải */}
+        {/* Icon on the right */}
         <div className="ml-auto flex items-center gap-2 z-10">
           <button
             className="p-1 hover:bg-[#323338] rounded-full transition"
@@ -290,7 +290,7 @@ const AccountPage = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setShowChangePasswordModal(true)}>
-                <LockIcon className="mr-2" size={18} /> Đổi mật khẩu
+                <LockIcon className="mr-2" size={18} /> Change Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
@@ -314,7 +314,6 @@ const AccountPage = ({
         >
           {userProfile.Profile.fullName}
         </div>
-        <div className="text-sm text-green-400">online</div>
         <div
           className="mt-2 text-sm text-[#CFCFCF] truncate max-w-full"
           style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
@@ -362,30 +361,7 @@ const AccountPage = ({
         </div>
       </div>
 
-      {/* Settings list */}
-      <div className="flex flex-col gap-1 mt-6 border-t border-[#35363A] pt-4 px-2">
-        {[
-          { icon: <Bell size={18} />, label: "Notifications and Sounds" },
-          { icon: <Database size={18} />, label: "Data and Storage" },
-          { icon: <Lock size={18} />, label: "Privacy and Security" },
-          { icon: <Settings size={18} />, label: "General Settings" },
-          { icon: <Folder size={18} />, label: "Chat Folders" },
-          { icon: <Smile size={18} />, label: "Stickers and Emoji" },
-          { icon: <Monitor size={18} />, label: "Devices", right: "2" },
-          { icon: <Languages size={18} />, label: "Language", right: "English" },
-        ].map((item, idx) => (
-          <div
-            key={idx}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-[#323338] rounded-lg cursor-pointer transition"
-          >
-            {item.icon}
-            <span className="flex-1 text-white">{item.label}</span>
-            {item.right && <span className="text-[#CFCFCF] text-sm">{item.right}</span>}
-          </div>
-        ))}
-      </div>
-
-      {/* Modal crop avatar */}
+      {/* Avatar crop modal */}
       {showCropper && selectedImage && (
         <EditProfileModal
           open={showCropper}
@@ -395,7 +371,7 @@ const AccountPage = ({
         />
       )}
 
-      {/* Modal chỉnh sửa */}
+      {/* Edit modal */}
       <EditProfileModal
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -409,10 +385,10 @@ const AccountPage = ({
         onSave={async ({ oldPassword, newPassword }) => {
           try {
             await userService.changePassword(oldPassword, newPassword)
-            toast.success("Đổi mật khẩu thành công!")
+            toast.success("Password changed successfully!")
             setShowChangePasswordModal(false)
           } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Đổi mật khẩu thất bại!")
+            toast.error(err?.response?.data?.message || "Failed to change password!")
           }
         }}
       />

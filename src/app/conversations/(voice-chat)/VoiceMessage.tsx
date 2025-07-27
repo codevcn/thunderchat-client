@@ -32,9 +32,9 @@ export async function getWaveformFromAudio(url: string, columns = 36): Promise<n
   })
 }
 
-// Hàm preload metadata của audio
+// Hàm preload metadata của audio với fallback graceful
 const preloadAudioMetadata = (url: string): Promise<number> => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const audio = new Audio()
 
     const handleLoadedMetadata = () => {
@@ -47,14 +47,22 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
         audio.addEventListener(
           "canplaythrough",
           () => {
-            resolve(audio.duration)
+            const seekedDuration = audio.duration
+            if (isFinite(seekedDuration) && seekedDuration > 0) {
+              resolve(seekedDuration)
+            } else {
+              // Nếu vẫn không load được, trả về 0 để hiển thị "--:--"
+              console.warn("Could not load audio duration, using fallback")
+              resolve(0)
+            }
           },
           { once: true }
         )
         audio.addEventListener(
           "error",
           () => {
-            reject(new Error("Failed to load audio metadata"))
+            console.warn("Audio metadata loading failed, using fallback")
+            resolve(0)
           },
           { once: true }
         )
@@ -62,7 +70,8 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
     }
 
     const handleError = () => {
-      reject(new Error("Failed to load audio"))
+      console.warn("Audio loading failed, using fallback")
+      resolve(0)
     }
 
     audio.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true })
@@ -71,12 +80,13 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
     audio.src = url
     audio.load()
 
-    // Timeout fallback
+    // Timeout fallback - không reject, chỉ resolve với 0
     setTimeout(() => {
       if (isFinite(audio.duration) && audio.duration > 0) {
         resolve(audio.duration)
       } else {
-        reject(new Error("Audio metadata loading timeout"))
+        console.warn("Audio metadata loading timeout, using fallback")
+        resolve(0)
       }
     }, 5000)
   })
@@ -125,7 +135,8 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
           loadedDurationRef.current = duration
         })
         .catch((error) => {
-          console.error("Failed to load audio duration:", error)
+          // Fallback nếu có lỗi không mong muốn
+          console.warn("Unexpected error loading audio duration:", error)
           setLocalDuration(0)
           setIsLoadingDuration(false)
         })

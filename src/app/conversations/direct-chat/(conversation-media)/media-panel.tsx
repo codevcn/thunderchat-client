@@ -51,8 +51,8 @@ const MediaPanel = () => {
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false)
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0)
   const [showArchive, setShowArchive] = useState(false)
-  const [archiveTab, setArchiveTab] = useState<"Ảnh/Video" | "files" | "voices" | "links">(
-    "Ảnh/Video"
+  const [archiveTab, setArchiveTab] = useState<"Images/Video" | "files" | "voices" | "links">(
+    "Images/Video"
   )
 
   // Voice player context
@@ -211,6 +211,7 @@ const MediaPanel = () => {
       directChatId: directChat?.id || 0,
       status: "SENT" as any,
       isNewMsg: false,
+      isDeleted: false, // Thêm property thiếu
       Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
       ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
     }
@@ -226,7 +227,7 @@ const MediaPanel = () => {
     const url = item.mediaUrl || item.fileUrl
     try {
       const response = await fetch(url)
-      if (!response.ok) throw new Error("Không thể tải file")
+      if (!response.ok) throw new Error("Cannot download file")
       const blob = await response.blob()
       const blobUrl = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
@@ -274,8 +275,8 @@ const MediaPanel = () => {
         </div>
       )}
 
-      {/* Ảnh/Video Section */}
-      <Section title="Ảnh/Video">
+      {/* Images/Video Section */}
+      <Section title="Images/Video">
         <div className="grid grid-cols-3 gap-2 px-2 pb-2">
           {mixedMedia.slice(0, 6).map((item) => (
             <div
@@ -334,18 +335,18 @@ const MediaPanel = () => {
             </div>
           ))}
           {mixedMedia.length === 0 && (
-            <div className="w-full text-center text-gray-400 py-4">Chưa có ảnh hoặc video</div>
+            <div className="w-full text-center text-gray-400 py-4">No images or videos yet</div>
           )}
         </div>
         {mixedMedia.length > 0 && (
           <button
             className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
             onClick={() => {
-              setArchiveTab("Ảnh/Video")
+              setArchiveTab("Images/Video")
               setShowArchive(true)
             }}
           >
-            Xem tất cả ({mixedMedia.length})
+            View all ({mixedMedia.length})
           </button>
         )}
       </Section>
@@ -412,7 +413,7 @@ const MediaPanel = () => {
             </div>
           ))}
           {mediaData.files.length === 0 && (
-            <div className="text-center text-gray-400 py-4">Chưa có file nào</div>
+            <div className="text-center text-gray-400 py-4">No files yet</div>
           )}
         </div>
         {mediaData.files.length > 0 && (
@@ -423,7 +424,7 @@ const MediaPanel = () => {
               setShowArchive(true)
             }}
           >
-            Xem tất cả ({mediaData.files.length})
+            View all ({mediaData.files.length})
           </button>
         )}
       </Section>
@@ -469,7 +470,7 @@ const MediaPanel = () => {
             </div>
           ))}
           {mediaData.audios.length === 0 && (
-            <div className="text-center text-gray-400 py-4">Chưa có tin nhắn voice</div>
+            <div className="text-center text-gray-400 py-4">No voice messages yet</div>
           )}
         </div>
         {mediaData.audios.length > 0 && (
@@ -480,7 +481,7 @@ const MediaPanel = () => {
               setShowArchive(true)
             }}
           >
-            Xem tất cả ({mediaData.audios.length})
+            View all ({mediaData.audios.length})
           </button>
         )}
       </Section>
@@ -516,7 +517,7 @@ const MediaPanel = () => {
             </div>
           ))}
           {mediaData.links.length === 0 && (
-            <div className="text-center text-gray-400 py-4">Chưa có link nào</div>
+            <div className="text-center text-gray-400 py-4">No links yet</div>
           )}
         </div>
         {mediaData.links.length > 0 && (
@@ -527,7 +528,7 @@ const MediaPanel = () => {
               setShowArchive(true)
             }}
           >
-            Xem tất cả ({mediaData.links.length})
+            View all ({mediaData.links.length})
           </button>
         )}
       </Section>

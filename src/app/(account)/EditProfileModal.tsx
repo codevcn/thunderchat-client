@@ -86,7 +86,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
     setBirthdayError("")
 
     if (!fullname.trim()) {
-      setFullnameError("Họ và tên không được để trống")
+      setFullnameError("Full name cannot be empty")
       valid = false
     }
     if (birthday) {
@@ -97,11 +97,11 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
         birthDate.getFullYear() -
         (now < new Date(birthDate.setFullYear(now.getFullYear())) ? 1 : 0)
       if (age < 18) {
-        setBirthdayError("Bạn phải trên 18 tuổi")
+        setBirthdayError("You must be over 18 years old")
         valid = false
       }
     } else {
-      setBirthdayError("Vui lòng chọn ngày sinh")
+      setBirthdayError("Please select your date of birth")
       valid = false
     }
     return valid
@@ -118,14 +118,14 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
         const blob = await response.blob()
         const file = new File([blob], `avatar-${Date.now()}.png`, { type: "image/png" })
         if (file.size > 5 * 1024 * 1024) {
-          toast.error("Ảnh avatar không được vượt quá 5MB!")
+          toast.error("Avatar image cannot exceed 5MB!")
           setUploading(false)
           return
         }
         const { url } = await uploadFile(file)
         avatarUrl = url
       } catch (err) {
-        toast.error("Lỗi khi upload avatar!")
+        toast.error("Error uploading avatar!")
         setUploading(false)
         return
       }
@@ -142,7 +142,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
         <button className="absolute top-2 right-2 text-white" onClick={onClose}>
           ✕
         </button>
-        <h2 className="text-xl font-bold text-white mb-4">Chỉnh sửa thông tin cá nhân</h2>
+        <h2 className="text-xl font-bold text-white mb-4">Edit Personal Information</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col items-center">
             <div
@@ -167,7 +167,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">Họ và tên</label>
+            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">Full Name</label>
             <input
               type="text"
               className={`w-full rounded-xl bg-[#2C2E31] border ${fullnameError ? "border-red-500" : "border-[#35363A]"} px-4 py-2 text-white`}
@@ -177,7 +177,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
             {fullnameError && <div className="text-red-500 text-xs mt-1">{fullnameError}</div>}
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">Ngày sinh</label>
+            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">Date of Birth</label>
             <input
               type="date"
               className={`w-full rounded-xl bg-[#2C2E31] border ${birthdayError ? "border-red-500" : "border-[#35363A]"} px-4 py-2 text-white`}
@@ -187,9 +187,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
             {birthdayError && <div className="text-red-500 text-xs mt-1">{birthdayError}</div>}
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">
-              Giới thiệu bản thân
-            </label>
+            <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">About Me</label>
             <textarea
               className="w-full rounded-xl bg-[#2C2E31] border border-[#35363A] px-4 py-2 text-white resize-none min-h-[60px]"
               value={about}
@@ -200,10 +198,10 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
             type="submit"
             className="w-full bg-gradient-to-r from-violet-600 to-indigo-500 hover:from-violet-500 hover:to-indigo-400 transition text-white font-bold py-2.5 rounded-xl mt-2 shadow-lg shadow-violet-800/30"
           >
-            Lưu thay đổi
+            Save Changes
           </button>
         </form>
-        {/* Modal crop avatar trong modal chỉnh sửa */}
+        {/* Avatar cropper modal within edit modal */}
         {showCropper && selectedImage && (
           <AvatarCropperModal
             open={showCropper}

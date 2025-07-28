@@ -10,6 +10,7 @@ export const convertToDirectChatsUIData = (
     const creator = item.Creator
     const creatorProfile = creator.Profile
     const lastMessage = item.LastSentMessage
+    const otherUser = creator.id === user.id ? item.Recipient : creator
     return {
       id: item.id,
       avatar: {
@@ -25,6 +26,7 @@ export const convertToDirectChatsUIData = (
       title: creator.id === user.id ? item.Recipient.Profile.fullName : creatorProfile.fullName,
       type: EChatType.DIRECT,
       createdAt: item.createdAt,
+      email: otherUser.email,
     }
   })
 }

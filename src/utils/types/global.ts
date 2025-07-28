@@ -54,6 +54,7 @@ export type TConversationCard = {
   pinIndex: number
   type: EChatType
   createdAt: string
+  email?: string
 }
 
 export type TUnknownObject = {
@@ -110,4 +111,17 @@ export type TRemoveGroupChatMemberState = {
 export type THighlightOffsets = {
   start: number
   end: number
+}
+
+export type TConversationSearchResult = {
+  id: number
+  type: EChatType
+  title: string
+  email?: string
+  avatar?: {
+    src: string
+  }
+  subtitle?: {
+    content: string
+  }
 }

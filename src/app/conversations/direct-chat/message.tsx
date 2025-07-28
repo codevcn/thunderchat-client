@@ -136,7 +136,7 @@ const ImageModal = ({
         <img
           src={imageUrl}
           alt="Zoomed image"
-          className="max-w-full max-h-full object-contain rounded-l min-h-[300px] max-h-[90vh]"
+          className="max-w-[85vw] max-h-[80vh] object-contain rounded-lg"
           style={{ transform: `rotate(${rotation}deg)` }}
           onClick={(e) => e.stopPropagation()}
         />

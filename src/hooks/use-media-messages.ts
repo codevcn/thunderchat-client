@@ -58,7 +58,8 @@ export const useMediaMessages = () => {
   // Hàm xử lý tin nhắn mới từ socket
   const handleNewMessage = useCallback(
     (newMessage: TDirectMessage) => {
-      if (isMediaMessage(newMessage)) {
+      // Chỉ xử lý tin nhắn thuộc về conversation hiện tại
+      if (newMessage.directChatId === directChat?.id && isMediaMessage(newMessage)) {
         setMediaMessages((prev) => {
           // Kiểm tra xem tin nhắn đã tồn tại chưa
           const exists = prev.some((msg) => msg.id === newMessage.id)
@@ -72,7 +73,7 @@ export const useMediaMessages = () => {
         })
       }
     },
-    [isMediaMessage]
+    [isMediaMessage, directChat?.id]
   )
 
   // Effect để fetch media messages ban đầu

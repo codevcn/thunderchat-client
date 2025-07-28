@@ -353,9 +353,13 @@ export const Messages = memo(
 
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendDirectMessage = (newMessage: TGetDirectMessagesMessage) => {
-      const { id } = newMessage
-      dispatch(pushNewMessages([newMessage]))
-      clientSocket.setMessageOffset(id, directChatId)
+      const { id, directChatId: messageDirectChatId } = newMessage
+
+      // Chỉ cập nhật state nếu tin nhắn thuộc về conversation hiện tại
+      if (messageDirectChatId === directChatId) {
+        dispatch(pushNewMessages([newMessage]))
+        clientSocket.setMessageOffset(id, directChatId)
+      }
     }
 
     // Xử lý sự kiện kết nối lại từ server

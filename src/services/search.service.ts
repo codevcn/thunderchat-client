@@ -1,4 +1,5 @@
 import type { TGlobalSearchData } from "@/utils/types/be-api"
+import type { TConversationSearchResult } from "@/utils/types/global"
 import { searchGlobally, searchConversations as searchConversationsAPI } from "@/apis/search"
 
 class SearchService {
@@ -28,7 +29,9 @@ class SearchService {
 
 export const searchService = new SearchService()
 
-export const searchConversations = async (keyword: string) => {
+export const searchConversations = async (
+  keyword: string
+): Promise<TConversationSearchResult[]> => {
   try {
     const response = await searchConversationsAPI(keyword)
     return response

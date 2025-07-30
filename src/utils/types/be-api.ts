@@ -292,3 +292,50 @@ export type TDeleteDirectMessageRes = {
 export type TMessageSearchOffset = [string, string]
 
 export type TUserSearchOffset = [string, string, string]
+
+// ================================= Admin API Types =================================
+
+export type TAdminUsersParams = {
+  page: number
+  limit: number
+  search?: string
+  isLocked?: "all" | "locked" | "active"
+}
+
+export type TAdminUser = {
+  id: number
+  email: string
+  fullName: string
+  avatar?: string
+  isLocked: boolean
+  createdAt: string
+  lastActive?: string
+}
+
+export type TAdminUsersData = {
+  users: TAdminUser[]
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+}
+
+export type TAdminUserActionParams = {
+  userId: number
+  isLocked: boolean
+}
+
+export type TAdminStatisticsData = {
+  systemHealth: "good" | "warning" | "error"
+  totalUsers: number
+  activeUsers: number
+  lockedUsers: number
+  newUsersToday: number
+  totalMessages: number
+  totalChats: number
+  totalFiles: number
+}

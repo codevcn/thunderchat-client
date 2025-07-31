@@ -111,12 +111,30 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const playAudio = useCallback(
     async (message: TStateDirectMessage) => {
-      if (!message.mediaUrl) return
+      console.log("🎵 playAudio called with message:", message.id)
+
+      if (!message.mediaUrl) {
+        console.log("❌ No mediaUrl for message:", message.id)
+        return
+      }
 
       // Cập nhật currentAudioIndex nếu message có trong danh sách
       const messageIndex = audioMessages.findIndex((msg) => msg.id === message.id)
+      console.log(
+        "🔍 Message index in audioMessages:",
+        messageIndex,
+        "totalMessages:",
+        audioMessages.length
+      )
+
       if (messageIndex !== -1) {
+        console.log("✅ Found message in audioMessages, setting currentIndex:", messageIndex)
         setCurrentAudioIndex(messageIndex)
+      } else {
+        console.log("⚠️ Message not found in audioMessages, adding to end")
+        // Nếu message không có trong danh sách, thêm vào cuối
+        setAudioMessages((prev) => [...prev, message])
+        setCurrentAudioIndex(audioMessages.length)
       }
 
       // Nếu đang phát audio khác, dừng lại
@@ -261,9 +279,18 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [])
 
   const playNext = useCallback(() => {
+    console.log(
+      "⏭️ playNext called, currentIndex:",
+      currentAudioIndex,
+      "totalMessages:",
+      audioMessages.length
+    )
+
     if (currentAudioIndex < audioMessages.length - 1) {
       const nextIndex = currentAudioIndex + 1
       const nextMessage = audioMessages[nextIndex]
+      console.log("⏭️ Playing next message:", nextMessage.id, "at index:", nextIndex)
+
       setCurrentAudioIndex(nextIndex)
       setCurrentMessage(nextMessage)
       setCurrentAudioUrl(nextMessage.mediaUrl ?? null)
@@ -271,13 +298,25 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (isPlaying) {
         playAudio(nextMessage)
       }
+    } else {
+      console.log("❌ Cannot play next: already at end")
     }
+    // TODO: Trigger load more voices if needed
   }, [currentAudioIndex, audioMessages, isPlaying, playAudio])
 
   const playPrevious = useCallback(() => {
+    console.log(
+      "⏮️ playPrevious called, currentIndex:",
+      currentAudioIndex,
+      "totalMessages:",
+      audioMessages.length
+    )
+
     if (currentAudioIndex > 0) {
       const prevIndex = currentAudioIndex - 1
       const prevMessage = audioMessages[prevIndex]
+      console.log("⏮️ Playing previous message:", prevMessage.id, "at index:", prevIndex)
+
       setCurrentAudioIndex(prevIndex)
       setCurrentMessage(prevMessage)
       setCurrentAudioUrl(prevMessage.mediaUrl ?? null)
@@ -285,13 +324,24 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (isPlaying) {
         playAudio(prevMessage)
       }
+    } else {
+      console.log("❌ Cannot play previous: already at beginning")
     }
+    // TODO: Trigger load more voices if needed
   }, [currentAudioIndex, audioMessages, isPlaying, playAudio])
 
   const handleSetAudioMessages = useCallback((messages: TStateDirectMessage[]) => {
+    console.log("🎯 handleSetAudioMessages called with:", messages.length, "messages")
+    console.log(
+      "🎯 Messages:",
+      messages.map((m) => ({ id: m.id, createdAt: m.createdAt }))
+    )
+
     setAudioMessages(messages)
     setCurrentAudioIndex(0)
     setCurrentAudioUrl(messages[0]?.mediaUrl ?? null)
+
+    console.log("✅ Audio messages set in context, currentIndex:", 0)
   }, [])
 
   const value: VoicePlayerContextType = {

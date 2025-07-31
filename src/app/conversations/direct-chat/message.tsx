@@ -29,7 +29,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
-import VoiceMessage from "../(voice-chat)/VoiceMessage"
+import VoiceMessage from "../../../components/voice-message/voice-message"
 import React, { useState, forwardRef, useEffect, useRef } from "react"
 import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"

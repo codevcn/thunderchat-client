@@ -8,7 +8,7 @@ import { ProgressiveImage } from "@/components/materials/progressive-image"
 import { setLastSeen } from "@/utils/helpers"
 import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
-import MediaPanel from "./(conversation-media)/media-panel"
+import MediaPanel from "../../../components/conversation-media/media-panel"
 
 type TAvatarProps = {
   recipient: TUserWithProfile

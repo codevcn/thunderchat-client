@@ -82,6 +82,15 @@ export const VoiceMessagePlayer: React.FC = () => {
   const canGoNext = currentAudioIndex < audioMessages.length - 1
   const canGoPrevious = currentAudioIndex > 0
 
+  console.log("🎮 VoicePlayer Debug:", {
+    currentAudioIndex,
+    audioMessagesLength: audioMessages.length,
+    canGoNext,
+    canGoPrevious,
+    currentMessage: currentMessage?.id,
+    showPlayer,
+  })
+
   return (
     <div className="bg-[#232328] text-white rounded-lg shadow-lg p-2 flex flex-col w-full max-w-xl">
       <div className="flex items-center">
@@ -89,7 +98,10 @@ export const VoiceMessagePlayer: React.FC = () => {
         <button
           className="text-[#766AC8] mr-1 flex items-center justify-center w-8 h-8 hover:bg-[#282837] rounded-full"
           disabled={!canGoPrevious}
-          onClick={playPrevious}
+          onClick={() => {
+            console.log("🖱️ Previous button clicked")
+            playPrevious()
+          }}
           aria-label="Previous"
         >
           <StepBack size={20} />
@@ -107,7 +119,10 @@ export const VoiceMessagePlayer: React.FC = () => {
         <button
           className="text-[#766AC8] ml-1 flex items-center justify-center w-8 h-8 hover:bg-[#282837] rounded-full"
           disabled={!canGoNext}
-          onClick={playNext}
+          onClick={() => {
+            console.log("🖱️ Next button clicked")
+            playNext()
+          }}
           aria-label="Next"
         >
           <StepForward size={20} />

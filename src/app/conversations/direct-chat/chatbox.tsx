@@ -15,9 +15,9 @@ import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TDirectChatData, TUserWithProfile } from "@/utils/types/be-api"
-import { VoiceMessagePlayer } from "../(voice-chat)/VoiceMessagePlayerProps"
+import { VoiceMessagePlayer } from "../../../components/voice-message/voice-message-player-props"
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
-import { useAudioMessages } from "@/hooks/audio-messages"
+import { useAudioMessages } from "@/hooks/voice-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import { setDirectChat } from "@/redux/messages/messages.slice"
@@ -237,7 +237,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
   }
 
   // Hook để quản lý danh sách audio messages
-  const { loading: audioLoading } = useAudioMessages()
+  useAudioMessages()
 
   const friendInfo = useMemo<TUserWithProfile>(() => {
     return user.id === Creator.id ? Recipient : Creator

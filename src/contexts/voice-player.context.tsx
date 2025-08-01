@@ -111,37 +111,25 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const playAudio = useCallback(
     async (message: TStateDirectMessage) => {
-      console.log("🎵 playAudio called with message:", message.id)
-
       if (!message.mediaUrl) {
-        console.log("❌ No mediaUrl for message:", message.id)
         return
       }
 
       // Cập nhật currentAudioIndex nếu message có trong danh sách
       const messageIndex = audioMessages.findIndex((msg) => msg.id === message.id)
-      console.log(
-        "🔍 Message index in audioMessages:",
-        messageIndex,
-        "totalMessages:",
-        audioMessages.length
-      )
 
       if (messageIndex !== -1) {
-        console.log("✅ Found message in audioMessages, setting currentIndex:", messageIndex)
         setCurrentAudioIndex(messageIndex)
       } else {
-        console.log("⚠️ Message not found in audioMessages, adding to end")
         // Nếu message không có trong danh sách, thêm vào cuối
         setAudioMessages((prev) => [...prev, message])
         setCurrentAudioIndex(audioMessages.length)
       }
 
-      // Nếu đang phát audio khác, dừng lại
-      if (audioRef.current && currentAudioUrl !== message.mediaUrl) {
+      // Dừng audio hiện tại nếu có
+      if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current.currentTime = 0
-        lastPausedTimeRef.current = 0
       }
 
       setCurrentMessage(message)
@@ -152,36 +140,28 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const audioDuration = await preloadAudioMetadata(message.mediaUrl)
       setDuration(audioDuration)
 
-      // Tạo audio element mới nếu cần
-      if (!audioRef.current) {
-        audioRef.current = new Audio()
-      }
+      // Tạo audio element mới để tránh race condition
+      const newAudio = new Audio()
+      audioRef.current = newAudio
 
-      // Remove event listeners cũ để tránh duplicate
-      audioRef.current.removeEventListener("loadedmetadata", () => {})
-      audioRef.current.removeEventListener("timeupdate", () => {})
-      audioRef.current.removeEventListener("ended", () => {})
-      audioRef.current.removeEventListener("pause", () => {})
-      audioRef.current.removeEventListener("play", () => {})
-
-      audioRef.current.src = message.mediaUrl
-      audioRef.current.playbackRate = playbackRate // Áp dụng playback rate hiện tại
-      audioRef.current.volume = volume // Áp dụng volume hiện tại
+      newAudio.src = message.mediaUrl
+      newAudio.playbackRate = playbackRate
+      newAudio.volume = volume
 
       // Nếu là cùng audio và đã có vị trí pause, tiếp tục từ đó
       if (currentAudioUrl === message.mediaUrl && lastPausedTimeRef.current > 0) {
-        audioRef.current.currentTime = lastPausedTimeRef.current
+        newAudio.currentTime = lastPausedTimeRef.current
         setCurrentTime(lastPausedTimeRef.current)
       } else {
         // Audio mới hoặc chưa có vị trí pause, bắt đầu từ đầu
-        audioRef.current.currentTime = 0
+        newAudio.currentTime = 0
         setCurrentTime(0)
         lastPausedTimeRef.current = 0
       }
 
       // Event listeners
       const handleLoadedMetadata = () => {
-        const loadedDuration = audioRef.current?.duration || 0
+        const loadedDuration = newAudio.duration || 0
         // Chỉ set duration nếu preloaded duration không hợp lệ
         if (!isFinite(audioDuration) || audioDuration <= 0) {
           setDuration(loadedDuration)
@@ -189,7 +169,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
 
       const handleTimeUpdate = () => {
-        const time = audioRef.current?.currentTime || 0
+        const time = newAudio.currentTime || 0
         setCurrentTime(time)
         // Cập nhật vị trí pause khi đang phát
         if (isPlaying) {
@@ -206,28 +186,29 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const handlePause = () => {
         setIsPlaying(false)
         // Lưu vị trí hiện tại khi pause
-        lastPausedTimeRef.current = audioRef.current?.currentTime || 0
+        lastPausedTimeRef.current = newAudio.currentTime || 0
       }
 
       const handlePlay = () => {
         setIsPlaying(true)
       }
 
-      audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata)
-      audioRef.current.addEventListener("timeupdate", handleTimeUpdate)
-      audioRef.current.addEventListener("ended", handleEnded)
-      audioRef.current.addEventListener("pause", handlePause)
-      audioRef.current.addEventListener("play", handlePlay)
+      newAudio.addEventListener("loadedmetadata", handleLoadedMetadata)
+      newAudio.addEventListener("timeupdate", handleTimeUpdate)
+      newAudio.addEventListener("ended", handleEnded)
+      newAudio.addEventListener("pause", handlePause)
+      newAudio.addEventListener("play", handlePlay)
 
-      // Bắt đầu phát
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true)
-        })
-        .catch((error) => {
-          console.error("Error playing audio:", error)
-        })
+      // Bắt đầu phát với error handling
+      try {
+        await newAudio.play()
+        setIsPlaying(true)
+      } catch (error) {
+        console.error("Error playing audio:", error)
+        // Nếu lỗi, reset state
+        setIsPlaying(false)
+        setCurrentTime(0)
+      }
     },
     [currentAudioUrl, isPlaying, playbackRate, audioMessages, volume]
   )
@@ -279,17 +260,9 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [])
 
   const playNext = useCallback(() => {
-    console.log(
-      "⏭️ playNext called, currentIndex:",
-      currentAudioIndex,
-      "totalMessages:",
-      audioMessages.length
-    )
-
     if (currentAudioIndex < audioMessages.length - 1) {
       const nextIndex = currentAudioIndex + 1
       const nextMessage = audioMessages[nextIndex]
-      console.log("⏭️ Playing next message:", nextMessage.id, "at index:", nextIndex)
 
       setCurrentAudioIndex(nextIndex)
       setCurrentMessage(nextMessage)
@@ -298,24 +271,14 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (isPlaying) {
         playAudio(nextMessage)
       }
-    } else {
-      console.log("❌ Cannot play next: already at end")
     }
     // TODO: Trigger load more voices if needed
   }, [currentAudioIndex, audioMessages, isPlaying, playAudio])
 
   const playPrevious = useCallback(() => {
-    console.log(
-      "⏮️ playPrevious called, currentIndex:",
-      currentAudioIndex,
-      "totalMessages:",
-      audioMessages.length
-    )
-
     if (currentAudioIndex > 0) {
       const prevIndex = currentAudioIndex - 1
       const prevMessage = audioMessages[prevIndex]
-      console.log("⏮️ Playing previous message:", prevMessage.id, "at index:", prevIndex)
 
       setCurrentAudioIndex(prevIndex)
       setCurrentMessage(prevMessage)
@@ -324,24 +287,14 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (isPlaying) {
         playAudio(prevMessage)
       }
-    } else {
-      console.log("❌ Cannot play previous: already at beginning")
     }
     // TODO: Trigger load more voices if needed
   }, [currentAudioIndex, audioMessages, isPlaying, playAudio])
 
   const handleSetAudioMessages = useCallback((messages: TStateDirectMessage[]) => {
-    console.log("🎯 handleSetAudioMessages called with:", messages.length, "messages")
-    console.log(
-      "🎯 Messages:",
-      messages.map((m) => ({ id: m.id, createdAt: m.createdAt }))
-    )
-
     setAudioMessages(messages)
     setCurrentAudioIndex(0)
     setCurrentAudioUrl(messages[0]?.mediaUrl ?? null)
-
-    console.log("✅ Audio messages set in context, currentIndex:", 0)
   }, [])
 
   const value: VoicePlayerContextType = {

@@ -82,15 +82,6 @@ export const VoiceMessagePlayer: React.FC = () => {
   const canGoNext = currentAudioIndex < audioMessages.length - 1
   const canGoPrevious = currentAudioIndex > 0
 
-  console.log("🎮 VoicePlayer Debug:", {
-    currentAudioIndex,
-    audioMessagesLength: audioMessages.length,
-    canGoNext,
-    canGoPrevious,
-    currentMessage: currentMessage?.id,
-    showPlayer,
-  })
-
   return (
     <div className="bg-[#232328] text-white rounded-lg shadow-lg p-2 flex flex-col w-full max-w-xl">
       <div className="flex items-center">
@@ -99,7 +90,6 @@ export const VoiceMessagePlayer: React.FC = () => {
           className="text-[#766AC8] mr-1 flex items-center justify-center w-8 h-8 hover:bg-[#282837] rounded-full"
           disabled={!canGoPrevious}
           onClick={() => {
-            console.log("🖱️ Previous button clicked")
             playPrevious()
           }}
           aria-label="Previous"
@@ -120,7 +110,6 @@ export const VoiceMessagePlayer: React.FC = () => {
           className="text-[#766AC8] ml-1 flex items-center justify-center w-8 h-8 hover:bg-[#282837] rounded-full"
           disabled={!canGoNext}
           onClick={() => {
-            console.log("🖱️ Next button clicked")
             playNext()
           }}
           aria-label="Next"
@@ -184,19 +173,29 @@ export const VoiceMessagePlayer: React.FC = () => {
       </div>
 
       {/* Progress Bar */}
-      <input
-        type="range"
-        min={0}
-        max={progressMax}
-        step={0.01}
-        value={progressValue}
-        onChange={handleSeek}
-        className="w-full mt-2 accent-[#766AC8]"
-        style={{
-          // Đảm bảo progress bar hiển thị đúng
-          background: `linear-gradient(to right, #766AC8 0%, #766AC8 ${(progressValue / progressMax) * 100}%, #444 0%)`,
-        }}
-      />
+      <div className="w-full mt-2 relative">
+        {/* Background track */}
+        <div className="w-full h-2 bg-gray-700 rounded-lg"></div>
+
+        {/* Smooth progress fill */}
+        <div
+          className="absolute top-0 left-0 h-2 bg-[#766AC8] rounded-lg transition-all duration-75 ease-linear"
+          style={{
+            width: `${(progressValue / progressMax) * 100}%`,
+          }}
+        />
+
+        {/* Interactive slider (invisible) */}
+        <input
+          type="range"
+          min={0}
+          max={progressMax}
+          step={0.01}
+          value={progressValue}
+          onChange={handleSeek}
+          className="absolute top-0 left-0 w-full h-2 opacity-0 cursor-pointer"
+        />
+      </div>
     </div>
   )
 }

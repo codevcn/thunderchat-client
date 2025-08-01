@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react"
 import WaveformData from "waveform-data"
 import { useVoicePlayer } from "@/contexts/voice-player.context"
 import type { TStateDirectMessage } from "@/utils/types/global"
-import dayjs from "dayjs"
 
 export async function getWaveformFromAudio(url: string, columns = 36): Promise<number[]> {
   const res = await fetch(url)
@@ -25,7 +24,11 @@ export async function getWaveformFromAudio(url: string, columns = 36): Promise<n
           downsampled.push(peaks[idx])
         }
         const max = Math.max(...downsampled) || 1
-        const normalized = downsampled.map((v) => (v / max) * 32 + 8)
+        // Cải thiện normalization để có range tốt hơn
+        const normalized = downsampled.map((v) => {
+          const normalizedValue = (v / max) * 24 + 8 // Range từ 8-32
+          return Math.max(6, Math.min(32, normalizedValue)) // Đảm bảo min 6, max 32
+        })
         resolve(normalized)
       }
     )
@@ -95,11 +98,12 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
 type VoiceMessageProps = {
   message: TStateDirectMessage
   audioUrl: string
+  isSender?: boolean // Thêm prop để phân biệt người gửi/nhận
 }
 
-export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
+export default function VoiceMessage({ message, audioUrl, isSender = false }: VoiceMessageProps) {
   const [waveform, setWaveform] = useState<number[]>([])
-  const [iconColor, setIconColor] = useState("#8F62FF")
+  const [iconColor, setIconColor] = useState("#766AC8")
   const [localDuration, setLocalDuration] = useState<number>(0)
   const [isLoadingDuration, setIsLoadingDuration] = useState(true)
   const loadedDurationRef = useRef<number>(0) // Lưu duration đã load để tránh bị reset
@@ -178,11 +182,13 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
       {/* Nút phát/dừng */}
       <div className="flex items-center justify-center mr-3 shrink-0" style={{ height: 56 }}>
         <button
-          className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow"
+          className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 ${
+            isSender ? "bg-white dark:bg-gray-800" : "bg-white dark:bg-gray-700"
+          }`}
           onClick={handlePlayPause}
           aria-label={isThisAudioPlaying ? "Pause" : "Play"}
           style={{
-            boxShadow: "0 2px 8px 0 rgba(0,0,0,0.07)",
+            boxShadow: "0 4px 12px 0 rgba(0,0,0,0.15)",
           }}
         >
           {isThisAudioPlaying ? (
@@ -201,12 +207,12 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
             <Waveform
               data={waveform.length ? waveform : Array(36).fill(12)}
               progress={progress}
-              color="#fff"
-              progressColor="#f1d0ff"
+              color={isSender ? "#ffffff" : "#cccccc"}
+              progressColor={isSender ? "#f1d0ff" : "#ffffff"}
             />
           </div>
           <button
-            className="ml-2 text-white/70 text-xl w-8 h-8 flex items-center justify-center"
+            className="ml-2 text-white/70 hover:text-white text-xl w-8 h-8 flex items-center justify-center transition-colors duration-200"
             tabIndex={-1}
           >
             &rarr;A
@@ -218,11 +224,11 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
           {/* Thời gian */}
           <span className="text-white text-[15px] flex items-center font-bold">
             {isLoadingDuration ? (
-              <span>Loading...</span>
+              <span className="text-white/70">Loading...</span>
             ) : currentAudioUrl === audioUrl && displayDuration > 0 ? (
               <>
                 <span>{format(displayCurrentTime)}</span>
-                <span className="mx-1">/</span>
+                <span className="mx-1 text-white/70">/</span>
                 <span>{format(displayDuration)}</span>
                 {/* Chấm đỏ nhấp nháy chỉ khi đang phát */}
                 {isThisAudioPlaying && (
@@ -232,7 +238,7 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
             ) : displayDuration > 0 ? (
               <span>{format(displayDuration)}</span>
             ) : (
-              <span>--:--</span>
+              <span className="text-white/70">--:--</span>
             )}
           </span>
         </div>
@@ -244,8 +250,8 @@ export default function VoiceMessage({ message, audioUrl }: VoiceMessageProps) {
 function Waveform({
   data,
   progress,
-  color = "#fff",
-  progressColor = "#d0aaff",
+  color = "#ffffff",
+  progressColor = "#f1d0ff",
 }: {
   data: number[]
   progress: number
@@ -253,19 +259,39 @@ function Waveform({
   progressColor?: string
 }) {
   return (
-    <div className="flex h-full items-end w-full gap-[1px]">
-      {data.map((v, i) => (
-        <div
-          key={i}
-          style={{
-            width: 4,
-            height: `${v}px`,
-            background: i / data.length < progress ? progressColor : color,
-            borderRadius: 2,
-            transition: "background 0.3s",
-          }}
-        />
-      ))}
+    <div className="flex h-full items-center w-full gap-[1px]">
+      {data.map((v, i) => {
+        const isPlayed = i / data.length < progress
+        const currentColor = isPlayed ? progressColor : color
+        const opacity = isPlayed ? 1 : 0.6
+
+        // Đảm bảo chiều cao tối thiểu và tối đa
+        const minHeight = 4 // Chiều cao tối thiểu
+        const maxHeight = 32 // Chiều cao tối đa
+        const barHeight = Math.max(minHeight, Math.min(maxHeight, v))
+
+        return (
+          <div
+            key={i}
+            className="flex items-center justify-center"
+            style={{
+              width: 4,
+              height: `${barHeight}px`,
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                background: currentColor,
+                borderRadius: 2,
+                transition: "background 0.3s ease-in-out",
+                opacity: opacity,
+              }}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }

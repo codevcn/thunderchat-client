@@ -52,6 +52,7 @@ type TContentProps = {
   fileType?: string
   fileSize?: number
   message?: TStateDirectMessage
+  user: TUserWithoutPassword
 }
 
 const ImageModal = ({
@@ -156,6 +157,7 @@ const Content = ({
   fileType,
   fileSize,
   message,
+  user,
 }: TContentProps) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
 
@@ -327,7 +329,8 @@ const Content = ({
   }
 
   if (type === EMessageTypes.AUDIO && mediaUrl && message) {
-    return <VoiceMessage audioUrl={mediaUrl} message={message} />
+    const isSender = user.id === message.authorId
+    return <VoiceMessage audioUrl={mediaUrl} message={message} isSender={isSender} />
   }
 
   // Hiển thị sticker
@@ -752,6 +755,7 @@ export const Message = forwardRef<
                   fileType={fileType}
                   fileSize={fileSize}
                   message={message}
+                  user={user}
                 />
                 <div className="flex justify-end items-center gap-x-1 mt-1.5 w-full">
                   <span className="text-xs text-regular-creator-msg-time-cl leading-none">
@@ -919,6 +923,7 @@ export const Message = forwardRef<
                   fileType={fileType}
                   fileSize={fileSize}
                   message={message}
+                  user={user}
                 />
               </div>
             </div>

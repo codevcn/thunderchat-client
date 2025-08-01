@@ -28,6 +28,10 @@ export const VoiceMessagePlayer: React.FC = () => {
 
   const currentUser = useUser()
 
+  // State để lưu giá trị volume trước khi mute
+  const [previousVolume, setPreviousVolume] = React.useState<number>(1)
+  const [isMuted, setIsMuted] = React.useState<boolean>(false)
+
   if (!showPlayer || !currentMessage) return null
 
   const handlePlayPause = () => {
@@ -59,6 +63,19 @@ export const VoiceMessagePlayer: React.FC = () => {
     setVolume(newVolume)
   }
 
+  const handleMuteToggle = () => {
+    if (isMuted) {
+      // Unmute: khôi phục giá trị volume trước đó
+      setVolume(previousVolume)
+      setIsMuted(false)
+    } else {
+      // Mute: lưu giá trị hiện tại và set volume = 0
+      setPreviousVolume(volume)
+      setVolume(0)
+      setIsMuted(true)
+    }
+  }
+
   const formatTime = (time: number) => {
     if (!isFinite(time) || isNaN(time) || time < 0) return "00:00"
     const minutes = Math.floor(time / 60)
@@ -66,8 +83,11 @@ export const VoiceMessagePlayer: React.FC = () => {
     return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
   }
 
+  // Sử dụng duration từ context nếu hợp lệ, hoặc fallback
+  const effectiveDuration = duration && isFinite(duration) && duration > 0 ? duration : 1
+
   // Đảm bảo max value cho progress bar luôn hợp lệ
-  const progressMax = isFinite(duration) && duration > 0 ? duration : 1
+  const progressMax = effectiveDuration
   const progressValue = Math.min(currentTime, progressMax)
 
   // Xác định người gửi
@@ -133,11 +153,9 @@ export const VoiceMessagePlayer: React.FC = () => {
 
         {/* Volume */}
         <div className="flex items-center mx-2">
-          {volume === 0 ? (
-            <VolumeX size={18} className="mr-1" />
-          ) : (
-            <Volume2 size={18} className="mr-1" />
-          )}
+          <button onClick={handleMuteToggle} className="mr-1 hover:bg-[#282837] rounded-full p-1">
+            {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
           <input
             type="range"
             min={0}

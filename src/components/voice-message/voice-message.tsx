@@ -169,7 +169,9 @@ export default function VoiceMessage({ message, audioUrl, isSender = false }: Vo
   // Sử dụng duration từ context nếu audio đang được quản lý, hoặc localDuration nếu không
   const displayDuration =
     currentAudioUrl === audioUrl
-      ? duration || loadedDurationRef.current
+      ? duration && isFinite(duration) && duration > 0
+        ? duration
+        : loadedDurationRef.current
       : localDuration || loadedDurationRef.current
   // Luôn lấy currentTime từ context nếu đây là audio đang được quản lý
   const displayCurrentTime = currentAudioUrl === audioUrl ? currentTime : 0

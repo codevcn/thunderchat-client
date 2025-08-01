@@ -3,7 +3,6 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
-  Image as ImageIcon,
   Link as LinkIcon,
   Music,
   Video,
@@ -13,7 +12,6 @@ import {
 import { useAppSelector } from "@/hooks/redux"
 import { EMessageTypes } from "@/utils/enums"
 import dayjs from "dayjs"
-import Image from "next/image"
 import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import MediaArchivePanel from "./media-archive-panel"
 import ActionIcons from "@/components/materials/action-icons"
@@ -92,6 +90,9 @@ const MediaPanel = React.memo(() => {
     const links: any[] = []
 
     mediaMessages.forEach((message) => {
+      // Bỏ qua tin nhắn đã bị xóa
+      if (message.isDeleted) return
+
       if (!message.mediaUrl && !message.content) return
 
       const messageData = {
@@ -300,64 +301,66 @@ const MediaPanel = React.memo(() => {
       {/* Images/Video Section */}
       <Section title="Images/Video">
         <div className="grid grid-cols-3 gap-2 px-2 pb-2">
-          {mixedMedia.slice(0, 6).map((item) => (
-            <div
-              key={item.id}
-              className="aspect-square bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer group relative"
-              onClick={() => openMediaViewer(item)}
-            >
-              {/* Action icons on hover, top-right */}
-              <div className="absolute top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <ActionIcons
-                  onDownload={() => handleDownload(item)}
-                  onShare={() => {}}
-                  onMore={() => {}}
-                  showDownload={item.mediaUrl ? true : false}
-                  isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}}
-                  onDeleteForMe={() => console.log("Delete for me:", item.id)}
-                  onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
-                  messageId={item.id}
-                  mediaUrl={item.mediaUrl || item.fileUrl}
-                  fileName={item.fileName}
-                  fileType={item.fileType}
-                />
-              </div>
-
-              {/* Media content */}
-              {item.mediaUrl &&
-                (item.type === EMessageTypes.IMAGE ? (
-                  <img
-                    src={item.mediaUrl}
-                    alt={item.fileName || "media"}
-                    className="object-cover w-full h-full"
-                    loading="lazy"
+          {mixedMedia.slice(0, 6).map((item) => {
+            return (
+              <div
+                key={item.id}
+                className="aspect-square bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer group relative"
+                onClick={() => openMediaViewer(item)}
+              >
+                {/* Action icons on hover, top-right */}
+                <div className="absolute top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ActionIcons
+                    onDownload={() => handleDownload(item)}
+                    onShare={() => {}}
+                    onMore={() => {}}
+                    showDownload={item.mediaUrl ? true : false}
+                    isSender={item.authorId === currentUser?.id}
+                    onViewOriginalMessage={() => {}}
+                    onDeleteForMe={() => console.log("Delete for me:", item.id)}
+                    onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
+                    messageId={item.id}
+                    mediaUrl={item.mediaUrl || item.fileUrl}
+                    fileName={item.fileName}
+                    fileType={item.fileType}
                   />
-                ) : item.type === EMessageTypes.VIDEO ? (
-                  <div className="relative w-full h-full">
-                    {item.thumbnailUrl ? (
-                      <img
-                        src={item.thumbnailUrl}
-                        alt={item.fileName || "video"}
-                        className="object-cover w-full h-full"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center w-full h-full text-white opacity-70">
-                        <Video className="w-8 h-8" />
-                        <span className="text-xs mt-1">Video</span>
-                      </div>
-                    )}
-                    {/* Video play icon overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                        <Play className="w-5 h-5 text-white" />
+                </div>
+
+                {/* Media content */}
+                {item.mediaUrl &&
+                  (item.type === EMessageTypes.IMAGE ? (
+                    <img
+                      src={item.mediaUrl}
+                      alt={item.fileName || "media"}
+                      className="object-cover w-full h-full"
+                      loading="lazy"
+                    />
+                  ) : item.type === EMessageTypes.VIDEO ? (
+                    <div className="relative w-full h-full">
+                      {item.thumbnailUrl ? (
+                        <img
+                          src={item.thumbnailUrl}
+                          alt={item.fileName || "video"}
+                          className="object-cover w-full h-full"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center w-full h-full text-white opacity-70">
+                          <Video className="w-8 h-8" />
+                          <span className="text-xs mt-1">Video</span>
+                        </div>
+                      )}
+                      {/* Video play icon overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                          <Play className="w-5 h-5 text-white" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : null)}
-            </div>
-          ))}
+                  ) : null)}
+              </div>
+            )
+          })}
           {mixedMedia.length === 0 && (
             <div className="w-full text-center text-gray-400 py-4">No images or videos yet</div>
           )}
@@ -387,7 +390,7 @@ const MediaPanel = React.memo(() => {
         />
       )}
       {directChat && showArchive && (
-        <div className="absolute right-0 top-0 h-full w-info-bar-mb screen-large-chatting:w-info-bar z-[100] bg-[#181A1B]">
+        <div className="absolute right-0 top-0 h-full w-info-bar-mb screen-large-chatting:w-info-bar z-[10] bg-[#181A1B]">
           <MediaArchivePanel
             onClose={() => setShowArchive(false)}
             mediaData={mediaData}
@@ -426,8 +429,6 @@ const MediaPanel = React.memo(() => {
                   showDownload={!!(item.mediaUrl || item.fileUrl)}
                   isSender={item.authorId === currentUser?.id}
                   onViewOriginalMessage={() => {}}
-                  onDeleteForMe={() => console.log("Delete for me:", item.id)}
-                  onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
                   mediaUrl={item.mediaUrl || item.fileUrl}
                   fileName={item.fileName}

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react"
 import dayjs from "dayjs"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
+import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
+import ReactDOM from "react-dom"
 
 const Filters = ({
   senderFilter,
@@ -39,28 +41,81 @@ const Filters = ({
   const dateButtonRef = useRef<HTMLButtonElement>(null)
   const senderPopupRef = useRef<HTMLDivElement>(null)
 
+  // Floating UI cho sender popup
+  const {
+    refs: senderRefs,
+    floatingStyles: senderFloatingStyles,
+    update: updateSender,
+  } = useFloating({
+    placement: "bottom-start",
+    middleware: [offset(4), flip(), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  })
+
+  // Floating UI cho date popup
+  const {
+    refs: dateRefs,
+    floatingStyles: dateFloatingStyles,
+    update: updateDate,
+  } = useFloating({
+    placement: "bottom-end",
+    middleware: [offset(4), flip(), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  })
+
+  // Floating UI cho suggestion popup
+  const {
+    refs: suggestionRefs,
+    floatingStyles: suggestionFloatingStyles,
+    update: updateSuggestion,
+  } = useFloating({
+    placement: "right-start",
+    middleware: [
+      offset(4),
+      flip({
+        fallbackPlacements: ["left-start", "right-end", "left-end"],
+      }),
+      shift({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
+  })
+
   // Đóng date popup khi click ra ngoài
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (datePopupRef.current && !datePopupRef.current.contains(e.target as Node)) {
+      const floatingEl = dateRefs.floating.current
+      const referenceEl = dateRefs.reference.current
+      const isRefEl = referenceEl instanceof HTMLElement
+      if (
+        floatingEl &&
+        !floatingEl.contains(e.target as Node) &&
+        (!isRefEl || !referenceEl.contains(e.target as Node))
+      ) {
         setIsDatePopupOpen(false)
         setIsSuggestionOpen(false)
       }
     }
     if (isDatePopupOpen) document.addEventListener("mousedown", handle)
     return () => document.removeEventListener("mousedown", handle)
-  }, [isDatePopupOpen])
+  }, [isDatePopupOpen, dateRefs])
 
   // Đóng sender popup khi click ra ngoài
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (senderPopupRef.current && !senderPopupRef.current.contains(e.target as Node)) {
+      const floatingEl = senderRefs.floating.current
+      const referenceEl = senderRefs.reference.current
+      const isRefEl = referenceEl instanceof HTMLElement
+      if (
+        floatingEl &&
+        !floatingEl.contains(e.target as Node) &&
+        (!isRefEl || !referenceEl.contains(e.target as Node))
+      ) {
         setIsSenderPopupOpen(false)
       }
     }
     if (isSenderPopupOpen) document.addEventListener("mousedown", handle)
     return () => document.removeEventListener("mousedown", handle)
-  }, [isSenderPopupOpen])
+  }, [isSenderPopupOpen, senderRefs])
 
   // Hàm chọn gợi ý thời gian
   const handleSuggestion = (days: number) => {
@@ -133,8 +188,14 @@ const Filters = ({
       {/* Người gửi */}
       <div className="relative flex-1">
         <button
+          ref={senderRefs.setReference}
           className="w-full bg-[#232526] text-white rounded-lg px-3 py-2 flex items-center justify-between hover:bg-[#2C2E31] transition-colors duration-200"
-          onClick={() => setIsSenderPopupOpen(!isSenderPopupOpen)}
+          onClick={() => {
+            setIsSenderPopupOpen(!isSenderPopupOpen)
+            if (!isSenderPopupOpen) {
+              setTimeout(updateSender, 0)
+            }
+          }}
           type="button"
         >
           <span className="font-medium truncate text-xs">{getSelectedUserName() || "Sender"}</span>
@@ -151,8 +212,9 @@ const Filters = ({
         {/* Popup filter người gửi */}
         {isSenderPopupOpen && (
           <div
-            ref={senderPopupRef}
-            className="absolute left-0 top-[110%] z-20 bg-[#202124] min-w-[280px] rounded-xl shadow-lg border border-[#222] p-2 animate-fade-in"
+            ref={senderRefs.setFloating}
+            style={senderFloatingStyles}
+            className="absolute z-20 bg-[#202124] min-w-[280px] rounded-xl shadow-lg border border-[#222] p-2 animate-fade-in"
           >
             <div className="px-2 py-2">
               <div className="font-semibold text-white mb-2 text-[15px]">Search</div>
@@ -232,9 +294,14 @@ const Filters = ({
       {/* Ngày gửi - button mở popup */}
       <div className="relative flex-1">
         <button
-          ref={dateButtonRef}
+          ref={dateRefs.setReference}
           className="w-full bg-[#232526] text-white rounded-lg px-3 py-2 flex items-center justify-between hover:bg-[#2C2E31] transition-colors duration-200"
-          onClick={() => setIsDatePopupOpen(!isDatePopupOpen)}
+          onClick={() => {
+            setIsDatePopupOpen(!isDatePopupOpen)
+            if (!isDatePopupOpen) {
+              setTimeout(updateDate, 0)
+            }
+          }}
           type="button"
         >
           <span className="text-xs font-medium truncate">{getDateDisplayText()}</span>
@@ -251,65 +318,25 @@ const Filters = ({
         {/* Popup filter ngày */}
         {isDatePopupOpen && (
           <div
-            ref={datePopupRef}
+            ref={dateRefs.setFloating}
+            style={dateFloatingStyles}
             className="fixed z-[9999] bg-[#202124] min-w-[350px] rounded-xl shadow-lg border border-[#222] p-0 animate-fade-in"
-            style={{
-              minWidth: 350,
-              left: dateButtonRef.current
-                ? dateButtonRef.current.getBoundingClientRect().right - 350
-                : 0,
-              top: dateButtonRef.current
-                ? dateButtonRef.current.getBoundingClientRect().bottom + 10
-                : 0,
-            }}
           >
             {/* Gợi ý thời gian */}
             <div className="px-5 pt-5 pb-1 relative" ref={suggestionRef}>
               <button
+                ref={suggestionRefs.setReference}
                 className="flex items-center justify-between w-full text-sm text-white font-medium py-2 px-2 rounded hover:bg-[#232526] transition"
-                onMouseEnter={() => setIsSuggestionOpen(true)}
+                onMouseEnter={() => {
+                  setIsSuggestionOpen(true)
+                  setTimeout(updateSuggestion, 0)
+                }}
                 onMouseLeave={() => setIsSuggestionOpen(false)}
                 type="button"
               >
                 <span>Time suggestions</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
-              {isSuggestionOpen && (
-                <div
-                  className="fixed z-[9999] min-w-[150px] rounded-md bg-[#232526] shadow-lg border border-[#222]"
-                  style={{
-                    left: datePopupRef.current
-                      ? datePopupRef.current.getBoundingClientRect().left -
-                        datePopupRef.current.offsetWidth * 0.81
-                      : 0,
-                    top: suggestionRef.current
-                      ? suggestionRef.current.getBoundingClientRect().top +
-                        suggestionRef.current.offsetHeight * 0.35
-                      : 0,
-                  }}
-                  onMouseEnter={() => setIsSuggestionOpen(true)}
-                  onMouseLeave={() => setIsSuggestionOpen(false)}
-                >
-                  <button
-                    className="w-full px-3 py-2 text-left text-white hover:bg-[#313438] text-sm"
-                    onClick={() => handleSuggestion(7)}
-                  >
-                    7 ngày trước
-                  </button>
-                  <button
-                    className="w-full px-3 py-2 text-left text-white hover:bg-[#313438] text-sm"
-                    onClick={() => handleSuggestion(30)}
-                  >
-                    30 ngày trước
-                  </button>
-                  <button
-                    className="w-full px-3 py-2 text-left text-white hover:bg-[#313438] text-sm"
-                    onClick={() => handleSuggestion(90)}
-                  >
-                    3 tháng trước
-                  </button>
-                </div>
-              )}
             </div>
             <div className="border-t border-[#313438] mx-4 my-1"></div>
 
@@ -371,6 +398,50 @@ const Filters = ({
           </div>
         )}
       </div>
+
+      {/* Suggestion popup - render bằng portal để tránh nested positioning */}
+      {isSuggestionOpen &&
+        ReactDOM.createPortal(
+          <div
+            ref={suggestionRefs.setFloating}
+            style={suggestionFloatingStyles}
+            className="fixed z-[10000] min-w-[150px] rounded-md bg-[#232526] shadow-lg border border-[#222]"
+            onMouseEnter={() => setIsSuggestionOpen(true)}
+            onMouseLeave={() => setIsSuggestionOpen(false)}
+          >
+            <button
+              className="w-full px-3 py-2 text-left text-white hover:bg-[#313438] text-sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSuggestion(7)
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              7 days ago
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-white hover:bg-[#313438] text-sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSuggestion(30)
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              30 days ago
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-white hover:bg-[#313438] text-sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSuggestion(90)
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              3 months ago
+            </button>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

@@ -3,8 +3,6 @@ import dayjs from "dayjs"
 import ActionIcons from "@/components/materials/action-icons"
 import { useUser } from "@/hooks/user"
 import { Play } from "lucide-react"
-import { FixedSizeGrid as Grid } from "react-window"
-
 import { useVoicePlayerActions } from "@/contexts/voice-player.context"
 import { EMessageTypes } from "@/utils/enums"
 
@@ -151,7 +149,7 @@ export const MediaGrid = React.memo(
             onClick={() => openMediaViewer(item)}
           >
             {/* Action icons on hover, top-right */}
-            <div className="absolute top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <ActionIcons
                 onDownload={() => handleDownload(item)}
                 onShare={() => {}}
@@ -203,28 +201,6 @@ export const MediaGrid = React.memo(
 
     MediaCell.displayName = "MediaCell"
 
-    // Memoized Cell component for react-window
-    const Cell = React.memo(({ columnIndex, rowIndex, style }: any) => {
-      const index = rowIndex * 3 + columnIndex
-      const item = items[index]
-
-      if (!item) return null
-
-      return (
-        <div style={style} className="p-1">
-          <MediaCell
-            item={item}
-            mixedMedia={mixedMedia}
-            setSelectedMediaIndex={setSelectedMediaIndex}
-            setIsMediaViewerOpen={setIsMediaViewerOpen}
-            currentUser={currentUser}
-          />
-        </div>
-      )
-    })
-
-    Cell.displayName = "Cell"
-
     if (items.length === 0) {
       return (
         <div className="grid grid-cols-3 gap-2">
@@ -235,19 +211,19 @@ export const MediaGrid = React.memo(
       )
     }
 
-    const rowCount = Math.ceil(items.length / 3)
-
     return (
-      <Grid
-        columnCount={3}
-        columnWidth={120}
-        height={400}
-        rowCount={rowCount}
-        rowHeight={120}
-        width={360}
-      >
-        {Cell}
-      </Grid>
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((item) => (
+          <MediaCell
+            key={item.id}
+            item={item}
+            mixedMedia={mixedMedia}
+            setSelectedMediaIndex={setSelectedMediaIndex}
+            setIsMediaViewerOpen={setIsMediaViewerOpen}
+            currentUser={currentUser}
+          />
+        ))}
+      </div>
     )
   }
 )
@@ -478,10 +454,10 @@ export const MediaGridContent = React.memo(
     setSelectedMediaIndex: (idx: number) => void
     setIsMediaViewerOpen: (open: boolean) => void
   }) => (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {grouped.map(([date, items]) => (
         <div key={date}>
-          <h3 className="text-lg font-semibold text-white mb-4">
+          <h3 className="text-lg font-semibold text-white mb-2">
             {dayjs(date).format("MMMM DD, YYYY")}
           </h3>
           {tab === "Images/Video" ? (

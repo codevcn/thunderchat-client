@@ -47,7 +47,9 @@ export const useMediaMessages = () => {
 
     try {
       const messages = await messageService.fetchDirectMedia(directChat.id, 100, 0, ESortTypes.DESC)
-      setMediaMessages(messages)
+      // Lọc ra tin nhắn chưa bị xóa
+      const nonDeletedMessages = messages.filter((msg) => !msg.isDeleted)
+      setMediaMessages(nonDeletedMessages)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -55,22 +57,43 @@ export const useMediaMessages = () => {
     }
   }, [directChat?.id])
 
-  // Hàm xử lý tin nhắn mới từ socket
-  const handleNewMessage = useCallback(
-    (newMessage: TDirectMessage) => {
-      if (isMediaMessage(newMessage)) {
-        setMediaMessages((prev) => {
-          // Kiểm tra xem tin nhắn đã tồn tại chưa
-          const exists = prev.some((msg) => msg.id === newMessage.id)
-          if (exists) return prev
+  // Hàm xử lý tin nhắn mới hoặc cập nhật từ socket
+  const handleMessageUpdate = useCallback(
+    (updatedMessage: TDirectMessage) => {
+      setMediaMessages((prev) => {
+        const existingIndex = prev.findIndex((msg) => msg.id === updatedMessage.id)
 
-          const newMediaMessages = [newMessage, ...prev]
-          // Sắp xếp theo thời gian mới nhất
-          return newMediaMessages.sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-        })
-      }
+        // Nếu tin nhắn đã bị xóa và là media message, loại bỏ khỏi danh sách
+        if (updatedMessage.isDeleted && isMediaMessage(updatedMessage)) {
+          if (existingIndex !== -1) {
+            const newMessages = prev.filter((msg) => msg.id !== updatedMessage.id)
+            return newMessages.sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+          }
+          return prev
+        }
+
+        // Nếu tin nhắn chưa bị xóa và là media message
+        if (!updatedMessage.isDeleted && isMediaMessage(updatedMessage)) {
+          if (existingIndex !== -1) {
+            // Cập nhật tin nhắn hiện có
+            const newMessages = [...prev]
+            newMessages[existingIndex] = updatedMessage
+            return newMessages.sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+          } else {
+            // Thêm tin nhắn mới
+            const newMediaMessages = [updatedMessage, ...prev]
+            return newMediaMessages.sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+          }
+        }
+
+        return prev
+      })
     },
     [isMediaMessage]
   )
@@ -84,13 +107,13 @@ export const useMediaMessages = () => {
   useEffect(() => {
     if (!directChat?.id) return
 
-    // Lắng nghe tin nhắn mới từ socket
-    clientSocket.socket.on(ESocketEvents.send_message_direct, handleNewMessage)
+    // Lắng nghe tin nhắn mới/cập nhật từ socket
+    clientSocket.socket.on(ESocketEvents.send_message_direct, handleMessageUpdate)
 
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, handleNewMessage)
+      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, handleMessageUpdate)
     }
-  }, [directChat?.id, handleNewMessage])
+  }, [directChat?.id, handleMessageUpdate])
 
   return {
     mediaMessages,

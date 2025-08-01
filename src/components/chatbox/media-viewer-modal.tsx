@@ -359,7 +359,7 @@ const MediaViewerModal = ({
             showZoom ? (
               <div
                 ref={imgContainerRef}
-                className="w-full h-full overflow-auto cursor-grab"
+                className="w-full h-full overflow-auto cursor-grab STYLE-styled-modal-scrollbar"
                 style={{ WebkitOverflowScrolling: "touch" }}
               >
                 {isImgLoading && (

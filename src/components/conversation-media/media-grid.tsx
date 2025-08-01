@@ -5,7 +5,7 @@ import { useUser } from "@/hooks/user"
 import { Play } from "lucide-react"
 import { FixedSizeGrid as Grid } from "react-window"
 
-import { useVoicePlayer } from "@/contexts/voice-player.context"
+import { useVoicePlayerActions } from "@/contexts/voice-player.context"
 import { EMessageTypes } from "@/utils/enums"
 
 // Helper function to get file icon based on file extension
@@ -101,173 +101,161 @@ const handleDownload = async (item: any) => {
   }
 }
 
-// Media Grid Component
-export const MediaGrid = ({
-  items,
-  mixedMedia,
-  setSelectedMediaIndex,
-  setIsMediaViewerOpen,
-}: {
-  items: any[]
-  mixedMedia: any[]
-  setSelectedMediaIndex: (idx: number) => void
-  setIsMediaViewerOpen: (open: boolean) => void
-}) => {
-  const currentUser = useUser()
-  // Virtualization config
-  const columnCount = 3
-  const rowCount = Math.ceil(items.length / columnCount)
-  const cellSize = 110 // Giảm size để tránh overflow
-  const gap = 8 // Gap giữa các cells
-
-  // Skeleton component
-  const MediaSkeleton = () => (
-    <div className="w-full h-full bg-gray-600 animate-pulse rounded-lg flex items-center justify-center">
-      <div className="w-8 h-8 bg-gray-500 rounded-full animate-pulse"></div>
-    </div>
-  )
-
-  // MediaCell component
-  const MediaCell = ({
-    item,
+// Tối ưu MediaGrid với React.memo
+export const MediaGrid = React.memo(
+  ({
+    items,
     mixedMedia,
     setSelectedMediaIndex,
     setIsMediaViewerOpen,
-    currentUser,
-  }: any) => {
-    const [imageLoaded, setImageLoaded] = React.useState(false)
-    const [imageError, setImageError] = React.useState(false)
-    return (
-      <div
-        className="aspect-square bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer group relative w-full h-full"
-        onClick={() => {
-          const idx = mixedMedia.findIndex((m: any) => m.id === item.id)
-          setSelectedMediaIndex(idx)
-          setIsMediaViewerOpen(true)
-        }}
-      >
-        {/* Action icons on hover, top-right */}
-        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ActionIcons
-            onDownload={() => handleDownload(item)}
-            onShare={() => {}}
-            onMore={() => {}}
-            showDownload={item.mediaUrl ? true : false}
-            isSender={item.authorId === currentUser?.id}
-            onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
-            onDeleteForMe={() => console.log("Delete for me:", item.id)}
-            onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
-            messageId={item.id}
-            mediaUrl={item.mediaUrl || item.fileUrl}
-            fileName={item.fileName}
-            fileType={item.fileType}
-          />
-        </div>
-        {/* Skeleton loading */}
-        {!imageLoaded && !imageError && <MediaSkeleton />}
-        {item.mediaUrl &&
-          (item.type === "IMAGE" ? (
-            <img
-              src={item.mediaUrl}
-              alt={item.fileName || "media"}
-              className={`object-cover w-full h-full transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-              loading="lazy"
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-            />
-          ) : item.type === "VIDEO" ? (
-            <div className="relative w-full h-full">
-              {item.thumbnailUrl ? (
+  }: {
+    items: any[]
+    mixedMedia: any[]
+    setSelectedMediaIndex: (idx: number) => void
+    setIsMediaViewerOpen: (open: boolean) => void
+  }) => {
+    const currentUser = useUser()
+
+    // Memoized MediaSkeleton component
+    const MediaSkeleton = React.memo(() => (
+      <div className="aspect-square bg-gray-700 rounded-lg animate-pulse"></div>
+    ))
+
+    // Memoized MediaCell component
+    const MediaCell = React.memo(
+      ({
+        item,
+        mixedMedia,
+        setSelectedMediaIndex,
+        setIsMediaViewerOpen,
+        currentUser,
+      }: {
+        item: any
+        mixedMedia: any[]
+        setSelectedMediaIndex: (idx: number) => void
+        setIsMediaViewerOpen: (open: boolean) => void
+        currentUser: any
+      }) => {
+        const openMediaViewer = React.useCallback(
+          (mediaItem: any) => {
+            const index = mixedMedia.findIndex((item) => item.id === mediaItem.id)
+            setSelectedMediaIndex(index >= 0 ? index : 0)
+            setIsMediaViewerOpen(true)
+          },
+          [mixedMedia, setSelectedMediaIndex, setIsMediaViewerOpen]
+        )
+
+        return (
+          <div
+            className="aspect-square bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer group relative"
+            onClick={() => openMediaViewer(item)}
+          >
+            {/* Action icons on hover, top-right */}
+            <div className="absolute top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+              <ActionIcons
+                onDownload={() => handleDownload(item)}
+                onShare={() => {}}
+                onMore={() => {}}
+                showDownload={item.mediaUrl ? true : false}
+                isSender={item.authorId === currentUser?.id}
+                onViewOriginalMessage={() => {}}
+                onDeleteForMe={() => console.log("Delete for me:", item.id)}
+                onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
+                messageId={item.id}
+                mediaUrl={item.mediaUrl || item.fileUrl}
+                fileName={item.fileName}
+                fileType={item.fileType}
+              />
+            </div>
+
+            {/* Media content */}
+            {item.type === EMessageTypes.IMAGE ? (
+              <img
+                src={item.mediaUrl}
+                alt={item.fileName || "Image"}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : item.type === EMessageTypes.VIDEO ? (
+              <div className="relative w-full h-full">
                 <img
-                  src={item.thumbnailUrl}
-                  alt={item.fileName || "video"}
-                  className={`object-cover w-full h-full transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+                  src={item.thumbnailUrl || item.mediaUrl}
+                  alt={item.fileName || "Video"}
+                  className="w-full h-full object-cover"
                   loading="lazy"
-                  onLoad={() => setImageLoaded(true)}
-                  onError={() => setImageError(true)}
                 />
-              ) : (
-                <div className="flex flex-col items-center justify-center w-full h-full text-white opacity-70">
-                  <Play className="w-8 h-8" />
-                  <span className="text-xs mt-1">Video</span>
-                </div>
-              )}
-              {/* Video play icon overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                  <Play className="w-6 h-6 text-white" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Play className="w-8 h-8 text-white" />
                 </div>
               </div>
-            </div>
-          ) : null)}
-      </div>
+            ) : (
+              <div className="text-white text-center">
+                <div className="w-8 h-8 mx-auto mb-2 bg-gray-600 rounded flex items-center justify-center">
+                  <span className="text-xs">F</span>
+                </div>
+                <span className="text-xs">{item.fileName}</span>
+              </div>
+            )}
+          </div>
+        )
+      }
     )
-  }
 
-  // Cell renderer cho react-window
-  const Cell = ({ columnIndex, rowIndex, style }: any) => {
-    const idx = rowIndex * columnCount + columnIndex
-    if (idx >= items.length) return null
-    const item = items[idx]
-    return (
-      <div
-        style={{
-          ...style,
-          padding: `${gap / 2}px`,
-          boxSizing: "border-box",
-        }}
-      >
-        <MediaCell
-          item={item}
-          mixedMedia={mixedMedia}
-          setSelectedMediaIndex={setSelectedMediaIndex}
-          setIsMediaViewerOpen={setIsMediaViewerOpen}
-          currentUser={currentUser}
-        />
-      </div>
-    )
-  }
+    MediaCell.displayName = "MediaCell"
 
-  // Nếu ít item thì không cần virtualization
-  if (items.length <= 12) {
-    return (
-      <div className="grid grid-cols-3 gap-2">
-        {items.map((item: any) => (
+    // Memoized Cell component for react-window
+    const Cell = React.memo(({ columnIndex, rowIndex, style }: any) => {
+      const index = rowIndex * 3 + columnIndex
+      const item = items[index]
+
+      if (!item) return null
+
+      return (
+        <div style={style} className="p-1">
           <MediaCell
-            key={item.id}
             item={item}
             mixedMedia={mixedMedia}
             setSelectedMediaIndex={setSelectedMediaIndex}
             setIsMediaViewerOpen={setIsMediaViewerOpen}
             currentUser={currentUser}
           />
-        ))}
-      </div>
-    )
-  }
+        </div>
+      )
+    })
 
-  // Virtualized grid
-  return (
-    <div className="w-full">
+    Cell.displayName = "Cell"
+
+    if (items.length === 0) {
+      return (
+        <div className="grid grid-cols-3 gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <MediaSkeleton key={i} />
+          ))}
+        </div>
+      )
+    }
+
+    const rowCount = Math.ceil(items.length / 3)
+
+    return (
       <Grid
-        columnCount={columnCount}
+        columnCount={3}
+        columnWidth={120}
+        height={400}
         rowCount={rowCount}
-        columnWidth={cellSize}
-        rowHeight={cellSize}
-        width={cellSize * columnCount}
-        height={Math.min(600, Math.max(300, rowCount * cellSize))}
-        itemData={items}
-        overscanRowCount={2}
-        overscanColumnCount={1}
+        rowHeight={120}
+        width={360}
       >
         {Cell}
       </Grid>
-    </div>
-  )
-}
+    )
+  }
+)
 
-// Files List Component
-export const FilesList = ({ items }: { items: any[] }) => {
+MediaGrid.displayName = "MediaGrid"
+
+// Tối ưu FilesList với React.memo
+export const FilesList = React.memo(({ items }: { items: any[] }) => {
   const currentUser = useUser()
 
   return (
@@ -278,25 +266,28 @@ export const FilesList = ({ items }: { items: any[] }) => {
           className="flex items-center justify-between p-3 bg-gray-800 rounded-lg group"
         >
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            {getFileIcon(item.fileName)}
+            {getFileIcon(item.fileName || "file")}
             <div className="flex-1 min-w-0">
               <div className="text-white text-sm font-medium truncate">{item.fileName}</div>
               <div className="text-gray-400 text-xs">{formatFileSize(item.fileSize || 0)}</div>
             </div>
           </div>
           {/* Action icons on hover */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <div
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
             <ActionIcons
               onDownload={() => handleDownload(item)}
               onShare={() => {}}
               onMore={() => {}}
               showDownload={true}
               isSender={item.authorId === currentUser?.id}
-              onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
+              onViewOriginalMessage={() => {}}
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
-              mediaUrl={item.fileUrl}
+              mediaUrl={item.mediaUrl}
               fileName={item.fileName}
               fileType={item.fileType}
             />
@@ -305,36 +296,41 @@ export const FilesList = ({ items }: { items: any[] }) => {
       ))}
     </div>
   )
-}
+})
 
-// Audio List Component
-export const AudioList = ({ items }: { items: any[] }) => {
+FilesList.displayName = "FilesList"
+
+// Tối ưu AudioList với React.memo
+export const AudioList = React.memo(({ items }: { items: any[] }) => {
   const currentUser = useUser()
-  const { playAudio, setShowPlayer } = useVoicePlayer()
+  const { playAudio, setShowPlayer } = useVoicePlayerActions()
 
-  // Hàm xử lý click vào voice message
-  const handleVoiceClick = (voiceMessage: any) => {
-    // Chuyển đổi format message để phù hợp với voice player
-    const messageForPlayer = {
-      id: voiceMessage.id,
-      authorId: voiceMessage.authorId,
-      createdAt: voiceMessage.createdAt,
-      mediaUrl: voiceMessage.mediaUrl,
-      type: EMessageTypes.AUDIO,
-      fileName: voiceMessage.fileName || "Audio message",
-      content: "",
-      directChatId: voiceMessage.directChatId || 0,
-      status: "SENT" as any,
-      isNewMsg: false,
-      isDeleted: false, // Thêm property thiếu
-      Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
-      ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
-    }
+  // Memoized handleVoiceClick
+  const handleVoiceClick = React.useCallback(
+    (voiceMessage: any) => {
+      // Chuyển đổi format message để phù hợp với voice player
+      const messageForPlayer = {
+        id: voiceMessage.id,
+        authorId: voiceMessage.authorId,
+        createdAt: voiceMessage.createdAt,
+        mediaUrl: voiceMessage.mediaUrl,
+        type: EMessageTypes.AUDIO,
+        fileName: voiceMessage.fileName || "Audio message",
+        content: "",
+        directChatId: voiceMessage.directChatId || 0,
+        status: "SENT" as any,
+        isNewMsg: false,
+        isDeleted: false,
+        Author: voiceMessage.Author || currentUser,
+        ReplyTo: voiceMessage.ReplyTo || null,
+      }
 
-    // Phát audio và hiển thị player
-    playAudio(messageForPlayer)
-    setShowPlayer(true)
-  }
+      // Phát audio và hiển thị player
+      playAudio(messageForPlayer)
+      setShowPlayer(true)
+    },
+    [currentUser, playAudio, setShowPlayer]
+  )
 
   return (
     <div className="space-y-2">
@@ -376,7 +372,7 @@ export const AudioList = ({ items }: { items: any[] }) => {
               onMore={() => {}}
               showDownload={true}
               isSender={item.authorId === currentUser?.id}
-              onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
+              onViewOriginalMessage={() => {}}
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
@@ -389,11 +385,23 @@ export const AudioList = ({ items }: { items: any[] }) => {
       ))}
     </div>
   )
-}
+})
 
-// Links List Component
-export const LinksList = ({ items }: { items: any[] }) => {
+AudioList.displayName = "AudioList"
+
+// Tối ưu LinksList với React.memo
+export const LinksList = React.memo(({ items }: { items: any[] }) => {
   const currentUser = useUser()
+
+  // Memoized formatUrl function
+  const formatUrl = React.useCallback((url: string) => {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.hostname + urlObj.pathname
+    } catch {
+      return url
+    }
+  }, [])
 
   return (
     <div className="space-y-2">
@@ -419,64 +427,81 @@ export const LinksList = ({ items }: { items: any[] }) => {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-blue-400 text-sm font-medium truncate underline">
-                {item.content}
+              <div className="text-white text-sm font-medium truncate">
+                {formatUrl(item.content || "")}
               </div>
-              <div className="text-gray-400 text-xs">Link</div>
+              <div className="text-gray-400 text-xs">
+                {dayjs(item.createdAt).format("MMM DD, YYYY")}
+              </div>
             </div>
           </div>
-          {/* Action icons on hover, no download */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Action icons on hover */}
+          <div
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
             <ActionIcons
-              showDownload={false}
+              onDownload={() => {}}
               onShare={() => {}}
               onMore={() => {}}
+              showDownload={false}
               isSender={item.authorId === currentUser?.id}
-              onViewOriginalMessage={() => {}} // Sẽ được xử lý tự động bởi ActionIcons
+              onViewOriginalMessage={() => {}}
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
+              mediaUrl={item.content}
+              fileName={item.content}
+              fileType="link"
             />
           </div>
         </div>
       ))}
     </div>
   )
-}
+})
 
-// Main Content Component
-export const MediaGridContent = ({
-  grouped,
-  tab,
-  mixedMedia,
-  setSelectedMediaIndex,
-  setIsMediaViewerOpen,
-}: {
-  grouped: [string, any[]][]
-  tab: "Images/Video" | "files" | "voices" | "links"
-  mixedMedia: any[]
-  setSelectedMediaIndex: (idx: number) => void
-  setIsMediaViewerOpen: (open: boolean) => void
-}) => (
-  <>
-    {grouped.length === 0 && <div className="text-gray-400 text-center py-8">Không có dữ liệu</div>}
-    {grouped.map(([date, items]) => (
-      <div key={date} className="mb-6">
-        <div className="text-base font-semibold text-white mb-2">
-          {date === "unknown" ? "Unknown date" : `${dayjs(date, "YYYY-MM-DD").format("MMM DD")}`}
+LinksList.displayName = "LinksList"
+
+// Tối ưu MediaGridContent với React.memo
+export const MediaGridContent = React.memo(
+  ({
+    grouped,
+    tab,
+    mixedMedia,
+    setSelectedMediaIndex,
+    setIsMediaViewerOpen,
+  }: {
+    grouped: [string, any[]][]
+    tab: "Images/Video" | "files" | "voices" | "links"
+    mixedMedia: any[]
+    setSelectedMediaIndex: (idx: number) => void
+    setIsMediaViewerOpen: (open: boolean) => void
+  }) => (
+    <div className="space-y-6">
+      {grouped.map(([date, items]) => (
+        <div key={date}>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {dayjs(date).format("MMMM DD, YYYY")}
+          </h3>
+          {tab === "Images/Video" ? (
+            <MediaGrid
+              items={items}
+              mixedMedia={mixedMedia}
+              setSelectedMediaIndex={setSelectedMediaIndex}
+              setIsMediaViewerOpen={setIsMediaViewerOpen}
+            />
+          ) : tab === "files" ? (
+            <FilesList items={items} />
+          ) : tab === "voices" ? (
+            <AudioList items={items} />
+          ) : (
+            <LinksList items={items} />
+          )}
         </div>
-        {tab === "Images/Video" && (
-          <MediaGrid
-            items={items}
-            mixedMedia={mixedMedia}
-            setSelectedMediaIndex={setSelectedMediaIndex}
-            setIsMediaViewerOpen={setIsMediaViewerOpen}
-          />
-        )}
-        {tab === "files" && <FilesList items={items} />}
-        {tab === "voices" && <AudioList items={items} />}
-        {tab === "links" && <LinksList items={items} />}
-      </div>
-    ))}
-  </>
+      ))}
+    </div>
+  )
 )
+
+MediaGridContent.displayName = "MediaGridContent"

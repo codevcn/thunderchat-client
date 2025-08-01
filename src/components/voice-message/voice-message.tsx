@@ -1,7 +1,7 @@
 import { Play, Pause } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import WaveformData from "waveform-data"
-import { useVoicePlayer } from "@/contexts/voice-player.context"
+import { useVoicePlayerState, useVoicePlayerActions } from "@/contexts/voice-player.context"
 import type { TStateDirectMessage } from "@/utils/types/global"
 
 export async function getWaveformFromAudio(url: string, columns = 36): Promise<number[]> {
@@ -108,9 +108,9 @@ export default function VoiceMessage({ message, audioUrl, isSender = false }: Vo
   const [isLoadingDuration, setIsLoadingDuration] = useState(true)
   const loadedDurationRef = useRef<number>(0) // Lưu duration đã load để tránh bị reset
 
-  // Sử dụng voice player context
-  const { isPlaying, currentTime, duration, currentAudioUrl, playAudio, pauseAudio } =
-    useVoicePlayer()
+  // Sử dụng voice player context - tách riêng state và actions
+  const { isPlaying, currentTime, duration, currentAudioUrl } = useVoicePlayerState()
+  const { playAudio, pauseAudio } = useVoicePlayerActions()
 
   // Kiểm tra xem audio này có đang được phát không
   const isThisAudioPlaying = currentAudioUrl === audioUrl && isPlaying

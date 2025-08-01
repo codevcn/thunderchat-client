@@ -18,34 +18,40 @@ import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import MediaArchivePanel from "./media-archive-panel"
 import ActionIcons from "@/components/materials/action-icons"
 import { useUser } from "@/hooks/user"
-import { useVoicePlayer } from "@/contexts/voice-player.context"
+import { useVoicePlayerActions } from "@/contexts/voice-player.context"
 import { useMediaMessages } from "@/hooks/use-media-messages"
 
-const Section = ({
-  title,
-  children,
-  defaultOpen = false,
-}: {
-  title: string
-  children: React.ReactNode
-  defaultOpen?: boolean
-}) => {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <div className="bg-[#232526] rounded-xl mb-2">
-      <button
-        className="flex items-center justify-between w-full px-4 py-3 text-base font-semibold text-[#CFCFCF] focus:outline-none"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span>{title}</span>
-        {open ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-      </button>
-      {open && <div>{children}</div>}
-    </div>
-  )
-}
+// Tối ưu Section component với React.memo
+const Section = React.memo(
+  ({
+    title,
+    children,
+    defaultOpen = false,
+  }: {
+    title: string
+    children: React.ReactNode
+    defaultOpen?: boolean
+  }) => {
+    const [open, setOpen] = useState(defaultOpen)
+    return (
+      <div className="bg-[#232526] rounded-xl mb-2">
+        <button
+          className="flex items-center justify-between w-full px-4 py-3 text-base font-semibold text-[#CFCFCF] focus:outline-none"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span>{title}</span>
+          {open ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        </button>
+        {open && <div>{children}</div>}
+      </div>
+    )
+  }
+)
 
-const MediaPanel = () => {
+Section.displayName = "Section"
+
+// Tối ưu MediaPanel với React.memo
+const MediaPanel = React.memo(() => {
   const { directChat } = useAppSelector(({ messages }) => messages)
   const currentUser = useUser()
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false)
@@ -55,23 +61,26 @@ const MediaPanel = () => {
     "Images/Video"
   )
 
-  // Voice player context
-  const { playAudio, setShowPlayer } = useVoicePlayer()
+  // Chỉ sử dụng actions, không subscribe vào state
+  const { playAudio, setShowPlayer } = useVoicePlayerActions()
 
   // Custom hook để quản lý media messages
   const { mediaMessages, loading, error } = useMediaMessages()
 
-  // Hàm kiểm tra URL
-  const isUrl = (text: string) => {
-    try {
-      new URL(text)
-      return true
-    } catch {
-      return false
-    }
-  }
+  // Hàm kiểm tra URL - memoized
+  const isUrl = useMemo(
+    () => (text: string) => {
+      try {
+        new URL(text)
+        return true
+      } catch {
+        return false
+      }
+    },
+    []
+  )
 
-  // Lọc các loại media từ tin nhắn
+  // Lọc các loại media từ tin nhắn - memoized
   const mediaData = useMemo(() => {
     if (!mediaMessages || mediaMessages.length === 0)
       return { images: [], videos: [], files: [], audios: [], links: [] }
@@ -140,124 +149,137 @@ const MediaPanel = () => {
     }
   }, [mediaMessages, isUrl])
 
-  // Trộn ảnh và video, sort theo thời gian mới nhất
+  // Memoized mixed media
   const mixedMedia = useMemo(() => {
     const arr = [...mediaData.images, ...mediaData.videos]
     arr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     return arr
   }, [mediaData.images, mediaData.videos])
 
-  // Hàm mở media viewer
-  const openMediaViewer = (mediaItem: any) => {
-    // Tìm index trong mixedMedia (danh sách đã được sort và hiển thị trong UI)
-    const index = mixedMedia.findIndex((item) => item.id === mediaItem.id)
-    setSelectedMediaIndex(index)
-    setIsMediaViewerOpen(true)
-  }
+  // Memoized handlers
+  const openMediaViewer = useMemo(
+    () => (mediaItem: any) => {
+      const index = mixedMedia.findIndex((item) => item.id === mediaItem.id)
+      setSelectedMediaIndex(index >= 0 ? index : 0)
+      setIsMediaViewerOpen(true)
+    },
+    [mixedMedia]
+  )
 
-  // Hàm lấy icon cho file
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName?.split(".").pop()?.toLowerCase()
-    const iconClass = "w-7 h-7"
+  const handleVoiceClick = useMemo(
+    () => (voiceMessage: any) => {
+      // Chuyển đổi format message để phù hợp với voice player
+      const messageForPlayer = {
+        id: voiceMessage.id,
+        authorId: voiceMessage.authorId,
+        createdAt: voiceMessage.createdAt,
+        mediaUrl: voiceMessage.mediaUrl,
+        type: EMessageTypes.AUDIO,
+        fileName: voiceMessage.fileName || "Audio message",
+        content: "",
+        directChatId: directChat?.id || 0,
+        status: "SENT" as any,
+        isNewMsg: false,
+        isDeleted: false,
+        Author: voiceMessage.Author || currentUser,
+        ReplyTo: voiceMessage.ReplyTo || null,
+      }
 
-    switch (ext) {
-      case "pdf":
-        return <FileText className={`${iconClass} text-red-500`} />
-      case "doc":
-      case "docx":
-        return <FileText className={`${iconClass} text-blue-500`} />
-      case "xls":
-      case "xlsx":
-        return <FileText className={`${iconClass} text-green-500`} />
-      case "ppt":
-      case "pptx":
-        return <FileText className={`${iconClass} text-orange-500`} />
-      case "txt":
-        return <FileText className={`${iconClass} text-gray-500`} />
-      default:
-        return <FileIcon className={`${iconClass} text-blue-400`} />
-    }
-  }
+      // Phát audio và hiển thị player
+      playAudio(messageForPlayer)
+      setShowPlayer(true)
+    },
+    [directChat?.id, currentUser, playAudio, setShowPlayer]
+  )
 
-  // Hàm format kích thước file
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return ""
-    if (bytes < 1024) return bytes + " B"
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB"
-  }
+  const handleDownload = useMemo(
+    () => async (item: any) => {
+      if (!item.mediaUrl && !item.fileUrl) return
+      const url = item.mediaUrl || item.fileUrl
+      try {
+        const response = await fetch(url)
+        if (!response.ok) throw new Error("Cannot download file")
+        const blob = await response.blob()
+        const blobUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = blobUrl
+        const fileNameWithExt = item.fileName || "media"
+        const hasExtension = fileNameWithExt.includes(".")
+        const finalFileName = hasExtension
+          ? fileNameWithExt
+          : `${fileNameWithExt}.${item.fileType || "dat"}`
+        link.download = finalFileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(blobUrl)
+      } catch (error) {
+        // Fallback: tải trực tiếp từ URL
+        const link = document.createElement("a")
+        link.href = url
+        const fileNameWithExt = item.fileName || "media"
+        const hasExtension = fileNameWithExt.includes(".")
+        const finalFileName = hasExtension
+          ? fileNameWithExt
+          : `${fileNameWithExt}.${item.fileType || "dat"}`
+        link.download = finalFileName
+        link.target = "_blank"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    },
+    []
+  )
 
-  // Hàm format URL để hiển thị
-  const formatUrl = (url: string) => {
-    try {
-      const urlObj = new URL(url)
-      return urlObj.hostname + urlObj.pathname
-    } catch {
-      return url
-    }
-  }
+  // Memoized helper functions
+  const getFileIcon = useMemo(
+    () => (fileName: string) => {
+      const ext = fileName?.split(".").pop()?.toLowerCase()
+      const iconClass = "w-7 h-7"
 
-  // Hàm xử lý click vào voice message
-  const handleVoiceClick = (voiceMessage: any) => {
-    // Chuyển đổi format message để phù hợp với voice player
-    const messageForPlayer = {
-      id: voiceMessage.id,
-      authorId: voiceMessage.authorId,
-      createdAt: voiceMessage.createdAt,
-      mediaUrl: voiceMessage.mediaUrl,
-      type: EMessageTypes.AUDIO,
-      fileName: voiceMessage.fileName || "Audio message",
-      content: "",
-      directChatId: directChat?.id || 0,
-      status: "SENT" as any,
-      isNewMsg: false,
-      isDeleted: false, // Thêm property thiếu
-      Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
-      ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
-    }
+      switch (ext) {
+        case "pdf":
+          return <FileText className={`${iconClass} text-red-500`} />
+        case "doc":
+        case "docx":
+          return <FileText className={`${iconClass} text-blue-500`} />
+        case "xls":
+        case "xlsx":
+          return <FileText className={`${iconClass} text-green-500`} />
+        case "ppt":
+        case "pptx":
+          return <FileText className={`${iconClass} text-orange-500`} />
+        case "txt":
+          return <FileText className={`${iconClass} text-gray-500`} />
+        default:
+          return <FileIcon className={`${iconClass} text-blue-400`} />
+      }
+    },
+    []
+  )
 
-    // Phát audio và hiển thị player
-    playAudio(messageForPlayer)
-    setShowPlayer(true)
-  }
+  const formatFileSize = useMemo(
+    () => (bytes?: number) => {
+      if (!bytes) return ""
+      if (bytes < 1024) return bytes + " B"
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+    },
+    []
+  )
 
-  // Thêm hàm handleDownload
-  const handleDownload = async (item: any) => {
-    if (!item.mediaUrl && !item.fileUrl) return
-    const url = item.mediaUrl || item.fileUrl
-    try {
-      const response = await fetch(url)
-      if (!response.ok) throw new Error("Cannot download file")
-      const blob = await response.blob()
-      const blobUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = blobUrl
-      const fileNameWithExt = item.fileName || "media"
-      const hasExtension = fileNameWithExt.includes(".")
-      const finalFileName = hasExtension
-        ? fileNameWithExt
-        : `${fileNameWithExt}.${item.fileType || "dat"}`
-      link.download = finalFileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(blobUrl)
-    } catch (error) {
-      // Fallback: tải trực tiếp từ URL
-      const link = document.createElement("a")
-      link.href = url
-      const fileNameWithExt = item.fileName || "media"
-      const hasExtension = fileNameWithExt.includes(".")
-      const finalFileName = hasExtension
-        ? fileNameWithExt
-        : `${fileNameWithExt}.${item.fileType || "dat"}`
-      link.download = finalFileName
-      link.target = "_blank"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-    }
-  }
+  const formatUrl = useMemo(
+    () => (url: string) => {
+      try {
+        const urlObj = new URL(url)
+        return urlObj.hostname + urlObj.pathname
+      } catch {
+        return url
+      }
+    },
+    []
+  )
 
   return (
     <div className="p-2">
@@ -292,7 +314,7 @@ const MediaPanel = () => {
                   onMore={() => {}}
                   showDownload={item.mediaUrl ? true : false}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
+                  onViewOriginalMessage={() => {}}
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
@@ -301,6 +323,8 @@ const MediaPanel = () => {
                   fileType={item.fileType}
                 />
               </div>
+
+              {/* Media content */}
               {item.mediaUrl &&
                 (item.type === EMessageTypes.IMAGE ? (
                   <img
@@ -401,7 +425,7 @@ const MediaPanel = () => {
                   onMore={() => {}}
                   showDownload={!!(item.mediaUrl || item.fileUrl)}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
+                  onViewOriginalMessage={() => {}}
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
@@ -448,17 +472,14 @@ const MediaPanel = () => {
                 </div>
               </div>
               {/* Action icons on hover */}
-              <div
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                 <ActionIcons
                   onDownload={() => handleDownload(item)}
                   onShare={() => {}}
                   onMore={() => {}}
                   showDownload={!!(item.mediaUrl || item.fileUrl)}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
+                  onViewOriginalMessage={() => {}}
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
@@ -496,10 +517,10 @@ const MediaPanel = () => {
             >
               <LinkIcon className="w-6 h-6 text-blue-400" />
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white truncate">{formatUrl(item.content)}</div>
-                <div className="text-xs text-gray-400">
-                  {dayjs(item.createdAt).format("DD/MM/YYYY")}
+                <div className="text-blue-400 text-sm font-medium truncate underline">
+                  {item.content}
                 </div>
+                <div className="text-gray-400 text-xs">Link</div>
               </div>
               {/* Action icons on hover, no download */}
               <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -508,10 +529,13 @@ const MediaPanel = () => {
                   onShare={() => {}}
                   onMore={() => {}}
                   isSender={item.authorId === currentUser?.id}
-                  onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
+                  onViewOriginalMessage={() => {}}
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
+                  mediaUrl={item.content}
+                  fileName={item.content}
+                  fileType="link"
                 />
               </div>
             </div>
@@ -534,6 +558,8 @@ const MediaPanel = () => {
       </Section>
     </div>
   )
-}
+})
+
+MediaPanel.displayName = "MediaPanel"
 
 export default MediaPanel

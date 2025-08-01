@@ -78,17 +78,19 @@ export const VoiceMessagePlayer: React.FC = () => {
 
   const formatTime = (time: number) => {
     if (!isFinite(time) || isNaN(time) || time < 0) return "00:00"
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
+    const roundedTime = Math.round(time) // Làm tròn theo quy tắc >= 0.5
+    const minutes = Math.floor(roundedTime / 60)
+    const seconds = Math.floor(roundedTime % 60)
     return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
   }
 
-  // Sử dụng duration từ context nếu hợp lệ, hoặc fallback
-  const effectiveDuration = duration && isFinite(duration) && duration > 0 ? duration : 1
+  // Sử dụng duration từ context nếu hợp lệ, hoặc fallback - làm tròn theo quy tắc >= 0.5
+  const effectiveDuration =
+    duration && isFinite(duration) && duration > 0 ? Math.round(duration) : 1
 
   // Đảm bảo max value cho progress bar luôn hợp lệ
   const progressMax = effectiveDuration
-  const progressValue = Math.min(currentTime, progressMax)
+  const progressValue = Math.min(Math.round(currentTime), progressMax)
 
   // Xác định người gửi
   const isCurrentUser = currentMessage.authorId === currentUser?.id

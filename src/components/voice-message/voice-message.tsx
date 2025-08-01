@@ -157,24 +157,25 @@ export default function VoiceMessage({ message, audioUrl, isSender = false }: Vo
 
   const format = (s: number) => {
     if (!isFinite(s) || isNaN(s) || s < 0) return "00:00"
-    const mm = Math.floor(s / 60)
+    const roundedS = Math.round(s) // Làm tròn theo quy tắc >= 0.5
+    const mm = Math.floor(roundedS / 60)
       .toString()
       .padStart(2, "0")
-    const ss = Math.floor(s % 60)
+    const ss = Math.floor(roundedS % 60)
       .toString()
       .padStart(2, "0")
     return `${mm}:${ss}`
   }
 
-  // Sử dụng duration từ context nếu audio đang được quản lý, hoặc localDuration nếu không
+  // Sử dụng duration từ context nếu audio đang được quản lý, hoặc localDuration nếu không - làm tròn theo quy tắc >= 0.5
   const displayDuration =
     currentAudioUrl === audioUrl
       ? duration && isFinite(duration) && duration > 0
-        ? duration
-        : loadedDurationRef.current
-      : localDuration || loadedDurationRef.current
-  // Luôn lấy currentTime từ context nếu đây là audio đang được quản lý
-  const displayCurrentTime = currentAudioUrl === audioUrl ? currentTime : 0
+        ? Math.round(duration)
+        : Math.round(loadedDurationRef.current)
+      : Math.round(localDuration || loadedDurationRef.current)
+  // Luôn lấy currentTime từ context nếu đây là audio đang được quản lý - làm tròn theo quy tắc >= 0.5
+  const displayCurrentTime = currentAudioUrl === audioUrl ? Math.round(currentTime) : 0
 
   // Tính progress cho waveform
   const progress = displayDuration > 0 ? displayCurrentTime / displayDuration : 0

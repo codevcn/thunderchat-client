@@ -36,7 +36,7 @@ export const PinButton: React.FC<PinButtonProps> = ({
       {isPinned ? (
         <Pin size={size} className="text-[var(--tdc-regular-violet-cl)] fill-current " />
       ) : (
-        <PinOff size={size} className="text-gray-400 transition-colors" />
+        <Pin size={size} className="text-gray-400 transition-colors" />
       )}
     </div>
   )

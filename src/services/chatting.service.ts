@@ -4,6 +4,8 @@ import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TChattingPayload } from "@/utils/types/socket"
 import type { TSendMessageCallback } from "@/utils/types/global"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
 
 type TOfflineMessage = TChattingPayload
 
@@ -38,8 +40,12 @@ class ChattingService {
               console.error(">>> error when sending message & save offline message:", error)
               this.saveOfflineMessage({ type, msgPayload: message })
             } else {
-              if (data && "isError" in data) {
-                console.error(">>> error when sending message & callback:", data)
+              if (data) {
+                if ("isError" in data) {
+                  console.error(">>> error when sending message & callback:", data)
+                } else if ("newDirectChat" in data) {
+                  eventEmitter.emit(EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE, data)
+                }
               }
               callback(data)
             }

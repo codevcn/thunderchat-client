@@ -1,4 +1,5 @@
 import type {
+  TLastSentMessageState,
   TMessageStateUpdates,
   TRemoveGroupChatMemberState,
   TStateDirectMessage,
@@ -19,6 +20,7 @@ import {
 } from "../conversations/conversations.thunks"
 import { updateObjectByPath } from "@/utils/helpers"
 import type { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
+import { EChatType } from "@/utils/enums"
 
 type TMessagesState = {
   directChat: TDirectChatData | null
@@ -99,6 +101,28 @@ export const messagesSlice = createSlice({
     setDirectChat: (state, action: PayloadAction<TDirectChatData>) => {
       state.directChat = action.payload
     },
+    updateDirectChat: (
+      state,
+      action: PayloadAction<TDeepPartial<THierarchyKeyObject<TDirectChatData>>>
+    ) => {
+      const updates = action.payload
+      const directChat = state.directChat
+      if (directChat) {
+        updateObjectByPath(directChat, updates)
+      }
+    },
+    setLastSentMessage: (state, action: PayloadAction<TLastSentMessageState>) => {
+      const { lastMessageId, chatType } = action.payload
+      if (chatType === EChatType.DIRECT) {
+        if (state.directChat) {
+          state.directChat.lastSentMessageId = lastMessageId
+        }
+      } else if (chatType === EChatType.GROUP) {
+        if (state.groupChat) {
+          state.groupChat.lastSentMessageId = lastMessageId
+        }
+      }
+    },
     setTempChatData: (state, action: PayloadAction<TDirectChatData>) => {
       state.tempChatData = action.payload
     },
@@ -160,4 +184,6 @@ export const {
   setTempChatData,
   resetAllChatData,
   mergeMessages,
+  updateDirectChat,
+  setLastSentMessage,
 } = messagesSlice.actions

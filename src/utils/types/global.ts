@@ -111,3 +111,8 @@ export type THighlightOffsets = {
   start: number
   end: number
 }
+
+export type TLastSentMessageState = {
+  lastMessageId: number
+  chatType: EChatType
+}

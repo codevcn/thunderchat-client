@@ -3,7 +3,7 @@ import type {
   TGetFriendRequestsData,
   TUserWithProfile,
 } from "@/utils/types/be-api"
-import type { TSendDirectMessageErrorRes, TSuccess } from "../types/global"
+import type { TSendDirectMessageErrorRes } from "../types/global"
 import { ESocketEvents, ESocketInitEvents } from "./events"
 import type {
   TChattingPayload,
@@ -14,6 +14,7 @@ import type {
   TWsErrorResponse,
   TPinMessageEventData,
   TPinDirectChatEventData,
+  TSendDirectMessageRes,
 } from "../types/socket"
 
 export interface IListenSocketEvents {
@@ -36,7 +37,7 @@ export interface IListenSocketEvents {
 export interface IEmitSocketEvents {
   [ESocketEvents.send_message_direct]: (
     message: TChattingPayload,
-    cb: (data: TSendDirectMessageErrorRes | TSuccess) => void
+    cb: (data: TSendDirectMessageErrorRes | TSendDirectMessageRes) => void
   ) => void
   [ESocketEvents.message_seen_direct]: (payload: TMsgSeenEmitPayload) => void
   [ESocketEvents.typing_direct]: (payload: TTypingEmitPayload) => void

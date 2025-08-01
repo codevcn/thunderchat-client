@@ -53,6 +53,7 @@ export enum ESortTypes {
 export enum ELocalStorageKeys {
   LAST_PAGE_ACCESSED = "LAST_PAGE_ACCESSED",
   THE_LAST_DIRECT_CHAT_ID = "TL_CONV_ID",
+  LAST_DIRECT_CHAT_DATA = "LAST_DIRECT_CHAT_DATA",
 }
 
 export enum EStickerCategory {

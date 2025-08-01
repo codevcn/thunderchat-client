@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { DirectChatbox } from "./direct-chat/chatbox"
 import { GroupChatbox } from "./group/group-chatbox"
 import type { TChatType } from "@/utils/types/global"
-import { resetAllChatData } from "@/redux/messages/messages.slice"
+import { resetAllChatData, setDirectChat } from "@/redux/messages/messages.slice"
 import { useAppDispatch } from "@/hooks/redux"
+import { localStorageManager } from "@/utils/local-storage"
 
 export const SwitchChatbox = () => {
   const [chatId, setChatId] = useState<number>()
@@ -20,6 +21,7 @@ export const SwitchChatbox = () => {
   const checkChatId = () => {
     if (directChatId && validator.isNumeric(directChatId)) {
       setChatId(parseInt(directChatId))
+      setIsTemp(false)
       setType("direct")
       return
     }
@@ -31,9 +33,26 @@ export const SwitchChatbox = () => {
     }
     if (groupChatId && validator.isNumeric(groupChatId)) {
       setChatId(parseInt(groupChatId))
+      setIsTemp(false)
       setType("group")
+      return
     }
   }
+
+  const handleTempChatData = () => {
+    if (!tempId) return
+    const lastDirectChatData = localStorageManager.getLastDirectChatData()
+    if (lastDirectChatData) {
+      setChatId(lastDirectChatData.id)
+      setType("direct")
+      setIsTemp(false)
+      dispatch(setDirectChat(lastDirectChatData))
+    }
+  }
+
+  useEffect(() => {
+    handleTempChatData()
+  }, [tempId])
 
   useEffect(() => {
     checkChatId()

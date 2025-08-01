@@ -7,3 +7,5 @@ export const postLoginUser = (data: TLoginUserParams) =>
 
 export const getCheckAuth = () =>
   clientAxios.get<TUserWithProfile>("/auth/check-auth", requestConfig)
+
+export const postLogoutUser = () => clientAxios.post<TSuccess>("/auth/logout", {}, requestConfig)

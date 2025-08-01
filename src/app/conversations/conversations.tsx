@@ -16,6 +16,7 @@ import type {
   TUserSearchOffset,
   TMessageSearchOffset,
   TUserWithProfile,
+  TDirectChatData,
 } from "@/utils/types/be-api"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
@@ -43,11 +44,16 @@ import {
 } from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
-import { setTempChatData } from "@/redux/messages/messages.slice"
+import { setTempChatData, updateDirectChat } from "@/redux/messages/messages.slice"
 import { usePinDirectChats } from "@/hooks/pin-messages"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TPinDirectChatEventData } from "@/utils/types/socket"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
+import type { TSendDirectMessageRes } from "@/utils/types/socket"
+import { convertToDirectChatsUIData } from "@/utils/data-convertors/conversations-convertor"
+import { localStorageManager } from "@/utils/local-storage"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 const SEARCH_LIMIT: number = 10
@@ -563,17 +569,6 @@ const ConversationCards = () => {
     return []
   }
 
-  const sortConversations = (conversations: TConversationCard[]) => {
-    // sort by lastMessageTime, if not have lastMessageTime, sort by createdAt
-    conversations.sort((a, b) => {
-      const getTimestamp = (chat: TConversationCard) => {
-        return new Date(chat.lastMessageTime ?? chat.createdAt).getTime()
-      }
-      return getTimestamp(b) - getTimestamp(a) // Mới nhất lên đầu
-    })
-    return conversations
-  }
-
   const fetchConversations = async () => {
     const [directChats, groupChats] = await Promise.all([fetchDirectChats(), fetchGroupChats()])
     const allChats = [...directChats, ...groupChats]
@@ -621,6 +616,57 @@ const ConversationCards = () => {
       console.error("Error toggling pin:", error)
     })
   }
+
+  const listenSendMessageSuccessResponse = (data: TSendDirectMessageRes) => {
+    console.log(">>> res data at conversations:", data)
+    if ("newDirectChat" in data) {
+      const { newDirectChat } = data
+      if (newDirectChat) {
+        dispatch((dispatch, getState) => {
+          const { directChat, directMessages } = getState().messages
+          console.log(">>> directChat from redux:", directChat)
+          if (directChat) {
+            const newDirectChatData: TDirectChatData = {
+              ...newDirectChat,
+              Recipient: directChat.Recipient,
+              Creator: directChat.Creator,
+            }
+            if (!newDirectChat.lastSentMessageId) {
+              const lastMessage = directMessages?.at(-1)
+              if (lastMessage) {
+                newDirectChatData.lastSentMessageId = lastMessage.id
+              }
+            }
+            dispatch(
+              updateDirectChat({
+                id: newDirectChat.id,
+                lastSentMessageId: newDirectChat.lastSentMessageId,
+                createdAt: newDirectChat.createdAt,
+                creatorId: newDirectChat.creatorId,
+                recipientId: newDirectChat.recipientId,
+              })
+            )
+            const conversationCard = convertToDirectChatsUIData([newDirectChatData], user)[0]
+            dispatch(addConversations([conversationCard]))
+            localStorageManager.setLastDirectChatData(newDirectChatData)
+          }
+        })
+      }
+    }
+  }
+
+  useEffect(() => {
+    eventEmitter.on(
+      EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
+      listenSendMessageSuccessResponse
+    )
+    return () => {
+      eventEmitter.off(
+        EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
+        listenSendMessageSuccessResponse
+      )
+    }
+  }, [])
 
   // WebSocket listener for direct chat pin events
   useEffect(() => {

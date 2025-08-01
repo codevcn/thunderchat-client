@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 
 export const useAuthRedirect = () => {
   return () => {
-    const redirect = new URLSearchParams(window.location.search).get("redirect") || "/account"
+    const redirect = new URLSearchParams(window.location.search).get("redirect") || "/conversations"
     pureNavigator(redirect)
   }
 }

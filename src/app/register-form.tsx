@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { PASSWORD_REGEX } from "@/utils/regex"
 import type { TRegisterUserParams } from "@/utils/types/be-api"
-import { DatePicker, Spinner } from "@/components/materials"
+import { Calendar, CustomDialog, Spinner } from "@/components/materials"
 import { userService } from "@/services/user.service"
 import { useAuthRedirect } from "@/hooks/navigation"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -24,10 +24,18 @@ type TRegisterUserFormProps = {
   onGoBack: () => void
 }
 
+const BIRTHDAY_INPUT_FORMAT: string = "YYYY-MM-DD"
+
 export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) => {
   const [errors, setErrors] = useState<Partial<TFormDataErrors>>({})
   const authRedirect = useAuthRedirect()
   const [loading, setLoading] = useState<boolean>(false)
+  const [showBirthdayDialog, setShowBirthdayDialog] = useState<boolean>(false)
+  const [birthday, setBirthday] = useState<Date | undefined>(undefined)
+
+  const handleDateChange = (date: Date | undefined) => {
+    setBirthday(date)
+  }
 
   const validateForm = (data: TFormFields): boolean => {
     let isValid = true
@@ -152,10 +160,19 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
 
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-400">Date of Birth</label>
-            <DatePicker
-              btnClassName="w-full bg-transparent h-[46.2px] hover:bg-transparent hover:text-[#9ca3af] text-[#9ca3af]"
-              withAnInput
-              inputName="birthday"
+            <input
+              id="birthday"
+              type="text"
+              placeholder="Ex: 20/01/2000"
+              value={
+                birthday
+                  ? dayjs(birthday).format(BIRTHDAY_INPUT_FORMAT)
+                  : dayjs().format(BIRTHDAY_INPUT_FORMAT)
+              }
+              readOnly
+              name="birthday"
+              className="bg-transparent outline-none p-3 border rounded-md text-white cursor-text w-full"
+              onClick={() => setShowBirthdayDialog(true)}
             />
             {errors.birthday && <p className="text-sm text-red-500">{errors.birthday.message}</p>}
           </div>
@@ -257,6 +274,27 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
           </button>
         </div>
       </form>
+
+      <CustomDialog
+        open={showBirthdayDialog}
+        onHideShow={setShowBirthdayDialog}
+        dialogBody={
+          <div className="flex flex-col gap-2 w-fit mt-4 mb-2">
+            <div className="DatePicker-input-button w-fit">
+              <Calendar
+                mode="single"
+                selected={birthday}
+                onSelect={handleDateChange}
+                captionLayout="dropdown"
+                className="!text-regular-icon-cl bg-transparent border-2 border-gray-500 border-solid rounded-md"
+              />
+            </div>
+          </div>
+        }
+        dialogHeader={{
+          title: "Select your birthday",
+        }}
+      />
     </>
   )
 }

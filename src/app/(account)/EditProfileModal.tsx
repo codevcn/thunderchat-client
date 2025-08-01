@@ -150,9 +150,10 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
               onClick={() => fileInputRef.current?.click()}
             >
               <CustomAvatar
-                src={avatar || "/images/user/default-avatar-black.webp"}
+                src={avatar || undefined}
                 imgSize={90}
-                className="ring-2 ring-[#3A3B3C] shadow-lg rounded-full"
+                className="ring-2 ring-[#3A3B3C] shadow-lg rounded-full text-[30px] font-bold"
+                fallback={userProfile.Profile.fullName[0]}
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
                 <Pencil size={28} color="#CFCFCF" />

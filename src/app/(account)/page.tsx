@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { CustomAvatar, toast } from "@/components/materials"
+import { CustomAvatar, DefaultAvatar, Spinner, toast } from "@/components/materials"
 import { useUserProfile } from "@/hooks/user-profile"
 import EditProfileModal from "./EditProfileModal"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
@@ -38,6 +38,9 @@ import { resetAuthStatus } from "@/redux/auth/auth.slice"
 import { resetUser } from "@/redux/user/user.slice"
 import ChangePasswordModal from "./ChangePasswordModal"
 import { userService } from "@/services/user.service"
+import { authService } from "@/services/auth.service"
+import axiosErrorHandler from "@/utils/axios-error-handler"
+import { pureNavigator } from "@/utils/helpers"
 
 function toDateInputValue(dateString: string) {
   if (!dateString) return ""
@@ -71,6 +74,7 @@ const AccountPage = ({
   const [birthdayError, setBirthdayError] = useState("")
   const [showEditModal, setShowEditModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
+  const [logoutLoading, setLogoutLoading] = useState(false)
 
   // Khi userProfile thay đổi, set lại state form
   useEffect(() => {
@@ -187,7 +191,7 @@ const AccountPage = ({
       toast.success("Updated successfully!")
     } catch (err) {
       console.log(err)
-      toast.error("Update failed!")
+      toast.error(axiosErrorHandler.handleHttpError(err).message)
     } finally {
       setLoading(false)
     }
@@ -227,17 +231,29 @@ const AccountPage = ({
       toast.success("Updated successfully!")
     } catch (err) {
       console.log(err)
-      toast.error("Update failed!")
+      toast.error(axiosErrorHandler.handleHttpError(err).message)
     } finally {
       setLoading(false)
     }
   }
 
   // Handler cho logout
-  const handleLogout = () => {
-    // dispatch(resetAuthStatus())
-    // dispatch(resetUser())
-    // router.push("/")
+  const handleLogout = async () => {
+    setLogoutLoading(true)
+    try {
+      await authService.logoutUser()
+      dispatch(resetAuthStatus())
+      dispatch(resetUser())
+      pureNavigator("/")
+    } catch (err) {
+      toast.error(axiosErrorHandler.handleHttpError(err).message)
+    } finally {
+      setLogoutLoading(false)
+    }
+  }
+
+  const handleChangePassword = () => {
+    setShowChangePasswordModal(true)
   }
 
   if (!userProfile)
@@ -281,32 +297,16 @@ const AccountPage = ({
           >
             <Pencil size={20} color="#CFCFCF" />
           </button>
-          {/* More menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-1 hover:bg-[#323338] rounded-full transition">
-                <MoreVertical size={20} color="#CFCFCF" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowChangePasswordModal(true)}>
-                <LockIcon className="mr-2" size={18} /> Change Password
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2" size={18} /> Log Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
       {/* Avatar + Info */}
       <div className="flex flex-col items-center py-6">
         <CustomAvatar
-          src={userProfile.Profile.avatar || "/images/user/default-avatar-black.webp"}
+          src={userProfile.Profile.avatar}
           imgSize={90}
-          className="ring-2 ring-[#3A3B3C] shadow-lg rounded-full"
+          className="ring-2 ring-[#3A3B3C] shadow-lg rounded-full text-[30px] font-bold"
+          fallback={userProfile.Profile.fullName[0]}
         />
         <div
           className="mt-3 text-xl font-bold text-white truncate max-w-full"
@@ -357,6 +357,37 @@ const AccountPage = ({
               {userProfile.Profile.about || "About"}
             </div>
             <div className="text-xs text-[#CFCFCF]">Bio</div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-4 mt-5">
+          <div className="flex justify-center">
+            <button
+              className="text-white flex justify-center items-center gap-2 text-sm w-full p-2 rounded-md bg-[#2C2E31] hover:bg-regular-hover-bgcl transition-colors duration-300"
+              onClick={handleChangePassword}
+            >
+              <LockIcon size={18} />
+              <span>Change password</span>
+            </button>
+          </div>
+          <div
+            className="flex justify-center"
+            style={{ pointerEvents: logoutLoading ? "none" : "auto" }}
+          >
+            <button
+              className="flex justify-center items-center text-red-600 gap-2 text-sm w-full p-2 rounded-md bg-[#2C2E31] hover:bg-[#ff000034] transition-colors duration-300"
+              onClick={handleLogout}
+            >
+              {logoutLoading ? (
+                <span className="m-auto block">
+                  <Spinner size="small" />
+                </span>
+              ) : (
+                <>
+                  <LogOut size={18} />
+                  <span>Log out</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

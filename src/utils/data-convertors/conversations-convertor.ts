@@ -8,13 +8,16 @@ export const convertToDirectChatsUIData = (
 ): TConversationCard[] => {
   return data.map((item) => {
     const creator = item.Creator
+    const recipient = item.Recipient
+    const recipientProfile = recipient.Profile
     const creatorProfile = creator.Profile
     const lastMessage = item.LastSentMessage
     return {
       id: item.id,
       avatar: {
         src: creatorProfile?.avatar,
-        fallback: creator.email[0],
+        fallback:
+          user.id === creator.id ? recipientProfile.fullName[0] : creatorProfile.fullName[0],
       },
       lastMessageTime: lastMessage?.createdAt,
       pinIndex: 0,
@@ -22,7 +25,7 @@ export const convertToDirectChatsUIData = (
         content: lastMessage?.content || "You created this chat",
         type: lastMessage?.type || EMessageTypes.TEXT,
       },
-      title: creator.id === user.id ? item.Recipient.Profile.fullName : creatorProfile.fullName,
+      title: creator.id === user.id ? recipientProfile.fullName : creatorProfile.fullName,
       type: EChatType.DIRECT,
       createdAt: item.createdAt,
     }

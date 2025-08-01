@@ -2,6 +2,7 @@ import EventEmitter from "eventemitter3"
 import type { EInternalEvents } from "./events"
 import type { TMsgContent } from "./types"
 import type { TGetFriendRequestsData } from "../types/be-api"
+import type { TSendDirectMessageRes } from "../types/socket"
 
 interface IEventEmitter {
   [EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION]: () => void
@@ -16,6 +17,7 @@ interface IEventEmitter {
   [EInternalEvents.OPEN_MANAGE_MEMBERS]: (groupChatId: number) => void
   [EInternalEvents.SCROLL_TO_MESSAGE_MEDIA]: (messageId: number) => void
   [EInternalEvents.FRIEND_REMOVED]: (friendRowId: number) => void
+  [EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE]: (data: TSendDirectMessageRes) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

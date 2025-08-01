@@ -9,11 +9,16 @@ import type {
   TUserWithoutPassword,
 } from "@/utils/types/be-api"
 import { Spinner } from "@/components/materials/spinner"
-import { EMessageTypes, EPaginations, ESortTypes } from "@/utils/enums"
+import { EChatType, EMessageTypes, EPaginations, ESortTypes } from "@/utils/enums"
 import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
 import { createPortal } from "react-dom"
 import { useUser } from "@/hooks/user"
-import { pushNewMessages, updateMessages, mergeMessages } from "@/redux/messages/messages.slice"
+import {
+  pushNewMessages,
+  updateMessages,
+  mergeMessages,
+  setLastSentMessage,
+} from "@/redux/messages/messages.slice"
 import { displayMessageStickyTime } from "@/utils/date-time"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { EInternalEvents } from "@/utils/event-emitter/events"
@@ -355,6 +360,7 @@ export const Messages = memo(
     const listenSendDirectMessage = (newMessage: TGetDirectMessagesMessage) => {
       const { id } = newMessage
       dispatch(pushNewMessages([newMessage]))
+      dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.DIRECT }))
       clientSocket.setMessageOffset(id, directChatId)
     }
 

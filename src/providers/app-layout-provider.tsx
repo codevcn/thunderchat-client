@@ -12,42 +12,63 @@ import { ETabs } from "@/app/friends/sharing"
 import { useRouter } from "next/navigation"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import type { TSendDirectMessageRes } from "@/utils/types/socket"
+import { useAppDispatch } from "@/hooks/redux"
+import { updateDirectChat } from "@/redux/messages/messages.slice"
 
 export const AppLayoutProvider = ({ children }: { children: React.ReactNode }) => {
-   const appRootRef = useRef<HTMLDivElement>(null)
-   const router = useRouter()
+  const appRootRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+  const dispatch = useAppDispatch()
 
-   const setLastPageAccessed = () => {
-      localStorageManager.setLastPageAccessed(getPathWithQueryString())
-   }
+  const setLastPageAccessed = () => {
+    localStorageManager.setLastPageAccessed(getPathWithQueryString())
+  }
 
-   const listenFriendRequest = (
-      userData: TUserWithProfile,
-      requestData: TGetFriendRequestsData
-   ) => {
-      const { Profile, email } = userData
-      eventEmitter.emit(EInternalEvents.SEND_FRIEND_REQUEST, requestData)
-      toast(`User "${Profile?.fullName || email}" sent you an add friend request`, {
-         action: {
-            label: "View",
-            onClick: () => {
-               router.push(`/friends?action=${ETabs.ADD_FRIEND_REQUESTS}`)
-            },
-         },
-      })
-   }
+  const listenFriendRequest = (userData: TUserWithProfile, requestData: TGetFriendRequestsData) => {
+    const { Profile, email } = userData
+    eventEmitter.emit(EInternalEvents.SEND_FRIEND_REQUEST, requestData)
+    toast(`User "${Profile?.fullName || email}" sent you an add friend request`, {
+      action: {
+        label: "View",
+        onClick: () => {
+          router.push(`/friends?action=${ETabs.ADD_FRIEND_REQUESTS}`)
+        },
+      },
+    })
+  }
 
-   useEffect(() => {
-      clientSocket.socket.on(ESocketEvents.send_friend_request, listenFriendRequest)
-      setLastPageAccessed()
-      return () => {
-         clientSocket.socket.removeListener(ESocketEvents.send_friend_request, listenFriendRequest)
-      }
-   }, [])
+  // const listenSendMessageSuccessResponse = (data: TSendDirectMessageRes) => {
+  //   if ("newDirectChat" in data) {
+  //     const { newDirectChat } = data
+  //     if (newDirectChat) {
+  //       dispatch(
+  //         updateDirectChat({
+  //           id: newDirectChat.id,
+  //           createdAt: newDirectChat.createdAt,
+  //           creatorId: newDirectChat.creatorId,
+  //           recipientId: newDirectChat.recipientId,
+  //         })
+  //       )
+  //     }
+  //   }
+  // }
 
-   return (
-      <div ref={appRootRef} id="App-Root" className="bg-regular-dark-gray-cl">
-         <RootLayoutContext.Provider value={{ appRootRef }}>{children}</RootLayoutContext.Provider>
-      </div>
-   )
+  useEffect(() => {
+    clientSocket.socket.on(ESocketEvents.send_friend_request, listenFriendRequest)
+    // eventEmitter.on(
+    //   EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
+    //   listenSendMessageSuccessResponse
+    // )
+    setLastPageAccessed()
+    return () => {
+      clientSocket.socket.removeListener(ESocketEvents.send_friend_request, listenFriendRequest)
+    }
+  }, [])
+
+  return (
+    <div ref={appRootRef} id="App-Root" className="bg-regular-dark-gray-cl">
+      <RootLayoutContext.Provider value={{ appRootRef }}>{children}</RootLayoutContext.Provider>
+    </div>
+  )
 }

@@ -63,7 +63,7 @@ const MediaPanel = React.memo(() => {
   const { playAudio, setShowPlayer } = useVoicePlayerActions()
 
   // Custom hook để quản lý media messages
-  const { mediaMessages, loading, error } = useMediaMessages()
+  const { mediaMessages, loading, error, statistics } = useMediaMessages()
 
   // Hàm kiểm tra URL - memoized
   const isUrl = useMemo(
@@ -365,7 +365,7 @@ const MediaPanel = React.memo(() => {
             <div className="w-full text-center text-gray-400 py-4">No images or videos yet</div>
           )}
         </div>
-        {mixedMedia.length > 0 && (
+        {statistics.images + statistics.videos > 0 && (
           <button
             className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
             onClick={() => {
@@ -373,7 +373,7 @@ const MediaPanel = React.memo(() => {
               setShowArchive(true)
             }}
           >
-            View all ({mixedMedia.length})
+            View all ({statistics.images + statistics.videos})
           </button>
         )}
       </Section>
@@ -442,7 +442,7 @@ const MediaPanel = React.memo(() => {
             <div className="text-center text-gray-400 py-4">No files yet</div>
           )}
         </div>
-        {mediaData.files.length > 0 && (
+        {statistics.files > 0 && (
           <button
             className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
             onClick={() => {
@@ -450,7 +450,7 @@ const MediaPanel = React.memo(() => {
               setShowArchive(true)
             }}
           >
-            View all ({mediaData.files.length})
+            View all ({statistics.files})
           </button>
         )}
       </Section>
@@ -496,7 +496,7 @@ const MediaPanel = React.memo(() => {
             <div className="text-center text-gray-400 py-4">No voice messages yet</div>
           )}
         </div>
-        {mediaData.audios.length > 0 && (
+        {statistics.voices > 0 && (
           <button
             className="w-full mt-2 bg-[#2C2E31] hover:bg-[#35363A] text-white font-semibold py-2 rounded-lg"
             onClick={() => {
@@ -504,7 +504,7 @@ const MediaPanel = React.memo(() => {
               setShowArchive(true)
             }}
           >
-            View all ({mediaData.audios.length})
+            View all ({statistics.voices})
           </button>
         )}
       </Section>

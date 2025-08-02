@@ -11,6 +11,19 @@ export const useMediaMessages = () => {
   const [mediaMessages, setMediaMessages] = useState<TDirectMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [statistics, setStatistics] = useState<{
+    images: number
+    videos: number
+    files: number
+    voices: number
+    links: number
+  }>({
+    images: 0,
+    videos: 0,
+    files: 0,
+    voices: 0,
+    links: 0,
+  })
 
   // Hàm kiểm tra URL
   const isUrl = useCallback((text: string) => {
@@ -37,6 +50,27 @@ export const useMediaMessages = () => {
     },
     [isUrl]
   )
+
+  // Hàm fetch statistics
+  const fetchStatistics = useCallback(async () => {
+    if (!directChat?.id) return
+
+    try {
+      const response = await messageService.getMediaStatistics(directChat.id)
+      if (response.success) {
+        const { images, videos, files, voices } = response.data
+        setStatistics({
+          images,
+          videos,
+          files,
+          voices,
+          links: 0, // Links count is not available in statistics API
+        })
+      }
+    } catch (err) {
+      console.error("Failed to fetch media statistics:", err)
+    }
+  }, [directChat?.id])
 
   // Hàm fetch media messages từ API chuyên dụng
   const fetchMediaMessages = useCallback(async () => {
@@ -114,12 +148,15 @@ export const useMediaMessages = () => {
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
       setMediaMessages(nonDeletedMessages)
+
+      // Fetch statistics after media messages are updated
+      await fetchStatistics()
     } catch (err: any) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [directChat?.id])
+  }, [directChat?.id, fetchStatistics])
 
   // Hàm xử lý tin nhắn mới hoặc cập nhật từ socket
   const handleMessageUpdate = useCallback(
@@ -131,9 +168,14 @@ export const useMediaMessages = () => {
         if (updatedMessage.isDeleted && isMediaMessage(updatedMessage)) {
           if (existingIndex !== -1) {
             const newMessages = prev.filter((msg) => msg.id !== updatedMessage.id)
-            return newMessages.sort(
+            const sortedMessages = newMessages.sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             )
+
+            // Update statistics after removing message
+            setTimeout(() => fetchStatistics(), 100)
+
+            return sortedMessages
           }
           return prev
         }
@@ -144,22 +186,32 @@ export const useMediaMessages = () => {
             // Cập nhật tin nhắn hiện có
             const newMessages = [...prev]
             newMessages[existingIndex] = updatedMessage
-            return newMessages.sort(
+            const sortedMessages = newMessages.sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             )
+
+            // Update statistics after updating message
+            setTimeout(() => fetchStatistics(), 100)
+
+            return sortedMessages
           } else {
             // Thêm tin nhắn mới
             const newMediaMessages = [updatedMessage, ...prev]
-            return newMediaMessages.sort(
+            const sortedMessages = newMediaMessages.sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             )
+
+            // Update statistics after adding new message
+            setTimeout(() => fetchStatistics(), 100)
+
+            return sortedMessages
           }
         }
 
         return prev
       })
     },
-    [isMediaMessage]
+    [isMediaMessage, fetchStatistics]
   )
 
   // Effect để fetch media messages ban đầu
@@ -183,6 +235,7 @@ export const useMediaMessages = () => {
     mediaMessages,
     loading,
     error,
+    statistics,
     refetch: fetchMediaMessages,
   }
 }

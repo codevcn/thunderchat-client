@@ -23,7 +23,7 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
 
   // Determine active tab based on pathname
   const getActiveTab = () => {
-    if (pathname === "/admin" || pathname === "/admin/admin-dashboard") return "dashboard"
+    if (pathname === "/admin" || pathname === "/admin/dashboard") return "dashboard"
     if (pathname === "/admin/admin-user-management") return "users"
     if (pathname === "/admin/admin-violation-management") return "violations"
     return "dashboard"
@@ -34,7 +34,7 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
   const adminNavs: TAdminNav[] = [
     {
       label: "Dashboard",
-      href: "/admin/admin-dashboard",
+      href: "/admin/dashboard",
       icon: <Home size={20} className="text-foreground" />,
       active: currentActiveTab === "dashboard",
     },

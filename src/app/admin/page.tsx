@@ -1,28 +1,70 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { AdminDashboard } from "./admin-dashboard/admin-dashboard"
-import { AdminNavigation } from "../../components/layout/admin-navigation"
+import { AdminLoginForm } from "../admin-login-form"
+import { useEffect, useState } from "react"
+import Image from "next/image"
+import { ECheckUserStatus } from "../sharings"
+import { useAdminAuth } from "@/hooks/admin-auth"
+import { EAdminAuthStatus } from "@/utils/enums"
+import { getCurrentLocationPath, pureNavigator } from "@/utils/helpers"
+import { localStorageManager } from "@/utils/local-storage"
+import AdminCheckUserForm from "../admin-check-user-form"
 
-export default function AdminPage() {
-  const router = useRouter()
+const AdminPage = () => {
+  const [checkUserStatus, setCheckUserStatus] = useState<ECheckUserStatus>(ECheckUserStatus.UNKOWN)
+  const [typedEmail, setTypedEmail] = useState<string>("")
+  const { adminAuthStatus } = useAdminAuth()
+
+  const handleSetCheckUserStatus = (status: ECheckUserStatus) => {
+    setCheckUserStatus(status)
+  }
+
+  const goBack = () => {
+    setCheckUserStatus(ECheckUserStatus.UNKOWN)
+  }
 
   useEffect(() => {
-    // Redirect to dashboard page
-    router.replace("/admin/admin-dashboard")
-  }, [router])
+    if (adminAuthStatus === EAdminAuthStatus.AUTHENTICATED) {
+      const lastPageAccessed = localStorageManager.getPrePageAccessed()
+      if (lastPageAccessed && lastPageAccessed !== getCurrentLocationPath()) {
+        pureNavigator(lastPageAccessed)
+      } else {
+        pureNavigator("/admin/dashboard") // Redirect to admin dashboard
+      }
+    }
+  }, [adminAuthStatus])
 
-  // Show loading while redirecting
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminNavigation />
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Đang chuyển hướng...</p>
-        </div>
-      </div>
+    <div className="flex flex-col justify-center items-center min-h-screen px-4 py-8">
+      {adminAuthStatus === EAdminAuthStatus.UNAUTHENTICATED ? (
+        <>
+          <div className="flex flex-col items-center justify-center text-white p-4">
+            <div className="w-20 h-20 p-4 rounded-full bg-red-600 flex items-center justify-center mb-6">
+              <Image src="/images/logo.svg" alt="App Logo" width={150} height={150} />
+            </div>
+
+            <h1 className="text-4xl font-bold mb-4 text-red-600">Admin Panel</h1>
+
+            <div hidden={checkUserStatus !== ECheckUserStatus.EXIST}>
+              <AdminLoginForm typedEmail={typedEmail} onGoBack={goBack} />
+            </div>
+
+            <div hidden={checkUserStatus !== ECheckUserStatus.UNKOWN}>
+              <AdminCheckUserForm
+                onSetCheckUserStatus={handleSetCheckUserStatus}
+                onSetTypedEmail={setTypedEmail}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-base text-white mt-5">Checking admin authentication status...</p>
+        </>
+      )}
     </div>
   )
 }
+
+export default AdminPage

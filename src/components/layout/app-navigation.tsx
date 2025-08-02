@@ -6,6 +6,7 @@ import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
 import { useAccountModal } from "@/contexts/account-modal.context"
 import { useAppSelector } from "@/hooks/redux"
+import { EAppRole } from "@/utils/enums"
 
 type TNav = {
   label: string
@@ -42,9 +43,7 @@ type AppNavigationProps = {
 export const AppNavigation = memo((props: AppNavigationProps) => {
   const { openAccount } = useAccountModal()
   const user = useAppSelector((state) => state.user.user)
-
-  // Check if user is admin (you can modify this logic based on your auth system)
-  const isAdmin = user?.email === "trung@gmail.com"
+  const isAdmin = user?.role === EAppRole.ADMIN
 
   return (
     <div className="screen-medium-chatting:flex hidden w-[55px] h-screen relative">

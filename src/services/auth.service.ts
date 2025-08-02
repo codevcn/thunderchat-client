@@ -1,4 +1,10 @@
-import { getCheckAuth, postLoginUser } from "@/apis/auth"
+import {
+  getCheckAuth,
+  postLoginUser,
+  postAdminLogin,
+  getAdminCheckAuth,
+  checkEmailIsAdmin,
+} from "@/apis/auth"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import type { TSuccess } from "@/utils/types/global"
 
@@ -11,6 +17,27 @@ class AuthService {
   async loginUser(email: string, password: string, keepSigned: boolean): Promise<TSuccess> {
     const { data } = await postLoginUser({ email, password, keepSigned })
     return data
+  }
+
+  // Admin methods
+  async checkAdminAuth(): Promise<TUserWithProfile> {
+    const { data } = await getAdminCheckAuth()
+    return data
+  }
+
+  async loginAdmin(email: string, password: string, keepSigned: boolean): Promise<TSuccess> {
+    const { data } = await postAdminLogin({ email, password, keepSigned })
+    return data
+  }
+
+  // Check if email has admin privileges
+  async checkEmailIsAdmin(email: string): Promise<boolean> {
+    try {
+      const { data } = await checkEmailIsAdmin(email)
+      return data.isAdmin
+    } catch (error) {
+      return false
+    }
   }
 }
 

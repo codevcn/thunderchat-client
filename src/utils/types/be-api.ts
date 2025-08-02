@@ -7,6 +7,7 @@ import type {
   EMessageTypes,
   ESortTypes,
   EChatType,
+  EAppRole,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 
@@ -16,6 +17,7 @@ export type TUser = {
   email: string
   password: string
   createdAt: string
+  role: EAppRole
 }
 
 export type TProfile = {

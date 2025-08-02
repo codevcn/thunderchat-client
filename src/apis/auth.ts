@@ -7,3 +7,14 @@ export const postLoginUser = (data: TLoginUserParams) =>
 
 export const getCheckAuth = () =>
   clientAxios.get<TUserWithProfile>("/auth/check-auth", requestConfig)
+
+// Admin APIs
+export const postAdminLogin = (data: TLoginUserParams) =>
+  clientAxios.post<TSuccess>("/auth/admin/login", data, requestConfig)
+
+export const getAdminCheckAuth = () =>
+  clientAxios.get<TUserWithProfile>("/auth/admin/check-auth", requestConfig)
+
+// Check if email has admin privileges
+export const checkEmailIsAdmin = (email: string) =>
+  clientAxios.post<{ isAdmin: boolean }>("/auth/admin/check-email", { email }, requestConfig)

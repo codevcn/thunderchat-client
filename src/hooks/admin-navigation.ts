@@ -1,15 +1,17 @@
 "use client"
 
-import { pureNavigator } from "@/utils/helpers"
+import { useRouter } from "next/navigation"
 
 export const useAdminRedirect = () => {
+  const router = useRouter()
   return () => {
-    pureNavigator("/admin/dashboard")
+    router.push("/admin/dashboard")
   }
 }
 
 export const useAdminRedirectToLogin = () => {
+  const router = useRouter()
   return () => {
-    pureNavigator("/admin")
+    router.push("/admin")
   }
 }

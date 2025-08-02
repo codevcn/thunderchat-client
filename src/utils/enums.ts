@@ -4,6 +4,19 @@ export enum EAuthStatus {
   UNAUTHENTICATED = "AUTH_STATUS_UNAUTHENTICATED",
 }
 
+export enum EAdminAuthStatus {
+  UNKNOWN = "ADMIN_AUTH_STATUS_UNKNOWN",
+  AUTHENTICATED = "ADMIN_AUTH_STATUS_AUTHENTICATED",
+  UNAUTHENTICATED = "ADMIN_AUTH_STATUS_UNAUTHENTICATED",
+}
+
+export enum EAdminMessages {
+  ADMIN_ACCESS_REQUIRED = "Admin access required",
+  USER_NOT_AUTHENTICATED = "User not authenticated",
+  INVALID_ADMIN_CREDENTIALS = "Invalid admin credentials",
+  ADMIN_NOT_FOUND = "Admin not found",
+}
+
 export enum EPaginations {
   FRIEND_REQUESTS_PAGE_SIZE = 5,
   FRIENDS_PAGE_SIZE = 5,

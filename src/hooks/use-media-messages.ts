@@ -46,9 +46,73 @@ export const useMediaMessages = () => {
     setError(null)
 
     try {
-      const messages = await messageService.fetchDirectMedia(directChat.id, 100, 0, ESortTypes.DESC)
-      // Lọc ra tin nhắn chưa bị xóa
-      const nonDeletedMessages = messages.filter((msg) => !msg.isDeleted)
+      // Fetch images/videos (6 items)
+      const imagesVideosResponse = await messageService.getMediaMessagesWithMultipleTypes(
+        directChat.id,
+        ["image", "video"],
+        {},
+        1, // page
+        6, // limit
+        "desc" // sort
+      )
+
+      // Fetch files (3 items)
+      const filesResponse = await messageService.getMediaMessagesWithFilters(
+        directChat.id,
+        { type: "file" },
+        1, // page
+        3, // limit
+        "desc" // sort
+      )
+
+      // Fetch voices (3 items)
+      const voicesResponse = await messageService.getMediaMessagesWithFilters(
+        directChat.id,
+        { type: "voice" },
+        1, // page
+        3, // limit
+        "desc" // sort
+      )
+
+      // Fetch links (3 items) - TEXT messages with URLs
+      const linksResponse = await messageService.getMediaMessagesWithFilters(
+        directChat.id,
+        {}, // No type filter, will filter TEXT with URLs on frontend
+        1, // page
+        10, // Get more to filter for URLs
+        "desc" // sort
+      )
+
+      // Combine all responses
+      const allMessages: TDirectMessage[] = []
+
+      if (imagesVideosResponse.success) {
+        allMessages.push(...imagesVideosResponse.data.items)
+      }
+      if (filesResponse.success) {
+        allMessages.push(...filesResponse.data.items)
+      }
+      if (voicesResponse.success) {
+        allMessages.push(...voicesResponse.data.items)
+      }
+      if (linksResponse.success) {
+        // Filter for TEXT messages with URLs and limit to 3
+        const linkMessages = linksResponse.data.items
+          .filter(
+            (msg: TDirectMessage) =>
+              msg.type === EMessageTypes.TEXT &&
+              msg.content &&
+              (msg.content.includes("http://") || msg.content.includes("https://"))
+          )
+          .slice(0, 3)
+        allMessages.push(...linkMessages)
+      }
+
+      // Lọc ra tin nhắn chưa bị xóa và sắp xếp theo thời gian
+      const nonDeletedMessages = allMessages
+        .filter((msg: TDirectMessage) => !msg.isDeleted)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
       setMediaMessages(nonDeletedMessages)
     } catch (err: any) {
       setError(err.message)

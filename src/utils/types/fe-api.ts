@@ -26,3 +26,29 @@ export type TUpdateUserSettingsReq = {
 export type TCheckCanSendDirectMessageRes = {
   canSend: boolean
 }
+
+// ================================= Media Pagination Frontend Types =================================
+
+export type TMediaPaginationState = {
+  items: any[]
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  hasMore: boolean
+  loading: boolean
+  error: string | null
+  filters: {
+    type?: "image" | "video" | "file" | "voice"
+    senderId?: number
+    fromDate?: string
+    toDate?: string
+  }
+  sortOrder: "asc" | "desc"
+}
+
+export type TMediaCacheState = {
+  cachedPages: Map<number, any[]>
+  lastUpdated: Map<number, Date>
+  memoryUsage: number
+  maxCacheSize: number
+}

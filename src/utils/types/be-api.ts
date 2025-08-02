@@ -339,3 +339,62 @@ export type TAdminStatisticsData = {
   totalChats: number
   totalFiles: number
 }
+
+// ================================= Media Pagination API Types =================================
+
+export type TMediaItem = TDirectMessageWithAuthorAndReplyTo
+
+export type TMediaPaginationInfo = {
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  hasMore: boolean
+  limit: number
+}
+
+export type TGetMediaMessagesResponse = {
+  success: boolean
+  data: {
+    items: TMediaItem[]
+    pagination: TMediaPaginationInfo
+  }
+  message?: string
+  errorCode?: string | null
+  errors?: any
+}
+
+export type TMediaFilters = {
+  type?: "image" | "video" | "file" | "voice"
+  types?: ("image" | "video" | "file" | "voice")[]
+  senderId?: number
+  fromDate?: string
+  toDate?: string
+}
+
+export type TGetMediaMessagesParams = {
+  directChatId: number
+  type?: "image" | "video" | "file" | "voice"
+  types?: ("image" | "video" | "file" | "voice")[]
+  senderId?: number
+  fromDate?: string
+  toDate?: string
+  page?: number
+  limit?: number
+  sort?: "asc" | "desc"
+}
+
+export type TMediaStatisticsData = {
+  total: number
+  images: number
+  videos: number
+  files: number
+  voices: number
+}
+
+export type TGetMediaStatisticsResponse = {
+  success: boolean
+  data: TMediaStatisticsData
+  message?: string
+  errorCode?: string | null
+  errors?: any
+}

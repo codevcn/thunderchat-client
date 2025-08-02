@@ -1,6 +1,7 @@
 import React from "react"
 import dayjs from "dayjs"
 import ActionIcons from "@/components/materials/action-icons"
+import LoadingSpinner from "@/components/materials/loading-spinner"
 import { useUser } from "@/hooks/user"
 import { Play } from "lucide-react"
 import { useVoicePlayerActions } from "@/contexts/voice-player.context"
@@ -447,37 +448,94 @@ export const MediaGridContent = React.memo(
     mixedMedia,
     setSelectedMediaIndex,
     setIsMediaViewerOpen,
+    onLoadMore,
+    hasMore,
+    loading,
   }: {
     grouped: [string, any[]][]
     tab: "Images/Video" | "files" | "voices" | "links"
     mixedMedia: any[]
     setSelectedMediaIndex: (idx: number) => void
     setIsMediaViewerOpen: (open: boolean) => void
-  }) => (
-    <div className="space-y-3">
-      {grouped.map(([date, items]) => (
-        <div key={date}>
-          <h3 className="text-lg font-semibold text-white mb-2">
-            {dayjs(date).format("MMMM DD, YYYY")}
-          </h3>
-          {tab === "Images/Video" ? (
-            <MediaGrid
-              items={items}
-              mixedMedia={mixedMedia}
-              setSelectedMediaIndex={setSelectedMediaIndex}
-              setIsMediaViewerOpen={setIsMediaViewerOpen}
-            />
-          ) : tab === "files" ? (
-            <FilesList items={items} />
-          ) : tab === "voices" ? (
-            <AudioList items={items} />
-          ) : (
-            <LinksList items={items} />
-          )}
-        </div>
-      ))}
-    </div>
-  )
+    onLoadMore?: () => Promise<void>
+    hasMore?: boolean
+    loading?: boolean
+  }) => {
+    // Infinite scroll observer
+    const observerRef = React.useRef<IntersectionObserver | null>(null)
+    const loadMoreRef = React.useRef<HTMLDivElement>(null)
+
+    React.useEffect(() => {
+      if (!onLoadMore || !hasMore) return
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasMore && !loading && onLoadMore) {
+            onLoadMore()
+          }
+        },
+        { threshold: 0.1 }
+      )
+
+      observerRef.current = observer
+
+      if (loadMoreRef.current) {
+        observer.observe(loadMoreRef.current)
+      }
+
+      return () => {
+        if (observerRef.current) {
+          observerRef.current.disconnect()
+        }
+      }
+    }, [onLoadMore, hasMore, loading])
+
+    return (
+      <div className="space-y-3">
+        {grouped.map(([date, items]) => (
+          <div key={date}>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              {dayjs(date).format("MMMM DD, YYYY")}
+            </h3>
+            {tab === "Images/Video" ? (
+              <MediaGrid
+                items={items}
+                mixedMedia={mixedMedia}
+                setSelectedMediaIndex={setSelectedMediaIndex}
+                setIsMediaViewerOpen={setIsMediaViewerOpen}
+              />
+            ) : tab === "files" ? (
+              <FilesList items={items} />
+            ) : tab === "voices" ? (
+              <AudioList items={items} />
+            ) : (
+              <LinksList items={items} />
+            )}
+          </div>
+        ))}
+
+        {/* Infinite scroll trigger */}
+        {onLoadMore && hasMore && (
+          <div ref={loadMoreRef} className="py-4">
+            {loading ? (
+              <LoadingSpinner size="sm" color="gray" text="Loading more..." />
+            ) : (
+              <div className="flex justify-center items-center">
+                <div className="text-gray-400">Scroll to load more</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* End of content */}
+        {!hasMore && grouped.length > 0 && (
+          <div className="py-4 text-center">
+            <div className="text-gray-400">No more media to load</div>
+          </div>
+        )}
+      </div>
+    )
+  }
 )
 
 MediaGridContent.displayName = "MediaGridContent"

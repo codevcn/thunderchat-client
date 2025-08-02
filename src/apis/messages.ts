@@ -20,17 +20,6 @@ export const getFetchGroupMessages = (params: TGetGroupMsgsParams) =>
     params,
   })
 
-export const getFetchDirectMedia = (
-  directChatId: number,
-  limit?: number,
-  offset?: number,
-  sortType?: ESortTypes
-) =>
-  clientAxios.get<TDirectMessage[]>("message/direct-message/media/" + directChatId, {
-    ...requestConfig,
-    params: { limit, offset, sortType },
-  })
-
 // API mới để lấy chỉ voice messages
 export const getFetchVoiceMessages = (
   directChatId: number,
@@ -41,4 +30,38 @@ export const getFetchVoiceMessages = (
   clientAxios.get<TGetDirectMessagesData>("message/direct-message/voices/" + directChatId, {
     ...requestConfig,
     params: { limit, offset, sortType },
+  })
+
+// ================================= Media Pagination API =================================
+
+import type {
+  TGetMediaMessagesResponse,
+  TGetMediaStatisticsResponse,
+  TGetMediaMessagesParams,
+} from "../utils/types/be-api"
+
+/**
+ * Get media messages with pagination and filters
+ */
+export const getMediaMessages = (params: TGetMediaMessagesParams) =>
+  clientAxios.get<TGetMediaMessagesResponse>(`media-message/${params.directChatId}`, {
+    ...requestConfig,
+    params: {
+      type: params.type,
+      types: params.types,
+      senderId: params.senderId,
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      page: params.page,
+      limit: params.limit,
+      sort: params.sort,
+    },
+  })
+
+/**
+ * Get media statistics for a chat
+ */
+export const getMediaStatistics = (directChatId: number) =>
+  clientAxios.get<TGetMediaStatisticsResponse>(`media-message/${directChatId}/statistics`, {
+    ...requestConfig,
   })

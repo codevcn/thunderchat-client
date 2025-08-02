@@ -398,6 +398,7 @@ const MediaPanel = React.memo(() => {
             creator={directChat.Creator}
             recipient={directChat.Recipient}
             initialTab={archiveTab}
+            directChatId={directChat.id}
           />
         </div>
       )}

@@ -744,15 +744,22 @@ export const Message = forwardRef<
                   </span>
                   <div className="flex ml-0.5">
                     {status === EMessageStatus.SENT ? (
-                      <Check size={15} />
+                      <span title="Sent">
+                        <Check size={15} />
+                      </span>
                     ) : (
-                      status === EMessageStatus.SEEN && <CheckCheck size={15} />
+                      status === EMessageStatus.SEEN && (
+                        <span title="Seen">
+                          <CheckCheck size={15} />
+                        </span>
+                      )
                     )}
                   </div>
                 </div>
               </div>
             </div>
           ) : (
+            // Tin nhắn của đối phương
             <div
               className={`${isNewMsg || status === EMessageStatus.SENT ? "QUERY-unread-message" : ""} origin-left flex justify-start w-full`}
               data-msg-id={id}

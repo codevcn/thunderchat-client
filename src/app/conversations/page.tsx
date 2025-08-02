@@ -8,6 +8,9 @@ import { AppNavigation } from "@/components/layout/app-navigation"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { SwitchChatbox } from "./switch-chatbox"
+import type { TGetDirectMessagesMessage } from "@/utils/types/be-api"
+import { clientSocket } from "@/utils/socket/client-socket"
+import { ESocketEvents } from "@/utils/socket/events"
 
 const ChatBackground = () => {
   const chatBackground = useAppSelector(({ settings }) => settings.theme.chatBackground)
@@ -30,10 +33,19 @@ const ConversationPage = () => {
     eventEmitter.emit(EInternalEvents.CLICK_ON_LAYOUT, e)
   }
 
+  const listenNewMessageFromChatting = (newMessage: TGetDirectMessagesMessage) => {
+    eventEmitter.emit(EInternalEvents.NEW_MESSAGE_FROM_CHATTING, newMessage)
+  }
+
   useEffect(() => {
     document.body.addEventListener("click", handleClickOnLayout)
+    clientSocket.socket.on(ESocketEvents.send_message_direct, listenNewMessageFromChatting)
     return () => {
       document.body.removeEventListener("click", handleClickOnLayout)
+      clientSocket.socket.removeListener(
+        ESocketEvents.send_message_direct,
+        listenNewMessageFromChatting
+      )
     }
   }, [])
 

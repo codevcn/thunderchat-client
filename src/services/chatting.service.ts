@@ -43,7 +43,7 @@ class ChattingService {
               if (data) {
                 if ("isError" in data) {
                   console.error(">>> error when sending message & callback:", data)
-                } else if ("newDirectChat" in data) {
+                } else if (data.success) {
                   eventEmitter.emit(EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE, data)
                 }
               }

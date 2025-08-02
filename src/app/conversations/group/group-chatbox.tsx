@@ -16,6 +16,8 @@ import { GroupMessages } from "./group-messages"
 import { TypeMessageBar } from "./type-message-bar"
 import { InfoBar } from "./info-bar"
 import type { TGroupChatData } from "@/utils/types/be-api"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
 
 const TypingIndicator = () => {
   return (
@@ -125,11 +127,7 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
   )
 }
 
-type TGroupChatboxProps = {
-  groupChatId: number
-}
-
-export const GroupChatbox = ({ groupChatId }: TGroupChatboxProps) => {
+export const GroupChatbox = () => {
   const { groupChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
@@ -138,13 +136,19 @@ export const GroupChatbox = ({ groupChatId }: TGroupChatboxProps) => {
     dispatch(openInfoBar(open))
   }
 
-  useEffect(() => {
+  const handleFetchGroupChat = (groupChatId: number) => {
     dispatch(fetchGroupChatThunk(groupChatId))
     dispatch(fetchGroupChatMembersThunk(groupChatId))
+  }
+
+  useEffect(() => {
+    eventEmitter.on(EInternalEvents.FETCH_GROUP_CHAT, handleFetchGroupChat)
+    return () => {
+      eventEmitter.off(EInternalEvents.FETCH_GROUP_CHAT, handleFetchGroupChat)
+    }
   }, [])
 
   return (
-    groupChatId &&
     groupChat && (
       <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative">
         <div className="flex flex-col items-center w-full box-border h-screen bg-no-repeat bg-transparent bg-cover bg-center relative">

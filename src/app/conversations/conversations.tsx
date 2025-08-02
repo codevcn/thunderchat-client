@@ -17,6 +17,8 @@ import type {
   TMessageSearchOffset,
   TUserWithProfile,
   TDirectChatData,
+  TDirectMessage,
+  TDirectChat,
 } from "@/utils/types/be-api"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
@@ -28,7 +30,12 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { extractHighlightOffsets, randomInRange, santizeMsgContent } from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
 import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
-import { addConversations, clearConversations } from "@/redux/conversations/conversations.slice"
+import {
+  addConversations,
+  clearConversations,
+  setConversations,
+  updateSingleConversation,
+} from "@/redux/conversations/conversations.slice"
 import { toaster } from "@/utils/toaster"
 import { AddMembersBoard } from "./group/create-group-chat"
 import { groupChatService } from "@/services/group-chat.service"
@@ -54,6 +61,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import type { TSendDirectMessageRes } from "@/utils/types/socket"
 import { convertToDirectChatsUIData } from "@/utils/data-convertors/conversations-convertor"
 import { localStorageManager } from "@/utils/local-storage"
+import { useSearchParams } from "next/navigation"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 const SEARCH_LIMIT: number = 10
@@ -164,30 +172,32 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
           if (directChat) {
             navToConversation(directChat.id, EChatType.DIRECT)
           } else {
-            dispatch(
-              setTempChatData({
-                id: -1,
-                createdAt: new Date().toISOString(),
-                creatorId: user.id,
-                recipientId: otherUserId,
-                Creator: {
-                  id: user.id,
-                  email: user.email,
-                  password: user.password,
-                  createdAt: user.createdAt,
-                  Profile: user.Profile,
-                },
-                Recipient: {
-                  id: otherUserId,
-                  email: otherUser.email,
-                  password: otherUser.password,
-                  createdAt: otherUser.createdAt,
-                  Profile: otherUser.Profile,
-                },
-                lastSentMessageId: undefined,
-              })
-            )
-            navToConversation(randomInRange(1, 100000), EChatType.DIRECT, true)
+            const tempChatData: TDirectChatData = {
+              id: -1,
+              createdAt: new Date().toISOString(),
+              creatorId: user.id,
+              recipientId: otherUserId,
+              Creator: {
+                id: user.id,
+                email: user.email,
+                password: user.password,
+                createdAt: user.createdAt,
+                Profile: user.Profile,
+              },
+              Recipient: {
+                id: otherUserId,
+                email: otherUser.email,
+                password: otherUser.password,
+                createdAt: otherUser.createdAt,
+                Profile: otherUser.Profile,
+              },
+            }
+            const tempId = randomInRange(1, 100000)
+            localStorageManager.setLastDirectChatData({
+              chatData: tempChatData,
+              tempId,
+            })
+            navToConversation(tempId, EChatType.DIRECT, true)
           }
         })
         .catch((err) => {
@@ -489,12 +499,109 @@ const GlobalSearchBar = ({
   )
 }
 
+type TConversationCardProps = {
+  id: number
+  type: EChatType
+  avatar: TConversationCard["avatar"]
+  title: string
+  onNavToConversation: (id: number, type: EChatType) => void
+  lastMessageTime: string | undefined
+  subtitle: TConversationCard["subtitle"]
+  pinIndex: number
+  isPinned: boolean
+  onPinToggle: (id: number) => void
+  pinIndexClass: string
+  pinLoading: boolean
+  unreadMessageCount: number
+}
+
+const ConversationCard = ({
+  id,
+  type,
+  avatar,
+  title,
+  onNavToConversation,
+  lastMessageTime,
+  subtitle,
+  pinIndex,
+  isPinned,
+  onPinToggle,
+  pinIndexClass,
+  pinLoading,
+  unreadMessageCount,
+}: TConversationCardProps) => {
+  return (
+    <div
+      className={`group flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${pinIndexClass} group`}
+      key={`${type}-${id}`}
+      onClick={() => onNavToConversation(id, type)}
+    >
+      <div>
+        <CustomAvatar
+          src={avatar.src || undefined}
+          imgSize={50}
+          fallback={avatar.fallback.toUpperCase()}
+          fallbackClassName="bg-regular-violet-cl text-2xl"
+        />
+      </div>
+      <div className="w-[195px]">
+        <div className="flex justify-between items-center w-full gap-3">
+          <h3 className="truncate font-bold grow text-left leading-snug">{title}</h3>
+          <div className="text-[10px] w-max min-w-max text-regular-icon-cl">
+            {dayjs(lastMessageTime).format("MMM D, YYYY")}
+          </div>
+        </div>
+        <div className="flex justify-between items-center mt-1 box-border gap-3">
+          {subtitle.type === EMessageTypes.STICKER ? (
+            <p className="truncate text-regular-placeholder-cl text-sm">
+              <span className="text-regular-icon-cl italic">Sticker</span>
+            </p>
+          ) : (
+            <p
+              dangerouslySetInnerHTML={{
+                __html: santizeMsgContent(subtitle.content),
+              }}
+              className="truncate opacity-60 text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
+            ></p>
+          )}
+          <div className="flex items-center gap-1">
+            {unreadMessageCount > 0 && (
+              <span className="flex items-center gap-1 h-5">
+                <span className="w-min px-1 h-full bg-regular-violet-cl rounded-full leading-none">
+                  {unreadMessageCount}
+                </span>
+              </span>
+            )}
+            {!!pinIndex && pinIndex !== -1 && pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
+              <CustomTooltip title="This directChat was pinned" placement="bottom">
+                <Pin color="currentColor" size={21} />
+              </CustomTooltip>
+            )}
+            {type === EChatType.DIRECT && (
+              <div
+                className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+              >
+                <PinButton
+                  isPinned={isPinned}
+                  onToggle={() => onPinToggle(id)}
+                  loading={pinLoading}
+                  size={16}
+                  tooltipText={isPinned ? "Bỏ ghim cuộc trò chuyện" : "Ghim cuộc trò chuyện"}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const ConversationCards = () => {
   const dispatch = useAppDispatch()
   const conversations = useAppSelector(sortDirectChatsByPinned)
   const directChatLastId = useRef<number | undefined>(undefined)
   const groupChatLastId = useRef<number | undefined>(undefined)
-  const tempFlagUseEffectRef = useRef<boolean>(true)
   const navToConversation = useNavToConversation()
   const [loading, setLoading] = useState<boolean>(false)
   const user = useUser()!
@@ -617,42 +724,67 @@ const ConversationCards = () => {
     })
   }
 
-  const listenSendMessageSuccessResponse = (data: TSendDirectMessageRes) => {
-    console.log(">>> res data at conversations:", data)
-    if ("newDirectChat" in data) {
-      const { newDirectChat } = data
-      if (newDirectChat) {
-        dispatch((dispatch, getState) => {
-          const { directChat, directMessages } = getState().messages
-          console.log(">>> directChat from redux:", directChat)
-          if (directChat) {
-            const newDirectChatData: TDirectChatData = {
-              ...newDirectChat,
-              Recipient: directChat.Recipient,
-              Creator: directChat.Creator,
-            }
-            if (!newDirectChat.lastSentMessageId) {
-              const lastMessage = directMessages?.at(-1)
-              if (lastMessage) {
-                newDirectChatData.lastSentMessageId = lastMessage.id
-              }
-            }
-            dispatch(
-              updateDirectChat({
-                id: newDirectChat.id,
-                lastSentMessageId: newDirectChat.lastSentMessageId,
-                createdAt: newDirectChat.createdAt,
-                creatorId: newDirectChat.creatorId,
-                recipientId: newDirectChat.recipientId,
-              })
-            )
-            const conversationCard = convertToDirectChatsUIData([newDirectChatData], user)[0]
-            dispatch(addConversations([conversationCard]))
-            localStorageManager.setLastDirectChatData(newDirectChatData)
-          }
-        })
+  const handleAddNewConversation = (newDirectChat: TDirectChat, newMessage: TDirectMessage) => {
+    dispatch((_, getState) => {
+      const currentConversations = getState().conversations.conversations
+      const currentDirectChat = getState().messages.directChat
+      if (!currentDirectChat) return
+      const directChatExist = currentConversations?.find((c) => c.id === newDirectChat.id)
+      if (directChatExist) return
+      const newDirectChatData: TDirectChatData = {
+        ...newDirectChat,
+        Recipient: currentDirectChat.Recipient,
+        Creator: currentDirectChat.Creator,
       }
+      if (!newDirectChat.lastSentMessageId) {
+        newDirectChatData.lastSentMessageId = newMessage.id
+      }
+      const conversationCard = convertToDirectChatsUIData(
+        [{ ...newDirectChatData, LastSentMessage: newMessage }],
+        user
+      )[0]
+      dispatch(addConversations([conversationCard]))
+    })
+  }
+
+  const handleUpdateDirectChat = (newDirectChat: TDirectChat) => {
+    dispatch(
+      updateDirectChat({
+        id: newDirectChat.id,
+        lastSentMessageId: newDirectChat.lastSentMessageId,
+        createdAt: newDirectChat.createdAt,
+        creatorId: newDirectChat.creatorId,
+        recipientId: newDirectChat.recipientId,
+      })
+    )
+  }
+
+  const handleUpdateLastSentMessage = (directChatId: number, newMessage: TDirectMessage) => {
+    dispatch(
+      updateSingleConversation({
+        id: directChatId,
+        lastMessageTime: new Date().toISOString(),
+        "subtitle.content": newMessage.content,
+      })
+    )
+  }
+
+  const listenSendMessageSuccessResponse = (data: TSendDirectMessageRes) => {
+    const { isNewDirectChat, directChat, newMessage } = data
+    if (isNewDirectChat) {
+      handleAddNewConversation(directChat, newMessage)
+    } else {
+      handleUpdateLastSentMessage(directChat.id, newMessage)
     }
+    handleUpdateDirectChat(directChat)
+  }
+
+  const listenUnreadMessagesCount = (unreadMessageCount: number, directChatId: number) => {
+    console.log(">>> run listen unread count (conversations):", {
+      unreadMessageCount,
+      directChatId,
+    })
+    dispatch(updateSingleConversation({ id: directChatId, unreadMessageCount }))
   }
 
   useEffect(() => {
@@ -660,11 +792,13 @@ const ConversationCards = () => {
       EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
       listenSendMessageSuccessResponse
     )
+    eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     return () => {
       eventEmitter.off(
         EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
         listenSendMessageSuccessResponse
       )
+      eventEmitter.off(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     }
   }, [])
 
@@ -716,17 +850,14 @@ const ConversationCards = () => {
       const newOrder = sortedChats.map((c) => c.id).join(",")
 
       if (currentOrder !== newOrder) {
-        dispatch(addConversations(sortedChats))
+        dispatch(setConversations(sortedChats))
       }
     }
   }, [pinnedDirectChats, conversations, isDirectChatPinned, dispatch])
 
   useEffect(() => {
-    if (tempFlagUseEffectRef.current) {
-      tempFlagUseEffectRef.current = false
-      if (!conversations || conversations.length === 0) {
-        fetchConversations()
-      }
+    if (!conversations || conversations.length === 0) {
+      fetchConversations()
     }
   }, [conversations])
 
@@ -744,70 +875,29 @@ const ConversationCards = () => {
     </div>
   ) : conversations && conversations.length > 0 ? (
     <div className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar pr-1 pb-4">
-      {conversations.map(({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type }) => {
-        const isPinned = type === EChatType.DIRECT ? isDirectChatPinned(id) : false
-
-        return (
-          <div
-            className={`group flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${getPinIndexClass(pinIndex)} group`}
-            key={`${type}-${id}`}
-            onClick={() => navToDirectChat(id, type)}
-          >
-            <div>
-              <CustomAvatar
-                src={avatar.src || undefined}
-                imgSize={50}
-                fallback={avatar.fallback.toUpperCase()}
-                fallbackClassName="bg-regular-violet-cl text-2xl"
-              />
-            </div>
-            <div className="w-[195px]">
-              <div className="flex justify-between items-center w-full gap-3">
-                <h3 className="truncate font-bold grow text-left leading-snug">{title}</h3>
-                <div className="text-[10px] w-max text-regular-icon-cl">
-                  {dayjs(lastMessageTime).format("MMM D, YYYY")}
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-1 box-border gap-3">
-                {subtitle.type === EMessageTypes.STICKER ? (
-                  <p className="truncate text-regular-placeholder-cl text-sm">
-                    <span className="text-regular-icon-cl italic">Sticker</span>
-                  </p>
-                ) : (
-                  <p
-                    dangerouslySetInnerHTML={{
-                      __html: santizeMsgContent(subtitle.content),
-                    }}
-                    className="truncate opacity-60 text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
-                  ></p>
-                )}
-                <div className="flex items-center gap-1">
-                  {!!pinIndex &&
-                    pinIndex !== -1 &&
-                    pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
-                      <CustomTooltip title="This directChat was pinned" placement="bottom">
-                        <Pin color="currentColor" size={21} />
-                      </CustomTooltip>
-                    )}
-                  {type === EChatType.DIRECT && (
-                    <div
-                      className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                    >
-                      <PinButton
-                        isPinned={isPinned}
-                        onToggle={() => handlePinToggle(id)}
-                        loading={pinLoading}
-                        size={16}
-                        tooltipText={isPinned ? "Bỏ ghim cuộc trò chuyện" : "Ghim cuộc trò chuyện"}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      })}
+      {conversations.map(
+        ({ id, avatar, lastMessageTime, pinIndex, subtitle, title, type, unreadMessageCount }) => {
+          const isPinned = type === EChatType.DIRECT ? isDirectChatPinned(id) : false
+          return (
+            <ConversationCard
+              key={id}
+              id={id}
+              type={type}
+              avatar={avatar}
+              title={title}
+              onNavToConversation={navToDirectChat}
+              lastMessageTime={lastMessageTime}
+              subtitle={subtitle}
+              pinIndex={pinIndex}
+              isPinned={isPinned}
+              onPinToggle={handlePinToggle}
+              pinIndexClass={getPinIndexClass(pinIndex)}
+              pinLoading={pinLoading}
+              unreadMessageCount={unreadMessageCount}
+            />
+          )
+        }
+      )}
     </div>
   ) : (
     <div className="flex flex-col gap-2 justify-center items-center h-full px-3">

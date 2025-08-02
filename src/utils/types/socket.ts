@@ -2,7 +2,7 @@ import type { HttpStatusCode } from "axios"
 import type { EMessageStatus } from "../socket/enums"
 import type { EFriendRequestStatus, EMessageTypes } from "@/utils/enums"
 import type { TSuccess } from "./global"
-import type { TDirectChat } from "./be-api"
+import type { TDirectChat, TDirectMessage } from "./be-api"
 
 export type TWsErrorResponse = {
   isError: boolean
@@ -60,5 +60,7 @@ export type TPinDirectChatEventData = {
 }
 
 export type TSendDirectMessageRes = TSuccess & {
-  newDirectChat?: TDirectChat
+  directChat: TDirectChat
+  newMessage: TDirectMessage
+  isNewDirectChat: boolean
 }

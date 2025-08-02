@@ -18,6 +18,7 @@ import {
   updateMessages,
   mergeMessages,
   setLastSentMessage,
+  resetDirectMessages,
 } from "@/redux/messages/messages.slice"
 import { displayMessageStickyTime } from "@/utils/date-time"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -34,7 +35,6 @@ import { expressionService } from "@/services/expression.service"
 import Image from "next/image"
 import { chattingService } from "@/services/chatting.service"
 import { CustomTooltip } from "@/components/materials"
-import { Pin } from "lucide-react"
 import { PinMessageModal } from "./pin-message"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
@@ -50,8 +50,7 @@ type TNoMessagesYetProps = {
 
 const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
   const [greetingSticker, setGreetingSticker] = useState<TSticker | null>(null)
-  const { id: directChatId, recipientId, creatorId } = directChat
-  const tempFlagUseEffectRef = useRef<boolean>(true)
+  const { recipientId, creatorId } = directChat
 
   console.log("canSend", canSend)
 
@@ -90,10 +89,7 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
   }
 
   useEffect(() => {
-    if (tempFlagUseEffectRef.current) {
-      tempFlagUseEffectRef.current = false
-      fetchRandomSticker()
-    }
+    fetchRandomSticker()
   }, [])
 
   if (canSend === false) return null
@@ -118,47 +114,6 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
   )
 }
 
-type TMappedMessagesProps = {
-  messages: TStateDirectMessage[]
-  user: TUserWithoutPassword
-  onReply: (msg: TStateDirectMessage) => void
-}
-
-const MappedMessages = ({
-  messages,
-  user,
-  onReply,
-  pinnedMessages,
-  setPinnedMessages,
-}: {
-  messages: TStateDirectMessage[]
-  user: TUserWithoutPassword
-  onReply: (msg: TStateDirectMessage) => void
-  pinnedMessages: TStateDirectMessage[]
-  setPinnedMessages: React.Dispatch<React.SetStateAction<TStateDirectMessage[]>>
-}) => {
-  return [...messages]
-    .sort((a, b) => a.id - b.id)
-    .map((message, index, arr) => {
-      const stickyTime = displayMessageStickyTime(message.createdAt, arr[index - 1]?.createdAt)
-      return (
-        <Message
-          message={message}
-          key={message.id}
-          user={user}
-          stickyTime={stickyTime}
-          onReply={onReply}
-          isPinned={!!pinnedMessages.find((m) => m.id === message.id)}
-          onPinChange={(newState) => {
-            if (newState) setPinnedMessages([...pinnedMessages, message])
-            else setPinnedMessages(pinnedMessages.filter((m) => m.id !== message.id))
-          }}
-          pinnedCount={pinnedMessages.length}
-        />
-      )
-    })
-}
-
 type TMessagesProps = {
   directChat: TDirectChatData
   onReply: (msg: TStateDirectMessage) => void
@@ -173,7 +128,7 @@ type TMessagesLoadingState = "loading-messages"
 
 type TUnreadMessages = {
   count: number
-  firstUnreadOffsetTop: number
+  firstUnreadBoundingTop: number
 }
 
 // Thêm hàm tìm đoạn id bị thiếu
@@ -208,9 +163,8 @@ export const Messages = memo(
     const finalMessageId = useRef<number>(-1) // Biến để lưu ID của tin nhắn cuối cùng trong danh sách
     const msgOffset = useRef<number>(lastSentMessageId) // Biến lưu offset để tải thêm tin nhắn
     const dispatch = useAppDispatch()
-    const tempFlagUseEffectRef = useRef<boolean>(true)
     const messagesPreCount = useRef<number>(0) // Biến để lưu số lượng tin nhắn trước đó trong danh sách
-    const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadOffsetTop: -1 }) // Biến để lưu thông tin về tin nhắn chưa đọc
+    const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadBoundingTop: -1 }) // Biến để lưu thông tin về tin nhắn chưa đọc
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
 
     // Thêm state lưu id cuối context
@@ -336,20 +290,24 @@ export const Messages = memo(
       }
     }
 
+    // Cuộn đến tin nhắn chưa đọc đầu tiên
     const scrollToFirstUnreadMessage = () => {
       const msgsContainerEle = messagesContainer.current
       if (msgsContainerEle) {
         msgsContainerEle.scrollTo({
-          top: unreadMessagesRef.current.firstUnreadOffsetTop - msgsContainerEle.clientHeight / 2,
+          top:
+            (unreadMessagesRef.current.firstUnreadBoundingTop -
+              msgsContainerEle.getBoundingClientRect().top) /
+            2,
           behavior: "instant",
         })
       }
     }
 
-    // Cuộn đến cuối danh sách tin nhắn hoặc cuộn đến tin nhắn đầu tiên chưa đọc
+    // Cuộn đến cuối danh sách tin nhắn hoặc cuộn đến tin nhắn chưa đọc đầu tiên
     const handleScrollToBottomMsg = () => {
       const unreadMessages = unreadMessagesRef.current
-      if (unreadMessages.count > 0 && unreadMessages.firstUnreadOffsetTop !== -1) {
+      if (unreadMessages.count > 0 && unreadMessages.firstUnreadBoundingTop !== -1) {
         scrollToFirstUnreadMessage()
       } else {
         scrollToBottomMessage()
@@ -373,14 +331,21 @@ export const Messages = memo(
       }
     }
 
-    // Xử lý tin nhắn chưa đọc nằm ngoài vùng nhìn thấy
+    // Xử lý tin nhắn chưa đọc nằm ngoài vùng nhìn thấy (tức là user KHÔNG nhìn thấy tin nhắn chưa đọc)
     const handleUnreadMsgOutOfVisibleView = (
       messagesContainer: HTMLElement,
       unreadMessage: HTMLElement
     ) => {
-      if (unreadMessage.offsetTop > messagesContainer.scrollTop + messagesContainer.clientHeight) {
+      const containerRect = messagesContainer.getBoundingClientRect()
+      const unreadMsgRect = unreadMessage.getBoundingClientRect()
+      if (unreadMsgRect.top > containerRect.top + containerRect.height) {
         // Nếu tin nhắn chưa đọc nằm ngoài vùng nhìn thấy
-        eventEmitter.emit(EInternalEvents.UNREAD_MESSAGES_COUNT, unreadMessagesRef.current.count)
+        console.log(">>> run out of visible view:", unreadMessagesRef.current)
+        eventEmitter.emit(
+          EInternalEvents.UNREAD_MESSAGES_COUNT,
+          unreadMessagesRef.current.count,
+          directChatId
+        )
       }
     }
 
@@ -395,9 +360,10 @@ export const Messages = memo(
       ) {
         const unreadMessageEles =
           msgsContainerEle.querySelectorAll<HTMLElement>(".QUERY-unread-message")
+        console.log(">>> unread eles:", unreadMessageEles)
         if (unreadMessageEles && unreadMessageEles.length > 0) {
           const unreadMessages = unreadMessagesRef.current
-          unreadMessages.firstUnreadOffsetTop = unreadMessageEles[0].offsetTop
+          unreadMessages.firstUnreadBoundingTop = unreadMessageEles[0].getBoundingClientRect().top
           unreadMessages.count = unreadMessageEles.length
           for (const msgEle of unreadMessageEles) {
             handleUnreadMsgInVisibleView(
@@ -411,22 +377,25 @@ export const Messages = memo(
       }
     }
 
-    // Xử lý tin nhắn chưa đọc khi cuộn vào vùng nhìn thấy
+    // Xử lý tin nhắn chưa đọc nằm trong vùng nhìn thấy (tức là user nhìn thấy 80% tin nhắn chưa đọc)
     const handleUnreadMsgInVisibleView = (
       messagesContainer: HTMLElement,
       unreadMessage: HTMLElement,
       msgId: number
     ) => {
+      const containerRect = messagesContainer.getBoundingClientRect()
+      const unreadMsgRect = unreadMessage.getBoundingClientRect()
       if (
-        unreadMessage.offsetTop + unreadMessage.offsetHeight <
-        messagesContainer.scrollTop + messagesContainer.clientHeight
+        unreadMsgRect.top + unreadMsgRect.height * 0.8 <
+        containerRect.top + containerRect.height
       ) {
         // Nếu tin nhắn chưa đọc nằm trong vùng nhìn thấy
-        unreadMessage.classList.remove("QUERY-unread-message")
+        // unreadMessage.classList.remove("QUERY-unread-message")
         const unreadMessages = unreadMessagesRef.current
         if (unreadMessages.count > 0) unreadMessages.count -= 1
-        unreadMessages.firstUnreadOffsetTop = -1
-        eventEmitter.emit(EInternalEvents.UNREAD_MESSAGES_COUNT, unreadMessages.count)
+        unreadMessages.firstUnreadBoundingTop = -1
+        console.log(">>> run in visible view:", unreadMessages)
+        eventEmitter.emit(EInternalEvents.UNREAD_MESSAGES_COUNT, unreadMessages.count, directChatId)
         clientSocket.socket.emit(ESocketEvents.message_seen_direct, {
           messageId: msgId,
           receiverId: recipientId === user.id ? creatorId : recipientId,
@@ -605,6 +574,11 @@ export const Messages = memo(
       }
     }
 
+    const startFetchingMessages = () => {
+      dispatch(resetDirectMessages())
+      fetchMessages(directChatId, undefined, true)
+    }
+
     // IntersectionObserver cho message cuối cùng
     useEffect(() => {
       if (!lastMsgRef.current) return
@@ -620,48 +594,33 @@ export const Messages = memo(
       return () => observer.disconnect()
     }, [messages])
 
+    // Xử lý thay đổi danh sách tin nhắn (>>> now)
     useEffect(() => {
+      console.log(">>> run useEffect (messages):", messages)
       initMessageOffset()
       requestAnimationFrame(() => {
         scrollToBottomOnMessages()
         checkUnreadMessage()
         updateMessagesCount()
       })
-      // Thêm log số lượng tin nhắn hiện tại
-      if (messages) {
-        //console.log(`[DEBUG] Số lượng tin nhắn được load ra hiện tại: ${messages.length}`)
-      }
-      // Thêm log kiểm tra messages có type 'PIN_NOTICE' không
-      if (messages && messages.length > 0) {
-        const pinNoticeMsgs = messages.filter((msg) => msg.type === "PIN_NOTICE")
-        //console.log("[DEBUG] Số lượng PIN_NOTICE:", pinNoticeMsgs.length, pinNoticeMsgs)
-      }
     }, [messages])
 
     useEffect(() => {
-      if (tempFlagUseEffectRef.current) {
-        tempFlagUseEffectRef.current = false
-        if (!messages || messages.length === 0) {
-          fetchMessages(directChatId, msgOffset.current, true)
-        }
-      }
+      startFetchingMessages()
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-      clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
+      eventEmitter.on(EInternalEvents.NEW_MESSAGE_FROM_CHATTING, listenSendDirectMessage)
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
       clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
       return () => {
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
+        eventEmitter.off(EInternalEvents.NEW_MESSAGE_FROM_CHATTING, listenSendDirectMessage)
         clientSocket.socket.removeListener(
           ESocketEvents.recovered_connection,
           handleRecoverdConnection
-        )
-        clientSocket.socket.removeListener(
-          ESocketEvents.send_message_direct,
-          listenSendDirectMessage
         )
         clientSocket.socket.removeListener(ESocketEvents.message_seen_direct, handleMessageSeen)
       }

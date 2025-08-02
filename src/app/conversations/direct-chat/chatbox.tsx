@@ -6,7 +6,7 @@ import { CustomAvatar, CustomTooltip, toast } from "@/components/materials"
 import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { useEffect, useMemo, useState, useRef, use } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { Search, Phone, MoreVertical, Pin } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
@@ -27,19 +27,21 @@ import { directChatService } from "@/services/direct-chat.service"
 import { renderMessageContent } from "./pin-message"
 import { CanceledError } from "axios"
 import axiosErrorHandler from "@/utils/axios-error-handler"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
 
 const TypingIndicator = () => {
   return (
-    <div className="flex items-center gap-2 text-xs text-gray-300 px-4 py-2">
+    <div className="flex items-center gap-2 text-xs text-gray-300">
       <div className="flex gap-1">
-        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+        <div className="STYLE-typing-message-dot-animation w-1 h-1 bg-gray-400 rounded-full"></div>
         <div
-          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-          style={{ animationDelay: "0.1s" }}
+          className="STYLE-typing-message-dot-animation w-1 h-1 bg-gray-400 rounded-full"
+          style={{ animationDelay: "0.2s" }}
         ></div>
         <div
-          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-          style={{ animationDelay: "0.2s" }}
+          className="STYLE-typing-message-dot-animation w-1 h-1 bg-gray-400 rounded-full"
+          style={{ animationDelay: "0.4s" }}
         ></div>
       </div>
       <span>Đang nhập...</span>
@@ -71,26 +73,24 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, canSend }: THeader
 
   return (
     <div className="flex justify-between gap-2 px-6 py-1.5 bg-regular-dark-gray-cl w-full box-border h-header">
-      <CustomTooltip title="View user info" placement="bottom">
-        <div className="flex gap-2 cursor-pointer" onClick={() => onOpenInfoBar(true)}>
-          <CustomAvatar
-            src={Profile.avatar}
-            imgSize={45}
-            className="text-2xl bg-regular-violet-cl"
-            fallback={Profile.fullName[0]}
-          />
-          <div className="flex flex-col">
-            <h3 className="text-lg font-bold w-fit text-white">{Profile.fullName || "Unnamed"}</h3>
-            {isTyping ? (
-              <TypingIndicator />
-            ) : (
-              <div className="text-xs text-regular-text-secondary-cl">
-                {"Last seen " + setLastSeen(dev_test_values.user_1.lastOnline)}
-              </div>
-            )}
-          </div>
+      <div className="flex gap-2">
+        <CustomAvatar
+          src={Profile.avatar}
+          imgSize={45}
+          fallbackClassName="bg-regular-violet-cl text-2xl"
+          fallback={Profile.fullName[0].toUpperCase()}
+        />
+        <div className="flex flex-col justify-center gap-2">
+          <h3 className="text-lg font-bold w-fit text-white leading-none">{Profile.fullName}</h3>
+          {isTyping ? (
+            <TypingIndicator />
+          ) : (
+            <div className="text-xs text-regular-text-secondary-cl">
+              {"Last seen " + setLastSeen(dev_test_values.user_1.lastOnline)}
+            </div>
+          )}
         </div>
-      </CustomTooltip>
+      </div>
 
       <div
         className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-header-icons" : "translate-x-0"} flex items-center gap-2 transition duration-300 ease-slide-info-bar-timing`}
@@ -122,7 +122,10 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, canSend }: THeader
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
           <div>
-            <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
+            <IconButton
+              onClick={() => onOpenInfoBar(true)}
+              className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
+            >
               <MoreVertical />
             </IconButton>
           </div>
@@ -322,6 +325,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
             <div className="flex flex-col flex-1 w-full justify-between h-0">
               <div className="flex-1 w-full overflow-y-auto">
                 <Messages
+                  key={directChat.id}
                   directChat={directChat}
                   onReply={handleSetReplyMessage}
                   pinnedMessages={pinnedMessages}
@@ -348,47 +352,35 @@ const Main = ({ directChat, canSend }: TMainProps) => {
   )
 }
 
-type TDirectChatboxProps = {
-  directChatId: number
-  isTemp: boolean
-}
-
 let fetchDirectChatAbortController: AbortController = new AbortController()
 
-export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => {
-  const { directChat, tempChatData } = useAppSelector(({ messages }) => messages)
+export const DirectChatbox = () => {
+  const { directChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
   const [canSend, setCanSend] = useState<boolean | null>(null)
   const user = useUser()
 
-  const fetchDirectChat = () => {
+  const handleFetchDirectChat = (directChatId: number) => {
     fetchDirectChatAbortController.abort()
     fetchDirectChatAbortController = new AbortController()
-    if (isTemp) {
-      if (tempChatData) dispatch(setDirectChat(tempChatData))
-    } else {
-      directChatService
-        .fetchDirectChat(directChatId, fetchDirectChatAbortController.signal)
-        .then((directChat) => {
-          dispatch(setDirectChat(directChat))
-        })
-        .catch((err) => {
-          if (!(err instanceof CanceledError)) {
-            toast.error(axiosErrorHandler.handleHttpError(err).message)
-          }
-        })
-    }
+    directChatService
+      .fetchDirectChat(directChatId, fetchDirectChatAbortController.signal)
+      .then((directChat) => {
+        dispatch(setDirectChat(directChat))
+      })
+      .catch((err) => {
+        if (!(err instanceof CanceledError)) {
+          toast.error(axiosErrorHandler.handleHttpError(err).message)
+        }
+      })
   }
 
   useEffect(() => {
+    eventEmitter.on(EInternalEvents.FETCH_DIRECT_CHAT, handleFetchDirectChat)
     return () => {
       fetchDirectChatAbortController.abort()
     }
   }, [])
-
-  useEffect(() => {
-    fetchDirectChat()
-  }, [directChatId, isTemp, tempChatData])
 
   useEffect(() => {
     if (!directChat) return
@@ -398,7 +390,6 @@ export const DirectChatbox = ({ directChatId, isTemp }: TDirectChatboxProps) => 
   }, [directChat?.id, user?.id])
 
   return (
-    directChatId &&
     directChat && (
       <VoicePlayerProvider>
         <Main directChat={directChat} canSend={canSend} />

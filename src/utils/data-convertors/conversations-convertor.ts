@@ -28,6 +28,7 @@ export const convertToDirectChatsUIData = (
       title: creator.id === user.id ? recipientProfile.fullName : creatorProfile.fullName,
       type: EChatType.DIRECT,
       createdAt: item.createdAt,
+      unreadMessageCount: item.unreadMessageCount || 0,
     }
   })
 }
@@ -50,6 +51,7 @@ export const convertToGroupChatsUIData = (data: TFetchGroupChatsData[]): TConver
       title: item.name,
       type: EChatType.GROUP,
       createdAt: item.createdAt,
+      unreadMessageCount: item.unreadMessageCount || 0,
     }
   })
 }

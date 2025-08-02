@@ -135,6 +135,9 @@ export const messagesSlice = createSlice({
       state.groupMessages = null
       state.fetchedMsgs = false
     },
+    resetDirectMessages: (state) => {
+      state.directMessages = null
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(
@@ -186,4 +189,5 @@ export const {
   mergeMessages,
   updateDirectChat,
   setLastSentMessage,
+  resetDirectMessages,
 } = messagesSlice.actions

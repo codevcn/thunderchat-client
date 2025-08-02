@@ -1,71 +1,98 @@
 import { useSearchParams } from "next/navigation"
 import validator from "validator"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { DirectChatbox } from "./direct-chat/chatbox"
 import { GroupChatbox } from "./group/group-chatbox"
-import type { TChatType } from "@/utils/types/global"
-import { resetAllChatData, setDirectChat } from "@/redux/messages/messages.slice"
-import { useAppDispatch } from "@/hooks/redux"
 import { localStorageManager } from "@/utils/local-storage"
+import { EChatType } from "@/utils/enums"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
+import { useAppDispatch } from "@/hooks/redux"
+import { setDirectChat } from "@/redux/messages/messages.slice"
+
+type TChatInfo = {
+  type: EChatType
+  chatId: number
+}
 
 export const SwitchChatbox = () => {
-  const [chatId, setChatId] = useState<number>()
-  const [type, setType] = useState<TChatType>()
-  const [isTemp, setIsTemp] = useState<boolean>(false)
+  const [chatInfo, setChatInfo] = useState<TChatInfo>()
   const searchParams = useSearchParams()
   const directChatId = searchParams.get("cid")
   const tempId = searchParams.get("tid")
   const groupChatId = searchParams.get("gid")
+  const prevChatIdRef = useRef<number | null>(null)
   const dispatch = useAppDispatch()
 
-  const checkChatId = () => {
+  const checkChatInfo = () => {
     if (directChatId && validator.isNumeric(directChatId)) {
-      setChatId(parseInt(directChatId))
-      setIsTemp(false)
-      setType("direct")
-      return
-    }
-    if (tempId && validator.isNumeric(tempId)) {
-      setChatId(parseInt(tempId))
-      setType("direct")
-      setIsTemp(true)
-      return
-    }
-    if (groupChatId && validator.isNumeric(groupChatId)) {
-      setChatId(parseInt(groupChatId))
-      setIsTemp(false)
-      setType("group")
-      return
+      handleSetChatInfo({
+        type: EChatType.DIRECT,
+        chatId: parseInt(directChatId),
+      })
+    } else if (tempId && validator.isNumeric(tempId)) {
+      handleLastDirectChatData(parseInt(tempId))
+    } else if (groupChatId && validator.isNumeric(groupChatId)) {
+      handleSetChatInfo({
+        type: EChatType.GROUP,
+        chatId: parseInt(groupChatId),
+      })
     }
   }
 
-  const handleTempChatData = () => {
-    if (!tempId) return
+  const handleSetChatInfo = ({ type, chatId }: TChatInfo) => {
+    setChatInfo((pre) => {
+      if (pre) {
+        if (pre.chatId !== chatId) {
+          return {
+            type,
+            chatId,
+          }
+        }
+        return pre
+      }
+      return {
+        type,
+        chatId,
+      }
+    })
+  }
+
+  const handleLastDirectChatData = (tempId: number) => {
     const lastDirectChatData = localStorageManager.getLastDirectChatData()
-    if (lastDirectChatData) {
-      setChatId(lastDirectChatData.id)
-      setType("direct")
-      setIsTemp(false)
-      dispatch(setDirectChat(lastDirectChatData))
+    if (lastDirectChatData && tempId === lastDirectChatData.tempId) {
+      const { chatData } = lastDirectChatData
+      const chatId = chatData.id
+      if (chatId === -1) {
+        dispatch(setDirectChat(chatData))
+      }
+      handleSetChatInfo({
+        type: EChatType.DIRECT,
+        chatId,
+      })
+    }
+  }
+
+  const handleFetchChatData = () => {
+    if (!chatInfo) return
+    const { chatId, type } = chatInfo
+    if (chatId !== -1 && prevChatIdRef.current !== chatId) {
+      if (type === EChatType.DIRECT) {
+        eventEmitter.emit(EInternalEvents.FETCH_DIRECT_CHAT, chatId)
+      } else if (type === EChatType.GROUP) {
+        eventEmitter.emit(EInternalEvents.FETCH_GROUP_CHAT, chatId)
+      }
+      prevChatIdRef.current = chatId
     }
   }
 
   useEffect(() => {
-    handleTempChatData()
-  }, [tempId])
+    handleFetchChatData()
+  }, [chatInfo])
 
   useEffect(() => {
-    checkChatId()
-    dispatch(resetAllChatData())
+    checkChatInfo()
   }, [directChatId, tempId, groupChatId])
 
-  return (
-    chatId &&
-    type &&
-    (type === "direct" ? (
-      <DirectChatbox key={chatId} directChatId={chatId} isTemp={isTemp} />
-    ) : (
-      <GroupChatbox key={chatId} groupChatId={chatId} />
-    ))
-  )
+  return chatInfo && (chatInfo.type === EChatType.DIRECT ? <DirectChatbox /> : <GroupChatbox />)
 }

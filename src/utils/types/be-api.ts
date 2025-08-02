@@ -239,6 +239,7 @@ export type TFetchDirectChatsData = TDirectChat & {
   LastSentMessage?: TDirectMessage
   Recipient: TUserWithProfile
   Creator: TUserWithProfile
+  unreadMessageCount?: number
 }
 
 export type TUploadGroupAvatarData = {
@@ -263,6 +264,7 @@ export type TGroupChatData = TGroupChat
 export type TFetchGroupChatsData = TGroupChat & {
   LastSentMessage?: TGroupMessage
   Creator: TUserWithProfile
+  unreadMessageCount?: number
 }
 
 export type TUpdateGroupChatParams = {

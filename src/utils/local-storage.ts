@@ -1,6 +1,5 @@
 import { ELocalStorageKeys } from "./enums"
-import { TDirectChatData } from "./types/be-api"
-import type { TLastPageAccessed } from "./types/global"
+import type { TLastDirectChatData, TLastPageAccessed } from "./types/global"
 
 class LocalStorageManager {
   setLastPageAccessed(url: string): void {
@@ -30,13 +29,13 @@ class LocalStorageManager {
     return localStorage.getItem(ELocalStorageKeys.THE_LAST_DIRECT_CHAT_ID)
   }
 
-  setLastDirectChatData(data: TDirectChatData): void {
+  setLastDirectChatData(data: TLastDirectChatData): void {
     localStorage.setItem(ELocalStorageKeys.LAST_DIRECT_CHAT_DATA, JSON.stringify(data))
   }
 
-  getLastDirectChatData(): TDirectChatData | null {
+  getLastDirectChatData(): TLastDirectChatData | null {
     const data = localStorage.getItem(ELocalStorageKeys.LAST_DIRECT_CHAT_DATA)
-    return data ? (JSON.parse(data) as TDirectChatData) : null
+    return data ? (JSON.parse(data) as TLastDirectChatData) : null
   }
 }
 

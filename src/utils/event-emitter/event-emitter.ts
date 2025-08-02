@@ -1,7 +1,7 @@
 import EventEmitter from "eventemitter3"
 import type { EInternalEvents } from "./events"
 import type { TMsgContent } from "./types"
-import type { TGetFriendRequestsData } from "../types/be-api"
+import type { TGetDirectMessagesMessage, TGetFriendRequestsData } from "../types/be-api"
 import type { TSendDirectMessageRes } from "../types/socket"
 
 interface IEventEmitter {
@@ -10,7 +10,7 @@ interface IEventEmitter {
   [EInternalEvents.SCROLL_OUT_OF_BOTTOM]: () => void
   [EInternalEvents.CLICK_ON_LAYOUT]: (e: MouseEvent) => void
   [EInternalEvents.MSG_TEXTFIELD_EDITED]: (e: TMsgContent) => void
-  [EInternalEvents.UNREAD_MESSAGES_COUNT]: (count: number) => void
+  [EInternalEvents.UNREAD_MESSAGES_COUNT]: (count: number, chatId: number) => void
   [EInternalEvents.LAST_FRIEND_REQUEST]: () => void
   [EInternalEvents.SAME_PATH_NAVIGATION]: () => void
   [EInternalEvents.SEND_FRIEND_REQUEST]: (requestData: TGetFriendRequestsData) => void
@@ -18,6 +18,9 @@ interface IEventEmitter {
   [EInternalEvents.SCROLL_TO_MESSAGE_MEDIA]: (messageId: number) => void
   [EInternalEvents.FRIEND_REMOVED]: (friendRowId: number) => void
   [EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE]: (data: TSendDirectMessageRes) => void
+  [EInternalEvents.FETCH_DIRECT_CHAT]: (directChatId: number) => void
+  [EInternalEvents.FETCH_GROUP_CHAT]: (groupChatId: number) => void
+  [EInternalEvents.NEW_MESSAGE_FROM_CHATTING]: (newMessage: TGetDirectMessagesMessage) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

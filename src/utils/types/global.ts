@@ -4,6 +4,7 @@ import type {
   TDirectChat,
   TGroupMessage,
   TDirectMessageWithAuthorAndReplyTo,
+  TDirectChatData,
 } from "@/utils/types/be-api"
 import type { EChatType, EMessageTypes } from "../enums"
 
@@ -54,6 +55,7 @@ export type TConversationCard = {
   pinIndex: number
   type: EChatType
   createdAt: string
+  unreadMessageCount: number
 }
 
 export type TUnknownObject = {
@@ -101,8 +103,6 @@ export type TPlacement = "top" | "right" | "bottom" | "left"
 
 export type TAlign = "center" | "start" | "end"
 
-export type TChatType = "direct" | "group"
-
 export type TRemoveGroupChatMemberState = {
   memberId: number
 }
@@ -115,4 +115,9 @@ export type THighlightOffsets = {
 export type TLastSentMessageState = {
   lastMessageId: number
   chatType: EChatType
+}
+
+export type TLastDirectChatData = {
+  chatData: TDirectChatData
+  tempId: number
 }

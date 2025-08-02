@@ -30,7 +30,7 @@ export const AdminAuthProvider = ({ children }: { children: JSX.Element }) => {
           dispatch(setAdminAuthStatus(EAdminAuthStatus.UNAUTHENTICATED))
         })
     }
-  }, [])
+  }, [adminAuthStatus])
 
   return children
 }

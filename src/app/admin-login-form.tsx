@@ -9,12 +9,12 @@ import { authService } from "@/services/auth.service"
 import { extractFormData } from "@/utils/helpers"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { AdminErrorHandler } from "@/utils/admin-error-handler"
-import { useAuthRedirect } from "@/hooks/navigation"
 import type { TCheckboxValue } from "@/utils/types/global"
 import { toast } from "sonner"
 import { useAppDispatch } from "@/hooks/redux"
 import { setAdminAuthStatus } from "@/redux/auth/admin-auth.slice"
 import { EAdminAuthStatus } from "@/utils/enums"
+import { useAdminRedirect } from "@/hooks/admin-navigation"
 
 type TAdminLoginFormData = {
   email: string
@@ -29,8 +29,8 @@ type TAdminLoginFormProps = {
 
 export const AdminLoginForm = ({ typedEmail, onGoBack }: TAdminLoginFormProps) => {
   const [loading, setLoading] = useState<boolean>(false)
-  const authRedirect = useAuthRedirect()
   const dispatch = useAppDispatch()
+  const adminRedirect = useAdminRedirect()
 
   const handleAdminError = (error: any) => {
     const errorMessage = axiosErrorHandler.handleHttpError(error).message
@@ -48,9 +48,7 @@ export const AdminLoginForm = ({ typedEmail, onGoBack }: TAdminLoginFormProps) =
         .then(() => {
           dispatch(setAdminAuthStatus(EAdminAuthStatus.AUTHENTICATED))
           toast.success("Admin login successful! Welcome to admin panel.")
-          setTimeout(() => {
-            authRedirect()
-          }, 500)
+          // Let the admin page handle the redirect
         })
         .catch((error) => {
           handleAdminError(error)

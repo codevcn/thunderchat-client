@@ -1,5 +1,5 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit"
-import type { TConversationCard } from "@/utils/types/global"
+import type { TConversationCard, TUpdateUnreadMsgCountState } from "@/utils/types/global"
 import { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
 import { updateObjectByPath } from "@/utils/helpers"
 
@@ -44,6 +44,17 @@ export const conversationsSlice = createSlice({
         }
       }
     },
+    updateUnreadMsgCountOnCard: (state, action: PayloadAction<TUpdateUnreadMsgCountState>) => {
+      const { count, directChatId } = action.payload
+      const conversations = state.conversations
+      if (conversations) {
+        for (const conversation of conversations) {
+          if (conversation.id === directChatId) {
+            conversation.unreadMessageCount = count
+          }
+        }
+      }
+    },
   },
 })
 
@@ -53,4 +64,5 @@ export const {
   addConversations,
   clearConversations,
   updateSingleConversation,
+  updateUnreadMsgCountOnCard,
 } = conversationsSlice.actions

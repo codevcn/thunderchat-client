@@ -20,7 +20,7 @@ interface IEventEmitter {
   [EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE]: (data: TSendDirectMessageRes) => void
   [EInternalEvents.FETCH_DIRECT_CHAT]: (directChatId: number) => void
   [EInternalEvents.FETCH_GROUP_CHAT]: (groupChatId: number) => void
-  [EInternalEvents.NEW_MESSAGE_FROM_CHATTING]: (newMessage: TGetDirectMessagesMessage) => void
+  [EInternalEvents.SEND_MESSAGE_DIRECT]: (newMessage: TGetDirectMessagesMessage) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

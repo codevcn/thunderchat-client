@@ -236,6 +236,7 @@ const MessageTextField = ({
     clientSocket.socket.emit(ESocketEvents.typing_direct, {
       receiverId: recipientId === user.id ? creatorId : recipientId,
       isTyping: type === "typing",
+      directChatId: directChat.id,
     })
   }, INDICATE_TYPING_DELAY)
 

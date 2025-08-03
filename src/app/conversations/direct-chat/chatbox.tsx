@@ -54,22 +54,36 @@ type THeaderProps = {
   onOpenInfoBar: (open: boolean) => void
   friendInfo: TUserWithProfile
   canSend: boolean | null
+  directChat: TDirectChatData
 }
 
-const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, canSend }: THeaderProps) => {
+const Header = ({
+  infoBarIsOpened,
+  onOpenInfoBar,
+  friendInfo,
+  canSend,
+  directChat,
+}: THeaderProps) => {
   const { Profile } = friendInfo
+  const { id } = directChat
   const [isTyping, setIsTyping] = useState<boolean>(false)
 
-  const handleTypingMessage = (typing: boolean) => {
+  const handleTypingMessage = (typing: boolean, directChatId: number) => {
+    if (directChatId !== id) return
     setIsTyping(typing)
   }
 
+  const resetTyping = () => {
+    setIsTyping(false)
+  }
+
   useEffect(() => {
+    resetTyping()
     clientSocket.socket.on(ESocketEvents.typing_direct, handleTypingMessage)
     return () => {
       clientSocket.socket.removeListener(ESocketEvents.typing_direct, handleTypingMessage)
     }
-  }, [])
+  }, [id])
 
   return (
     <div className="flex justify-between gap-2 px-6 py-1.5 bg-regular-dark-gray-cl w-full box-border h-header">
@@ -257,6 +271,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
           onOpenInfoBar={handleOpenInfoBar}
           friendInfo={friendInfo}
           canSend={canSend}
+          directChat={directChat}
         />
 
         {/* Hiển thị thông báo khi không thể gửi tin nhắn */}
@@ -325,7 +340,6 @@ const Main = ({ directChat, canSend }: TMainProps) => {
             <div className="flex flex-col flex-1 w-full justify-between h-0">
               <div className="flex-1 w-full overflow-y-auto">
                 <Messages
-                  key={directChat.id}
                   directChat={directChat}
                   onReply={handleSetReplyMessage}
                   pinnedMessages={pinnedMessages}

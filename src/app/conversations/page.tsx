@@ -33,19 +33,16 @@ const ConversationPage = () => {
     eventEmitter.emit(EInternalEvents.CLICK_ON_LAYOUT, e)
   }
 
-  const listenNewMessageFromChatting = (newMessage: TGetDirectMessagesMessage) => {
-    eventEmitter.emit(EInternalEvents.NEW_MESSAGE_FROM_CHATTING, newMessage)
+  const listenSendDirectMessage = (newMessage: TGetDirectMessagesMessage) => {
+    eventEmitter.emit(EInternalEvents.SEND_MESSAGE_DIRECT, newMessage)
   }
 
   useEffect(() => {
     document.body.addEventListener("click", handleClickOnLayout)
-    clientSocket.socket.on(ESocketEvents.send_message_direct, listenNewMessageFromChatting)
+    clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
     return () => {
       document.body.removeEventListener("click", handleClickOnLayout)
-      clientSocket.socket.removeListener(
-        ESocketEvents.send_message_direct,
-        listenNewMessageFromChatting
-      )
+      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)
     }
   }, [])
 

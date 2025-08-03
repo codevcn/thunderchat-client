@@ -28,7 +28,7 @@ export interface IListenSocketEvents {
   ) => void
   [ESocketEvents.recovered_connection]: (messages: TDirectMessageWithAuthorAndReplyTo[]) => void
   [ESocketEvents.message_seen_direct]: (payload: TMsgSeenListenPayload) => void
-  [ESocketEvents.typing_direct]: (isTyping: boolean) => void
+  [ESocketEvents.typing_direct]: (isTyping: boolean, directChatId: number) => void
   [ESocketEvents.friend_request_action]: (payload: TFriendRequestPayload) => void
   [ESocketEvents.pin_message]: (data: TPinMessageEventData) => void
   [ESocketEvents.pin_direct_chat]: (data: TPinDirectChatEventData) => void

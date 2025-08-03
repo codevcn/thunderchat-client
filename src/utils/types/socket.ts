@@ -38,6 +38,7 @@ export type TMsgSeenEmitPayload = {
 export type TTypingEmitPayload = {
   receiverId: number
   isTyping: boolean
+  directChatId: number
 }
 
 export type TFriendRequestPayload = {

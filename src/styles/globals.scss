@@ -349,3 +349,67 @@ svg {
 .STYLE-typing-message-dot-animation {
   animation: typing-message-dot 1s infinite;
 }
+
+.STYLE-file-icon {
+  display: flex;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  background-color: var(--tdc-regular-red-cl);
+  position: relative;
+  flex-shrink: 0;
+  align-items: flex-end;
+  color: var(--tdc-regular-white-cl);
+  clip-path: polygon(0px 0px, calc(100% - 1.125rem) 0px, 100% 1.125rem, 100% 100%, 0px 100%);
+  padding: 1rem 0.75rem 0.5rem;
+  transition: clip-path 0.2s ease-in;
+  cursor: pointer;
+  position: relative;
+
+  .STYLE-file-icon-extension,
+  .STYLE-file-icon-download {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: opacity 0.2s;
+    color: var(--tdc-regular-white-cl);
+  }
+
+  .STYLE-file-icon-download {
+    opacity: 0;
+    transform: translate(-50%, -20%);
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    display: block;
+    border-bottom-left-radius: 0.25rem;
+    border-color: rgba(0, 0, 0, 0.25);
+    border-style: solid;
+    border-width: 0.5625rem;
+    transition: border-width 0.2s ease-in;
+  }
+
+  &:hover {
+    clip-path: polygon(0px 0px, 100% 0px, 100% 0px, 100% 100%, 0px 100%);
+
+    .STYLE-file-icon-extension {
+      opacity: 0;
+    }
+
+    .STYLE-file-icon-download {
+      opacity: 1;
+    }
+
+    &::after {
+      border-width: 0;
+    }
+  }
+}

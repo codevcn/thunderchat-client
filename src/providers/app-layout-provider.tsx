@@ -12,14 +12,10 @@ import { ETabs } from "@/app/friends/sharing"
 import { useRouter } from "next/navigation"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
-import type { TSendDirectMessageRes } from "@/utils/types/socket"
-import { useAppDispatch } from "@/hooks/redux"
-import { updateDirectChat } from "@/redux/messages/messages.slice"
 
 export const AppLayoutProvider = ({ children }: { children: React.ReactNode }) => {
   const appRootRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const dispatch = useAppDispatch()
 
   const setLastPageAccessed = () => {
     localStorageManager.setLastPageAccessed(getPathWithQueryString())
@@ -38,28 +34,8 @@ export const AppLayoutProvider = ({ children }: { children: React.ReactNode }) =
     })
   }
 
-  // const listenSendMessageSuccessResponse = (data: TSendDirectMessageRes) => {
-  //   if ("newDirectChat" in data) {
-  //     const { newDirectChat } = data
-  //     if (newDirectChat) {
-  //       dispatch(
-  //         updateDirectChat({
-  //           id: newDirectChat.id,
-  //           createdAt: newDirectChat.createdAt,
-  //           creatorId: newDirectChat.creatorId,
-  //           recipientId: newDirectChat.recipientId,
-  //         })
-  //       )
-  //     }
-  //   }
-  // }
-
   useEffect(() => {
     clientSocket.socket.on(ESocketEvents.send_friend_request, listenFriendRequest)
-    // eventEmitter.on(
-    //   EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
-    //   listenSendMessageSuccessResponse
-    // )
     setLastPageAccessed()
     return () => {
       clientSocket.socket.removeListener(ESocketEvents.send_friend_request, listenFriendRequest)

@@ -206,3 +206,11 @@ export function extractEmojisFromMessage(message: string): TEmoji[] {
 
   return emojis
 }
+
+/**
+ * Get the current path of the browser
+ * @returns The current path of the browser, e.g. "/conversations"
+ */
+export const getCurrentPathOnBrowserURL = (): string => {
+  return window.location.pathname
+}

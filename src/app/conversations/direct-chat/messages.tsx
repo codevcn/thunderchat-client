@@ -2,7 +2,6 @@
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useRef, useState, useEffect, memo } from "react"
-import { fetchDirectMessagesThunk } from "@/redux/messages/messages.thunk"
 import type {
   TGetDirectMessagesMessage,
   TSticker,
@@ -19,6 +18,7 @@ import {
   mergeMessages,
   setLastSentMessage,
   resetDirectMessages,
+  addDirectMessages,
 } from "@/redux/messages/messages.slice"
 import { displayMessageStickyTime } from "@/utils/date-time"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -38,6 +38,7 @@ import { CustomTooltip } from "@/components/materials"
 import { PinMessageModal } from "./pin-message"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
+import { messageService } from "@/services/message.service"
 
 const SCROLL_ON_MESSAGES_THRESHOLD: number = 100
 const SHOW_SCROLL_BTN_THRESHOLD: number = 250
@@ -128,7 +129,7 @@ type TMessagesLoadingState = "loading-messages"
 
 type TUnreadMessages = {
   count: number
-  firstUnreadBoundingTop: number
+  firstUnreadMsgEle: HTMLElement | null
 }
 
 // Thêm hàm tìm đoạn id bị thiếu
@@ -164,8 +165,9 @@ export const Messages = memo(
     const msgOffset = useRef<number>(lastSentMessageId) // Biến lưu offset để tải thêm tin nhắn
     const dispatch = useAppDispatch()
     const messagesPreCount = useRef<number>(0) // Biến để lưu số lượng tin nhắn trước đó trong danh sách
-    const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadBoundingTop: -1 }) // Biến để lưu thông tin về tin nhắn chưa đọc
+    const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadMsgEle: null }) // Biến để lưu thông tin về tin nhắn chưa đọc
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
+    const isRenderingMessages = useRef<boolean>(false)
 
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
@@ -241,25 +243,24 @@ export const Messages = memo(
       msgOffset: number | undefined,
       isFirstTime: boolean
     ) => {
+      if (isRenderingMessages.current) return
+      isRenderingMessages.current = true
       const msgsContainerEle = messagesContainer.current
       if (!msgsContainerEle) return
       setLoading("loading-messages")
       const scrollHeightBefore = msgsContainerEle.scrollHeight // Chiều cao trước khi thêm
       const scrollTopBefore = msgsContainerEle.scrollTop // Vị trí cuộn từ top
-      dispatch(
-        fetchDirectMessagesThunk({
+      messageService
+        .fetchDirectMessages({
           directChatId,
           msgOffset,
           limit: EPaginations.DIRECT_MESSAGES_PAGE_SIZE,
           sortType: ESortTypes.ASC,
           isFirstTime,
         })
-      )
-        .unwrap()
         .then((result) => {
-          if (result) {
-            hasMoreMessages.current = result.hasMoreMessages
-          }
+          hasMoreMessages.current = result.hasMoreMessages
+          dispatch(addDirectMessages(result.directMessages))
         })
         .catch((error) => {
           toast.error(axiosErrorHandler.handleHttpError(error).message)
@@ -296,9 +297,8 @@ export const Messages = memo(
       if (msgsContainerEle) {
         msgsContainerEle.scrollTo({
           top:
-            unreadMessagesRef.current.firstUnreadBoundingTop -
-            msgsContainerEle.getBoundingClientRect().top -
-            msgsContainerEle.clientHeight / 2,
+            unreadMessagesRef.current.firstUnreadMsgEle!.getBoundingClientRect().top -
+            msgsContainerEle.getBoundingClientRect().top,
           behavior: "instant",
         })
       }
@@ -307,7 +307,7 @@ export const Messages = memo(
     // Cuộn đến cuối danh sách tin nhắn hoặc cuộn đến tin nhắn chưa đọc đầu tiên
     const handleScrollToBottomMsg = () => {
       const unreadMessages = unreadMessagesRef.current
-      if (unreadMessages.count > 0 && unreadMessages.firstUnreadBoundingTop !== -1) {
+      if (unreadMessages.count > 0 && unreadMessages.firstUnreadMsgEle !== null) {
         scrollToFirstUnreadMessage()
       } else {
         scrollToBottomMessage()
@@ -364,8 +364,8 @@ export const Messages = memo(
           const unreadMessages = unreadMessagesRef.current
           unreadMessages.count = unreadMessageEles.length
           for (const msgEle of unreadMessageEles) {
-            if (unreadMessages.firstUnreadBoundingTop === -1) {
-              unreadMessages.firstUnreadBoundingTop = msgEle.getBoundingClientRect().top
+            if (unreadMessages.firstUnreadMsgEle === null) {
+              unreadMessages.firstUnreadMsgEle = msgEle
             }
             handleUnreadMsgInVisibleView(
               msgsContainerEle,
@@ -376,7 +376,7 @@ export const Messages = memo(
           }
         } else {
           unreadMessagesRef.current.count = 0
-          unreadMessagesRef.current.firstUnreadBoundingTop = -1
+          unreadMessagesRef.current.firstUnreadMsgEle = null
           eventEmitter.emit(
             EInternalEvents.UNREAD_MESSAGES_COUNT,
             unreadMessagesRef.current.count,
@@ -402,7 +402,7 @@ export const Messages = memo(
         unreadMessage.classList.remove("QUERY-unread-message")
         const unreadMessages = unreadMessagesRef.current
         if (unreadMessages.count > 0) unreadMessages.count -= 1
-        unreadMessages.firstUnreadBoundingTop = -1
+        unreadMessages.firstUnreadMsgEle = null
         eventEmitter.emit(EInternalEvents.UNREAD_MESSAGES_COUNT, unreadMessages.count, directChatId)
         clientSocket.socket.emit(ESocketEvents.message_seen_direct, {
           messageId: msgId,
@@ -588,6 +588,21 @@ export const Messages = memo(
       fetchMessages(directChatId, undefined, true)
     }
 
+    const handleMessagesChange = () => {
+      initMessageOffset()
+      requestAnimationFrame(() => {
+        scrollToBottomOnMessages()
+        checkUnreadMessage()
+        updateMessagesCount()
+        isRenderingMessages.current = false
+      })
+    }
+
+    // Xử lý thay đổi danh sách tin nhắn
+    useEffect(() => {
+      handleMessagesChange()
+    }, [messages, directChatId])
+
     // IntersectionObserver cho message cuối cùng
     useEffect(() => {
       if (!lastMsgRef.current) return
@@ -601,16 +616,6 @@ export const Messages = memo(
       )
       observer.observe(lastMsgRef.current)
       return () => observer.disconnect()
-    }, [messages, directChatId])
-
-    // Xử lý thay đổi danh sách tin nhắn (>>> now)
-    useEffect(() => {
-      initMessageOffset()
-      requestAnimationFrame(() => {
-        scrollToBottomOnMessages()
-        checkUnreadMessage()
-        updateMessagesCount()
-      })
     }, [messages, directChatId])
 
     useEffect(() => {

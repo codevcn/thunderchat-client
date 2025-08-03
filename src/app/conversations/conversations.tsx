@@ -545,7 +545,6 @@ const ConversationCard = ({
   pinLoading,
   conversationData,
 }: TConversationCardProps) => {
-  console.log(">>> conversationData:", conversationData)
   const { id, type, avatar, title, lastMessageTime, subtitle, pinIndex, unreadMessageCount } =
     conversationData
   const subtitleType = subtitle.type

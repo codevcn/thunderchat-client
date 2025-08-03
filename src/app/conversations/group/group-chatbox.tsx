@@ -6,13 +6,8 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useEffect, useState } from "react"
 import { Search, Phone, MoreVertical } from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
-import {
-  fetchGroupChatMembersThunk,
-  fetchGroupChatThunk,
-} from "@/redux/conversations/conversations.thunks"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import { GroupMessages } from "./group-messages"
 import { TypeMessageBar } from "./type-message-bar"
 import { InfoBar } from "./info-bar"
 import type { TGroupChatData } from "@/utils/types/be-api"
@@ -137,8 +132,8 @@ export const GroupChatbox = () => {
   }
 
   const handleFetchGroupChat = (groupChatId: number) => {
-    dispatch(fetchGroupChatThunk(groupChatId))
-    dispatch(fetchGroupChatMembersThunk(groupChatId))
+    // dispatch(fetchGroupChatThunk(groupChatId))
+    // dispatch(fetchGroupChatMembersThunk(groupChatId))
   }
 
   useEffect(() => {
@@ -160,7 +155,7 @@ export const GroupChatbox = () => {
           <div
             className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden`}
           >
-            <GroupMessages groupChat={groupChat} />
+            {/* <GroupMessages groupChat={groupChat} /> */}
 
             <TypeMessageBar groupChat={groupChat} />
           </div>

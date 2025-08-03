@@ -26,6 +26,7 @@ import {
   RotateCw,
   MoreHorizontal,
   X as CloseIcon,
+  Download,
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
@@ -42,17 +43,6 @@ import { directChatService } from "@/services/direct-chat.service"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { clientSocket } from "@/utils/socket/client-socket"
-
-type TContentProps = {
-  content: string
-  stickerUrl: string | null
-  mediaUrl: string | null
-  type: string
-  fileName?: string
-  fileType?: string
-  fileSize?: number
-  message?: TStateDirectMessage
-}
 
 const ImageModal = ({
   imageUrl,
@@ -147,6 +137,33 @@ const ImageModal = ({
   )
 }
 
+type TFileIconProps = {
+  fileTypeText: string
+  onDownload: (e: React.MouseEvent) => void
+}
+
+const FileIcon = ({ fileTypeText, onDownload }: TFileIconProps) => {
+  return (
+    <div className="STYLE-file-icon" onClick={onDownload}>
+      <span className="STYLE-file-icon-extension">{fileTypeText}</span>
+      <div className="STYLE-file-icon-download">
+        <Download size={20} />
+      </div>
+    </div>
+  )
+}
+
+type TContentProps = {
+  content: string
+  stickerUrl: string | null
+  mediaUrl: string | null
+  type: string
+  fileName?: string
+  fileType?: string
+  fileSize?: number
+  message?: TStateDirectMessage
+}
+
 const Content = ({
   content,
   stickerUrl,
@@ -204,29 +221,58 @@ const Content = ({
       </div>
     )
   }
-
   // Hiển thị document
   if (type === EMessageTypes.DOCUMENT && mediaUrl) {
-    const getFileIcon = (fileName: string) => {
-      const ext = fileName.split(".").pop()?.toLowerCase()
-      const iconClass = "w-8 h-8"
+    const downloadFile = async (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
 
-      switch (ext) {
-        case "pdf":
-          return <FileText className={`${iconClass} text-red-500`} />
-        case "doc":
-        case "docx":
-          return <FileText className={`${iconClass} text-blue-500`} />
-        case "xls":
-        case "xlsx":
-          return <FileSpreadsheet className={`${iconClass} text-green-500`} />
-        case "ppt":
-        case "pptx":
-          return <Presentation className={`${iconClass} text-orange-500`} />
-        case "txt":
-          return <FileCode className={`${iconClass} text-gray-500`} />
-        default:
-          return <File className={`${iconClass} text-blue-400`} />
+      try {
+        // Fetch file từ S3
+        const response = await fetch(mediaUrl)
+        if (!response.ok) throw new Error("Không thể tải file")
+
+        // Tạo blob từ response
+        const blob = await response.blob()
+
+        // Tạo URL cho blob
+        const blobUrl = window.URL.createObjectURL(blob)
+
+        // Tạo thẻ a để tải file
+        const link = document.createElement("a")
+        link.href = blobUrl
+
+        // Đảm bảo tên file có extension
+        const fileNameWithExt = fileName || "document"
+        const hasExtension = fileNameWithExt.includes(".")
+        const finalFileName = hasExtension
+          ? fileNameWithExt
+          : `${fileNameWithExt}.${fileType || "pdf"}`
+
+        link.download = finalFileName
+
+        // Thêm vào DOM, click và xóa
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        // Giải phóng blob URL
+        window.URL.revokeObjectURL(blobUrl)
+      } catch (error) {
+        console.error("Lỗi khi tải file:", error)
+        // Fallback: thử cách cũ
+        const link = document.createElement("a")
+        link.href = mediaUrl
+        const fileNameWithExt = fileName || "document"
+        const hasExtension = fileNameWithExt.includes(".")
+        const finalFileName = hasExtension
+          ? fileNameWithExt
+          : `${fileNameWithExt}.${fileType || "pdf"}`
+        link.download = finalFileName
+        link.target = "_blank"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
       }
     }
 
@@ -239,88 +285,17 @@ const Content = ({
 
     return (
       <div className="max-w-xs">
-        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 transition-colors">
-          {getFileIcon(fileName || "document")}
+        <div className="flex items-center gap-1.5 p-1 pb-0 rounded-lg">
+          <FileIcon
+            fileTypeText={fileType || fileName?.split(".").pop()?.toUpperCase() || "Unknown"}
+            onDownload={downloadFile}
+          />
           <div className="flex-1 min-w-0">
-            <div className="truncate font-medium text-sm text-blue-400">
+            <div className="truncate font-medium text-sm text-regular-white-cl">
               {fileName || "Tệp tin"}
             </div>
             <div className="text-xs text-gray-400">{formatBytes(fileSize)}</div>
           </div>
-          {/* Nút tải xuống */}
-          <button
-            type="button"
-            className="p-1 hover:bg-white/20 rounded transition-colors"
-            title="Tải xuống file"
-            onClick={async (e) => {
-              e.preventDefault()
-              e.stopPropagation()
-
-              try {
-                // Fetch file từ S3
-                const response = await fetch(mediaUrl)
-                if (!response.ok) throw new Error("Không thể tải file")
-
-                // Tạo blob từ response
-                const blob = await response.blob()
-
-                // Tạo URL cho blob
-                const blobUrl = window.URL.createObjectURL(blob)
-
-                // Tạo thẻ a để tải file
-                const link = document.createElement("a")
-                link.href = blobUrl
-
-                // Đảm bảo tên file có extension
-                const fileNameWithExt = fileName || "document"
-                const hasExtension = fileNameWithExt.includes(".")
-                const finalFileName = hasExtension
-                  ? fileNameWithExt
-                  : `${fileNameWithExt}.${fileType || "pdf"}`
-
-                link.download = finalFileName
-
-                // Thêm vào DOM, click và xóa
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-
-                // Giải phóng blob URL
-                window.URL.revokeObjectURL(blobUrl)
-              } catch (error) {
-                console.error("Lỗi khi tải file:", error)
-                // Fallback: thử cách cũ
-                const link = document.createElement("a")
-                link.href = mediaUrl
-                const fileNameWithExt = fileName || "document"
-                const hasExtension = fileNameWithExt.includes(".")
-                const finalFileName = hasExtension
-                  ? fileNameWithExt
-                  : `${fileNameWithExt}.${fileType || "pdf"}`
-                link.download = finalFileName
-                link.target = "_blank"
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-              }
-            }}
-          >
-            {/* Download icon */}
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
         </div>
       </div>
     )

@@ -105,7 +105,7 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
           {/* Settings */}
           <CustomTooltip placement="right" title="Settings">
             <Link
-              href="/user-settings"
+              href="/admin/admin-settings"
               className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-accent py-3"
             >
               <div className="m-auto">

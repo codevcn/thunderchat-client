@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Search } from "lucide-react"
-import { Spinner } from "@/components/materials/spinner"
+import { useEffect, useState, useCallback } from "react"
+import { Search, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { adminService } from "@/services/admin.service"
-import type { TAdminUser, TAdminUsersData } from "@/utils/types/be-api"
+import type { TAdminUser } from "@/utils/types/be-api"
 
 // Use the types from be-api instead of local interfaces
 type User = TAdminUser
@@ -174,12 +173,22 @@ export const AdminUserManagement = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterLocked, setFilterLocked] = useState<"all" | "locked" | "active">("all")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all")
   const [itemsPerPage] = useState(10)
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500) // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   useEffect(() => {
     fetchUsers()
-  }, [currentPage, searchTerm, filterLocked])
+  }, [currentPage, debouncedSearchTerm, filterActive])
 
   const fetchUsers = async () => {
     try {
@@ -189,8 +198,8 @@ export const AdminUserManagement = () => {
       const response = await adminService.getUsers({
         page: currentPage,
         limit: itemsPerPage,
-        search: searchTerm || undefined,
-        isLocked: filterLocked === "all" ? undefined : filterLocked,
+        search: debouncedSearchTerm || undefined,
+        isActive: filterActive === "all" ? undefined : filterActive,
       })
 
       setUsers(response.users)
@@ -203,17 +212,26 @@ export const AdminUserManagement = () => {
     }
   }
 
-  const handleLockUnlockUser = async (userId: number, isLocked: boolean) => {
+  const handleLockUnlockUser = async (userId: number, isActive: boolean) => {
     try {
       // Use admin service to lock/unlock user
-      await adminService.lockUnlockUser(userId, isLocked)
+      await adminService.lockUnlockUser(userId, isActive)
 
-      // Update local state
+      // Update local state with both isActive and inActiveAt
       setUsers((prevUsers) =>
-        prevUsers.map((user) => (user.id === userId ? { ...user, isLocked } : user))
+        prevUsers.map((user) => {
+          if (user.id === userId) {
+            return {
+              ...user,
+              isActive,
+              inActiveAt: new Date().toISOString(), // Always set to current time
+            }
+          }
+          return user
+        })
       )
 
-      toast.success(isLocked ? "Account locked" : "Account unlocked")
+      toast.success(isActive ? "Account unlocked" : "Account locked")
     } catch (err) {
       console.error("Error locking/unlocking user:", err)
       toast.error("An error occurred while performing the action")
@@ -278,22 +296,25 @@ export const AdminUserManagement = () => {
               placeholder="Search by email or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
+              className="w-full pl-10 pr-4 h-10 border border-border rounded-lg focus:outline-none bg-background text-foreground placeholder-muted-foreground"
               style={{ minWidth: "300px" }}
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
           </div>
 
           {/* Filter */}
-          <select
-            value={filterLocked}
-            onChange={(e) => setFilterLocked(e.target.value as "all" | "locked" | "active")}
-            className="px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-foreground"
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="locked">Locked</option>
-          </select>
+          <div className="relative">
+            <select
+              value={filterActive}
+              onChange={(e) => setFilterActive(e.target.value as "all" | "active" | "inactive")}
+              className="px-4 pr-10 h-10 border border-border rounded-lg focus:outline-none bg-background text-foreground appearance-none cursor-pointer min-w-[120px]"
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
         </div>
       </div>
 
@@ -316,7 +337,7 @@ export const AdminUserManagement = () => {
                     Created Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Last Activity
+                    Inactive Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Status
@@ -352,37 +373,31 @@ export const AdminUserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-foreground">
-                        {user.lastActive ? formatDate(user.lastActive) : "Never active"}
+                        {user.inActiveAt ? formatDate(user.inActiveAt) : "Never active"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.isLocked
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          user.isActive
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                         }`}
                       >
-                        {user.isLocked ? "Locked" : "Active"}
+                        {user.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleLockUnlockUser(user.id, !user.isLocked)}
+                          onClick={() => handleLockUnlockUser(user.id, !user.isActive)}
                           className={`px-3 py-1 rounded text-xs font-medium ${
-                            user.isLocked
-                              ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800"
-                              : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800"
+                            user.isActive
+                              ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800"
+                              : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800"
                           }`}
                         >
-                          {user.isLocked ? "Unlock" : "Lock"}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="px-3 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                        >
-                          Delete
+                          {user.isActive ? "Lock" : "Unlock"}
                         </button>
                       </div>
                     </td>

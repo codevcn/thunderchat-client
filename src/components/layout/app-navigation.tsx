@@ -1,12 +1,10 @@
 "use client"
 
-import { Home, Bell, Settings, MessageCircle, Users, User, Shield } from "lucide-react"
+import { Home, Bell, Settings, MessageCircle, Users, User } from "lucide-react"
 import Link from "next/link"
 import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
 import { useAccountModal } from "@/contexts/account-modal.context"
-import { useAppSelector } from "@/hooks/redux"
-import { EAppRole } from "@/utils/enums"
 
 type TNav = {
   label: string
@@ -42,8 +40,6 @@ type AppNavigationProps = {
 
 export const AppNavigation = memo((props: AppNavigationProps) => {
   const { openAccount } = useAccountModal()
-  const user = useAppSelector((state) => state.user.user)
-  const isAdmin = user?.role === EAppRole.ADMIN
 
   return (
     <div className="screen-medium-chatting:flex hidden w-[55px] h-screen relative">
@@ -76,20 +72,6 @@ export const AppNavigation = memo((props: AppNavigationProps) => {
               )}
             </CustomTooltip>
           ))}
-
-          {/* Admin Link - Only show for admin users */}
-          {isAdmin && (
-            <CustomTooltip placement="right" title="Admin Panel">
-              <Link
-                href="/admin"
-                className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
-              >
-                <div className="m-auto text-white">
-                  <Shield size={20} color="white" />
-                </div>
-              </Link>
-            </CustomTooltip>
-          )}
         </div>
 
         <CustomTooltip placement="right" title="Settings">

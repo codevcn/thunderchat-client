@@ -645,7 +645,7 @@ export const TypeMessageBar = memo(
     function renderReplyPreview(msg: TStateDirectMessage) {
       // Nếu tin nhắn đã bị thu hồi, hiển thị thông báo thu hồi
       if (msg.isDeleted) {
-        return <span className="text-sm text-gray-400 italic">Tin nhắn này đã được thu hồi</span>
+        return <span className="text-sm text-gray-400 italic">This message has been deleted</span>
       }
 
       const type = msg.type.toUpperCase()

@@ -13,8 +13,8 @@ class AdminService {
     return data
   }
 
-  async lockUnlockUser(userId: number, isLocked: boolean): Promise<TSuccess> {
-    const { data } = await lockUnlockUser({ userId, isLocked })
+  async lockUnlockUser(userId: number, isActive: boolean): Promise<TSuccess> {
+    const { data } = await lockUnlockUser({ userId, isActive })
     return data
   }
 

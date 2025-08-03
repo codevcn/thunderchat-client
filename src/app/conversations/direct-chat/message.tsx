@@ -165,7 +165,7 @@ const Content = ({
     return (
       <div
         className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent("Tin nhắn này đã được thu hồi") }}
+        dangerouslySetInnerHTML={{ __html: santizeMsgContent("This message has been deleted") }}
       ></div>
     )
   }
@@ -388,7 +388,7 @@ const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
   if (isDeleted) {
     return (
       <span className="text-xs rounded mt-0.5 inline-block text-gray-400 italic">
-        Tin nhắn này đã được thu hồi
+        This message has been deleted
       </span>
     )
   }

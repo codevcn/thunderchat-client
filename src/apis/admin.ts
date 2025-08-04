@@ -5,6 +5,7 @@ import type {
   TAdminUsersParams,
   TAdminUserActionParams,
   TAdminStatisticsData,
+  TUpdateUserEmailResponse,
 } from "../utils/types/be-api"
 
 // Get users with pagination, search, and filters
@@ -22,3 +23,11 @@ export const deleteUser = (data: { userId: number }) =>
 // Get admin statistics
 export const getAdminStatistics = () =>
   clientAxios.get<TAdminStatisticsData>("/admin/statistics", requestConfig)
+
+// Update user email
+export const updateUserEmail = (userId: number, email: string) =>
+  clientAxios.put<TUpdateUserEmailResponse>(
+    `/admin/users/${userId}/email`,
+    { email },
+    requestConfig
+  )

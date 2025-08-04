@@ -1,6 +1,6 @@
 import { dev_test_values } from "../../../../temp/test"
 
-import { X, Info, AtSign, Mail } from "lucide-react"
+import { X, Info, AtSign, Mail, AlertTriangle } from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
@@ -9,6 +9,8 @@ import { setLastSeen } from "@/utils/helpers"
 import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import MediaPanel from "../../../components/conversation-media/media-panel"
+import { ReportModal } from "../../../components/chatbox/report/report-model"
+import { useState } from "react"
 
 type TAvatarProps = {
   recipient: TUserWithProfile
@@ -53,6 +55,15 @@ type TProfileInfoProps = {
 const ProfileInfo = ({ recipient }: TProfileInfoProps) => {
   const { Profile, email } = recipient
   const { about } = Profile
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+
+  const handleOpenReportModal = () => {
+    setIsReportModalOpen(true)
+  }
+
+  const handleCloseReportModal = () => {
+    setIsReportModalOpen(false)
+  }
 
   return (
     <div className="flex flex-col gap-2 px-2 pt-[0.87rem] pb-[0.87rem]">
@@ -79,6 +90,23 @@ const ProfileInfo = ({ recipient }: TProfileInfoProps) => {
           </div>
         </div>
       )}
+
+      <div className="flex gap-4 items-center px-4 py-2">
+        <div className="text-red-500">
+          <AlertTriangle color="currentColor" />
+        </div>
+        <div className="w-info-bar">
+          <button
+            onClick={handleOpenReportModal}
+            className="text-base leading-5 w-full text-left text-red-500 hover:text-red-400 transition-colors"
+          >
+            Report user
+          </button>
+        </div>
+      </div>
+
+      {/* Report Modal */}
+      <ReportModal isOpen={isReportModalOpen} onClose={handleCloseReportModal} user={recipient} />
     </div>
   )
 }

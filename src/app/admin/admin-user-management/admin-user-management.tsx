@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Search, ChevronDown } from "lucide-react"
+import { Search, ChevronDown, Edit, X, Check } from "lucide-react"
 import { toast } from "sonner"
 import { adminService } from "@/services/admin.service"
 import type { TAdminUser } from "@/utils/types/be-api"
@@ -24,16 +24,16 @@ const TableSkeleton = () => {
                 Email
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Created Date
+                Birthday
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Last Activity
+                About
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Actions
+                Created Date
               </th>
             </tr>
           </thead>
@@ -58,16 +58,13 @@ const TableSkeleton = () => {
                   <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex space-x-2">
-                    <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-12"></div>
-                    <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-8"></div>
-                  </div>
+                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
                 </td>
               </tr>
             ))}
@@ -174,8 +171,12 @@ export const AdminUserManagement = () => {
   const [totalPages, setTotalPages] = useState(1)
   const [searchTerm, setSearchTerm] = useState("")
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
-  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all")
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "NORMAL" | "WARNING" | "TEMPORARY_BAN" | "PERMANENT_BAN"
+  >("all")
   const [itemsPerPage] = useState(10)
+  const [editingEmail, setEditingEmail] = useState<number | null>(null)
+  const [editingEmailValue, setEditingEmailValue] = useState("")
 
   // Debounce search term
   useEffect(() => {
@@ -188,7 +189,7 @@ export const AdminUserManagement = () => {
 
   useEffect(() => {
     fetchUsers()
-  }, [currentPage, debouncedSearchTerm, filterActive])
+  }, [currentPage, debouncedSearchTerm, filterStatus])
 
   const fetchUsers = async () => {
     try {
@@ -199,7 +200,7 @@ export const AdminUserManagement = () => {
         page: currentPage,
         limit: itemsPerPage,
         search: debouncedSearchTerm || undefined,
-        isActive: filterActive === "all" ? undefined : filterActive,
+        status: filterStatus === "all" ? undefined : filterStatus,
       })
 
       setUsers(response.users)
@@ -212,51 +213,73 @@ export const AdminUserManagement = () => {
     }
   }
 
-  const handleLockUnlockUser = async (userId: number, isActive: boolean) => {
+  const handleStartEditEmail = (user: User) => {
+    setEditingEmail(user.id)
+    setEditingEmailValue(user.email)
+  }
+
+  const handleCancelEditEmail = () => {
+    setEditingEmail(null)
+    setEditingEmailValue("")
+  }
+
+  const handleSaveEmail = async (userId: number) => {
+    // Client-side validation
+    if (!editingEmailValue.trim()) {
+      toast.error("Email cannot be empty")
+      return
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(editingEmailValue)) {
+      toast.error("Please enter a valid email address")
+      return
+    }
+
+    // Check if email has changed
+    const currentUser = users.find((user) => user.id === userId)
+    if (currentUser && currentUser.email === editingEmailValue.trim()) {
+      toast.info("Email is unchanged")
+      setEditingEmail(null)
+      setEditingEmailValue("")
+      return
+    }
+
     try {
-      // Use admin service to lock/unlock user
-      await adminService.lockUnlockUser(userId, isActive)
+      const response = await adminService.updateUserEmail(userId, editingEmailValue)
 
-      // Update local state with both isActive and inActiveAt
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => {
-          if (user.id === userId) {
-            return {
-              ...user,
-              isActive,
-              inActiveAt: new Date().toISOString(), // Always set to current time
-            }
-          }
-          return user
-        })
-      )
+      if (response.success) {
+        // Update local state
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.id === userId ? { ...user, email: editingEmailValue } : user
+          )
+        )
 
-      toast.success(isActive ? "Account unlocked" : "Account locked")
+        setEditingEmail(null)
+        setEditingEmailValue("")
+        toast.success(response.message)
+      } else {
+        // Handle error response
+        toast.error(response.message)
+      }
     } catch (err) {
-      console.error("Error locking/unlocking user:", err)
-      toast.error("An error occurred while performing the action")
+      console.error("Error updating email:", err)
+      toast.error("An error occurred while updating the email")
     }
   }
 
-  const handleDeleteUser = async (userId: number) => {
-    if (!confirm("Are you sure you want to delete this user?")) return
-
-    try {
-      // Use admin service to delete user
-      await adminService.deleteUser(userId)
-
-      // Update local state
-      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId))
-
-      toast.success("User deleted")
-    } catch (err) {
-      console.error("Error deleting user:", err)
-      toast.error("An error occurred while deleting the user")
+  const formatDate = (dateString: string, isBirthday: boolean = false) => {
+    const date = new Date(dateString)
+    if (isBirthday) {
+      return date.toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
     }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
+    return date.toLocaleDateString("vi-VN", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -305,13 +328,19 @@ export const AdminUserManagement = () => {
           {/* Filter */}
           <div className="relative">
             <select
-              value={filterActive}
-              onChange={(e) => setFilterActive(e.target.value as "all" | "active" | "inactive")}
+              value={filterStatus}
+              onChange={(e) =>
+                setFilterStatus(
+                  e.target.value as "all" | "NORMAL" | "WARNING" | "TEMPORARY_BAN" | "PERMANENT_BAN"
+                )
+              }
               className="px-4 pr-10 h-10 border border-border rounded-lg focus:outline-none bg-background text-foreground appearance-none cursor-pointer min-w-[120px]"
             >
-              <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">All Status</option>
+              <option value="NORMAL">Normal</option>
+              <option value="WARNING">Warning</option>
+              <option value="TEMPORARY_BAN">Temporary Ban</option>
+              <option value="PERMANENT_BAN">Permanent Ban</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           </div>
@@ -334,16 +363,16 @@ export const AdminUserManagement = () => {
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Created Date
+                    Birthday
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Inactive Date
+                    About
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Actions
+                    Created Date
                   </th>
                 </tr>
               </thead>
@@ -365,41 +394,72 @@ export const AdminUserManagement = () => {
                         </div>
                       </div>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground">{formatDate(user.createdAt)}</div>
+                      {editingEmail === user.id ? (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="email"
+                            value={editingEmailValue}
+                            onChange={(e) => setEditingEmailValue(e.target.value)}
+                            className="flex-1 px-2 py-1 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSaveEmail(user.id)}
+                            className="p-1 text-green-600 hover:text-green-800"
+                            title="Save"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={handleCancelEditEmail}
+                            className="p-1 text-red-600 hover:text-red-800"
+                            title="Cancel"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-foreground">{user.email}</span>
+                          <button
+                            onClick={() => handleStartEditEmail(user)}
+                            className="p-1 text-muted-foreground hover:text-foreground"
+                            title="Edit email"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-foreground">
-                        {user.inActiveAt ? formatDate(user.inActiveAt) : "Never active"}
+                        {user.birthday ? formatDate(user.birthday, true) : "Not set"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-foreground max-w-xs truncate">
+                        {user.about || ""}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.isActive
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                          user.status === "NORMAL"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : user.status === "WARNING"
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                              : user.status === "TEMPORARY_BAN"
+                                ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                         }`}
                       >
-                        {user.isActive ? "Active" : "Inactive"}
+                        {user.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleLockUnlockUser(user.id, !user.isActive)}
-                          className={`px-3 py-1 rounded text-xs font-medium ${
-                            user.isActive
-                              ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800"
-                              : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800"
-                          }`}
-                        >
-                          {user.isActive ? "Lock" : "Unlock"}
-                        </button>
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-foreground">{formatDate(user.createdAt)}</div>
                     </td>
                   </tr>
                 ))}

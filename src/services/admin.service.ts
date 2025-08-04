@@ -3,8 +3,15 @@ import type {
   TAdminUsersParams,
   TAdminUserActionParams,
   TAdminStatisticsData,
+  TUpdateUserEmailResponse,
 } from "@/utils/types/be-api"
-import { getAdminUsers, lockUnlockUser, deleteUser, getAdminStatistics } from "@/apis/admin"
+import {
+  getAdminUsers,
+  lockUnlockUser,
+  deleteUser,
+  getAdminStatistics,
+  updateUserEmail,
+} from "@/apis/admin"
 import type { TSuccess } from "@/utils/types/global"
 
 class AdminService {
@@ -25,6 +32,11 @@ class AdminService {
 
   async getStatistics(): Promise<TAdminStatisticsData> {
     const { data } = await getAdminStatistics()
+    return data
+  }
+
+  async updateUserEmail(userId: number, email: string): Promise<TUpdateUserEmailResponse> {
+    const { data } = await updateUserEmail(userId, email)
     return data
   }
 }

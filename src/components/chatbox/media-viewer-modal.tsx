@@ -38,6 +38,10 @@ type MediaViewerModalProps = {
   initialIndex: number
   creator: TUserWithProfile
   recipient: TUserWithProfile
+  // New props to control button visibility
+  showUserInfo?: boolean
+  showActionButtons?: boolean
+  showZoomControls?: boolean
 }
 
 const HEADER_HEIGHT = 64 // px
@@ -50,6 +54,9 @@ const MediaViewerModal = ({
   initialIndex,
   creator,
   recipient,
+  showUserInfo = true,
+  showActionButtons = true,
+  showZoomControls = true,
 }: MediaViewerModalProps) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
@@ -236,56 +243,66 @@ const MediaViewerModal = ({
           zIndex: 10,
         }}
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
-            {sender?.Profile.avatar ? (
-              <img
-                src={sender.Profile.avatar}
-                alt={sender.Profile.fullName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-white font-semibold text-sm">
-                {sender?.Profile.fullName?.[0] || "U"}
-              </span>
-            )}
-          </div>
-          <div>
-            <div className="text-white font-medium">{sender?.Profile.fullName || "Unknown"}</div>
-            <div className="text-gray-400 text-sm">
-              {currentMedia?.createdAt
-                ? dayjs(currentMedia.createdAt).format("MMM D [at] HH:mm")
-                : ""}
+        {showUserInfo ? (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+              {sender?.Profile.avatar ? (
+                <img
+                  src={sender.Profile.avatar}
+                  alt={sender.Profile.fullName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white font-semibold text-sm">
+                  {sender?.Profile.fullName?.[0] || "U"}
+                </span>
+              )}
+            </div>
+            <div>
+              <div className="text-white font-medium">{sender?.Profile.fullName || "Unknown"}</div>
+              <div className="text-gray-400 text-sm">
+                {currentMedia?.createdAt
+                  ? dayjs(currentMedia.createdAt).format("MMM D [at] HH:mm")
+                  : ""}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-white font-medium"></div>
+        )}
         <div className="flex items-center gap-3">
-          {/* Nút xem tin nhắn gốc */}
-          <button
-            className="p-2 hover:bg-gray-700 rounded-full transition-colors"
-            onClick={handleViewOriginalMessage}
-            title="Xem tin nhắn gốc"
-          >
-            <MessageSquare className="w-4 h-4 text-gray-400" />
-          </button>
-          <button className="p-2 hover:bg-gray-700 rounded-full transition-colors">
-            <Trash2 className="w-4 h-4 text-gray-400" />
-          </button>
-          <button className="p-2 hover:bg-gray-700 rounded-full transition-colors">
-            <Share className="w-4 h-4 text-gray-400" />
-          </button>
-          <button
-            className="p-2 hover:bg-gray-700 rounded-full transition-colors"
-            onClick={handleDownload}
-          >
-            <Download className="w-4 h-4 text-gray-400" />
-          </button>
-          <button
-            className="p-2 hover:bg-gray-700 rounded-full transition-colors"
-            onClick={() => setShowZoom(!showZoom)}
-          >
-            <ZoomIn className="w-4 h-4 text-gray-400" />
-          </button>
+          {showActionButtons && (
+            <>
+              {/* Nút xem tin nhắn gốc */}
+              <button
+                className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+                onClick={handleViewOriginalMessage}
+                title="Xem tin nhắn gốc"
+              >
+                <MessageSquare className="w-4 h-4 text-gray-400" />
+              </button>
+              <button className="p-2 hover:bg-gray-700 rounded-full transition-colors">
+                <Trash2 className="w-4 h-4 text-gray-400" />
+              </button>
+              <button className="p-2 hover:bg-gray-700 rounded-full transition-colors">
+                <Share className="w-4 h-4 text-gray-400" />
+              </button>
+              <button
+                className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+                onClick={handleDownload}
+              >
+                <Download className="w-4 h-4 text-gray-400" />
+              </button>
+            </>
+          )}
+          {showZoomControls && (
+            <button
+              className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+              onClick={() => setShowZoom(!showZoom)}
+            >
+              <ZoomIn className="w-4 h-4 text-gray-400" />
+            </button>
+          )}
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-700 rounded-full transition-colors"
@@ -296,7 +313,7 @@ const MediaViewerModal = ({
       </div>
 
       {/* Zoom controls */}
-      {showZoom && currentMedia.type === "IMAGE" && (
+      {showZoom && showZoomControls && currentMedia.type === "IMAGE" && (
         <div
           className="flex items-center justify-center gap-4 px-4 py-3 bg-black/50 border-b border-gray-700"
           style={{

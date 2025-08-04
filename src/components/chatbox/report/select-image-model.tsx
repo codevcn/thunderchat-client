@@ -1,5 +1,5 @@
 // ... giữ lại các import cũ
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { X, ChevronLeft, Plus, Trash2 } from "lucide-react"
 import { IconButton } from "@/components/materials/icon-button"
 import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
@@ -12,8 +12,10 @@ type TSelectImageModalProps = {
   selectedImages: number
   onImagesChange: (count: number) => void
   asOverlay?: boolean
-  // new prop: nếu true thì modal sẽ có kích thước/ style giống ReportModal (centered, card)
   matchReportSize?: boolean
+  // New props to persist selected images
+  initialImages?: File[]
+  onImagesUpdate?: (images: File[]) => void
 }
 
 const MAX_IMAGES = 5
@@ -26,19 +28,47 @@ export const SelectImageModal = ({
   onImagesChange,
   asOverlay = true,
   matchReportSize = false,
+  initialImages,
+  onImagesUpdate,
 }: TSelectImageModalProps) => {
   const [images, setImages] = useState<File[]>([])
   const [isClosing, setIsClosing] = useState(false)
+  const [isOpening, setIsOpening] = useState(false)
   const [showLimitMessage, setShowLimitMessage] = useState(false)
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [shouldLoadImages, setShouldLoadImages] = useState(false)
   const closeTimeoutRef = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const initializedRef = useRef(false)
+  const imageUrlsRef = useRef<Map<File, string>>(new Map())
 
-  // sync count upward
+  // Handle opening animation and delay image loading
   useEffect(() => {
-    onImagesChange(images.length)
-  }, [images, onImagesChange])
+    if (isOpen && !isOpening) {
+      setIsOpening(true)
+      // Delay image loading until animation completes
+      const timer = setTimeout(() => {
+        setShouldLoadImages(true)
+      }, 500) // Match animation duration
+
+      return () => clearTimeout(timer)
+    } else if (!isOpen) {
+      setShouldLoadImages(false)
+    }
+  }, [isOpen, isOpening])
+
+  // Reset shouldLoadImages when images are added (but respect animation delay)
+  useEffect(() => {
+    if (images.length > 0 && isOpening) {
+      // Only force load if animation is already running
+      const timer = setTimeout(() => {
+        setShouldLoadImages(true)
+      }, 300) // Same delay as animation
+
+      return () => clearTimeout(timer)
+    }
+  }, [images.length, isOpening])
 
   // cleanup timeout and object URLs
   useEffect(() => {
@@ -46,112 +76,216 @@ export const SelectImageModal = ({
       if (closeTimeoutRef.current) {
         clearTimeout(closeTimeoutRef.current)
       }
-      // Cleanup object URLs to prevent memory leaks
-      images.forEach((image) => {
-        URL.revokeObjectURL(URL.createObjectURL(image))
-      })
     }
-  }, [images])
+  }, []) // Empty dependency array - only run on unmount
 
-  const handleAddImage = () => {
+  // Cleanup object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup all object URLs
+      imageUrlsRef.current.forEach((url) => {
+        URL.revokeObjectURL(url)
+      })
+      imageUrlsRef.current.clear()
+    }
+  }, []) // Empty dependency array - only run on unmount
+
+  // Initialize images from props when modal opens
+  useEffect(() => {
+    if (isOpen && initialImages && initialImages.length > 0) {
+      setImages(initialImages)
+      onImagesChange(initialImages.length)
+    }
+  }, [isOpen, initialImages, onImagesChange])
+
+  // Memoized function to get or create image URL
+  const getImageUrl = useCallback((file: File): string => {
+    if (imageUrlsRef.current.has(file)) {
+      return imageUrlsRef.current.get(file)!
+    }
+
+    const url = URL.createObjectURL(file)
+    imageUrlsRef.current.set(file, url)
+    return url
+  }, [])
+
+  // Memoized image grid to prevent unnecessary re-renders
+  const imageGrid = useMemo(() => {
+    if (!shouldLoadImages) {
+      // Show skeleton loading while animation is running
+      return images.map((_, index) => (
+        <div
+          key={`skeleton-${index}`}
+          className="relative w-32 h-32 bg-regular-dark-gray-cl rounded-lg flex items-center justify-center overflow-hidden animate-pulse"
+        >
+          <div className="w-16 h-16 bg-regular-hover-card-cl rounded-full opacity-50"></div>
+        </div>
+      ))
+    }
+
+    return images.map((image, index) => (
+      <div
+        key={`${image.name}-${image.lastModified}-${index}`}
+        className="relative w-32 h-32 bg-regular-dark-gray-cl rounded-lg flex items-center justify-center overflow-hidden cursor-pointer"
+        onClick={() => handleImageClick(index)}
+      >
+        {/* Lazy loaded image */}
+        <img
+          src={getImageUrl(image)}
+          alt={`Image ${index + 1}`}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+
+        {/* Delete Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleRemoveImage(index)
+          }}
+          className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+        >
+          <Trash2 size={12} className="text-white" />
+        </button>
+      </div>
+    ))
+  }, [images, getImageUrl, shouldLoadImages])
+
+  const handleAddImage = useCallback(() => {
     if (images.length >= MAX_IMAGES) return
     // Trigger file input click
     fileInputRef.current?.click()
-  }
+  }, [images.length])
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files) return
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files
+      if (!files) return
 
-    const newImages: File[] = []
-    const totalSelected = files.length
-    let addedCount = 0
-    let skippedCount = 0
+      // Lọc ra các file là ảnh
+      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"))
+      const totalAfterAdd = images.length + imageFiles.length
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      // Check if file is an image
-      if (file.type.startsWith("image/")) {
-        if (images.length + newImages.length < MAX_IMAGES) {
-          newImages.push(file)
-          addedCount++
-        } else {
-          skippedCount++
-        }
-      } else {
-        skippedCount++
+      if (imageFiles.length === 0) {
+        // Không có file hợp lệ
+        setShowLimitMessage(true)
+        setTimeout(() => setShowLimitMessage(false), 3000)
+        event.target.value = ""
+        return
       }
-    }
 
-    if (newImages.length > 0) {
-      setImages((prev) => [...prev, ...newImages])
-    }
+      if (totalAfterAdd > MAX_IMAGES) {
+        // Vượt quá số lượng cho phép, không thêm ảnh nào
+        setShowLimitMessage(true)
+        setTimeout(() => setShowLimitMessage(false), 3000)
+        event.target.value = ""
+        return
+      }
 
-    // Show message if some files were skipped
-    if (skippedCount > 0 || addedCount < totalSelected) {
-      setShowLimitMessage(true)
-      setTimeout(() => setShowLimitMessage(false), 3000) // Hide after 3 seconds
-    }
+      // Hợp lệ, thêm tất cả ảnh
+      const updatedImages = [...images, ...imageFiles]
+      setImages(updatedImages)
+      onImagesChange(updatedImages.length)
+      if (onImagesUpdate) {
+        onImagesUpdate(updatedImages)
+      }
+      event.target.value = ""
+    },
+    [images, onImagesChange, onImagesUpdate]
+  )
 
-    // Reset file input
-    event.target.value = ""
-  }
+  const handleContinue = useCallback(() => {
+    handleBack()
+  }, [])
 
-  const handleContinue = () => {
-    handleClose()
-  }
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsClosing(true)
     closeTimeoutRef.current = window.setTimeout(() => {
-      onClose()
+      onClose() // Gọi onClose của ReportModal để thoát hoàn toàn
       setIsClosing(false)
-    }, 300)
-  }
+    }, 400)
+  }, [onClose])
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose()
-    }
-  }
+  const handleBack = useCallback(() => {
+    setIsClosing(true)
+    closeTimeoutRef.current = window.setTimeout(() => {
+      onBack()
+      setIsClosing(false)
+    }, 400)
+  }, [onBack])
 
-  const handleRemoveImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
-  }
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        handleClose()
+      }
+    },
+    [handleClose]
+  )
 
-  const handleImageClick = (index: number) => {
+  const handleRemoveImage = useCallback(
+    (index: number) => {
+      const imageToRemove = images[index]
+      const newImages = images.filter((_, i) => i !== index)
+
+      // Cleanup URL for removed image
+      if (imageUrlsRef.current.has(imageToRemove)) {
+        URL.revokeObjectURL(imageUrlsRef.current.get(imageToRemove)!)
+        imageUrlsRef.current.delete(imageToRemove)
+      }
+
+      setImages(newImages)
+      onImagesChange(newImages.length)
+      if (onImagesUpdate) {
+        onImagesUpdate(newImages)
+      }
+    },
+    [images, onImagesChange, onImagesUpdate]
+  )
+
+  const handleImageClick = useCallback((index: number) => {
     setSelectedImageIndex(index)
     setShowImageViewer(true)
-  }
+  }, [])
 
-  const handleImageViewerClose = () => {
+  const handleImageViewerClose = useCallback(() => {
     setShowImageViewer(false)
-  }
+  }, [])
 
-  // Convert File[] to MediaItem[] for MediaViewerModal
-  const mediaItems = images.map((file, index) => ({
-    id: index,
-    type: "IMAGE",
-    mediaUrl: URL.createObjectURL(file),
-    fileName: file.name,
-    thumbnailUrl: URL.createObjectURL(file),
-    createdAt: new Date().toISOString(),
-    authorId: 1, // dummy value
-  }))
+  // Convert File[] to MediaItem[] for MediaViewerModal - memoized
+  const mediaItems = useMemo(() => {
+    return images.map((file, index) => ({
+      id: index,
+      type: "IMAGE",
+      mediaUrl: getImageUrl(file),
+      fileName: file.name,
+      thumbnailUrl: getImageUrl(file),
+      createdAt: new Date().toISOString(),
+      authorId: 1, // dummy value
+    }))
+  }, [images, getImageUrl])
 
   // Dummy user for MediaViewerModal
-  const dummyUser = {
-    id: 1,
-    Profile: {
-      fullName: "User",
-      avatar: null,
-    },
-  } as any
+  const dummyUser = useMemo(
+    () =>
+      ({
+        id: 1,
+        email: "dummy@example.com",
+        password: "",
+        createdAt: new Date(),
+        role: "USER",
+        Profile: {
+          fullName: "User",
+          avatar: null,
+        },
+      }) as any,
+    []
+  )
 
   if (!isOpen && !isClosing) return null
 
   const innerContent = (
-    <>
+    <div className="flex flex-col h-full">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -162,12 +296,12 @@ export const SelectImageModal = ({
         className="hidden"
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-regular-hover-card-cl">
+      {/* Header - Fixed */}
+      <div className="flex items-center justify-between p-4 border-b border-regular-hover-card-cl flex-shrink-0">
         <IconButton
           aria-label="Back"
           className="text-regular-white-cl hover:text-regular-text-secondary-cl"
-          onClick={onBack}
+          onClick={handleBack}
         >
           <ChevronLeft size={20} />
         </IconButton>
@@ -194,7 +328,7 @@ export const SelectImageModal = ({
           {showLimitMessage && (
             <div className="bg-yellow-500 bg-opacity-20 border border-yellow-500 rounded-lg p-3">
               <p className="text-yellow-300 text-sm">
-                Maximum {MAX_IMAGES} images allowed. Some files were not added.
+                Maximum {MAX_IMAGES} images allowed. Please try again.
               </p>
             </div>
           )}
@@ -202,31 +336,7 @@ export const SelectImageModal = ({
           {/* Selected Images Grid - 3 columns with Add Photo button integrated */}
           <div className="grid grid-cols-3 gap-4">
             {/* Render all images first */}
-            {images.map((image, index) => (
-              <div
-                key={index}
-                className="relative w-32 h-32 bg-regular-dark-gray-cl rounded-lg flex items-center justify-center overflow-hidden cursor-pointer"
-                onClick={() => handleImageClick(index)}
-              >
-                {/* Image Preview */}
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt={`Image ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-
-                {/* Delete Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleRemoveImage(index)
-                  }}
-                  className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <Trash2 size={12} className="text-white" />
-                </button>
-              </div>
-            ))}
+            {imageGrid}
 
             {/* Add Photo Button - always at the end of the grid */}
             {images.length < MAX_IMAGES && (
@@ -251,7 +361,7 @@ export const SelectImageModal = ({
           Continue
         </button>
       </div>
-    </>
+    </div>
   )
 
   // Nếu muốn giống ReportModal về diện tích (centered card)
@@ -262,7 +372,7 @@ export const SelectImageModal = ({
         onClick={handleBackdropClick}
       >
         <div
-          className={`bg-regular-black-cl rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col border-2 border-regular-white-cl transition-all duration-300 ease-out relative ${
+          className={`bg-regular-black-cl rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col transition-all duration-300 ease-out relative ${
             isOpen && !isClosing ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}
         >
@@ -280,7 +390,7 @@ export const SelectImageModal = ({
         onClick={handleBackdropClick}
       >
         <div
-          className={`bg-regular-black-cl rounded-l-lg w-full max-w-lg h-full flex flex-col border-2 border-regular-white-cl transition-all duration-300 ease-out ${
+          className={`bg-regular-black-cl rounded-l-lg w-full max-w-lg h-full flex flex-col transition-all duration-300 ease-out ${
             isOpen && !isClosing ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
           }`}
           style={{
@@ -298,10 +408,14 @@ export const SelectImageModal = ({
   return (
     <>
       <div
-        className={`absolute inset-0 bg-regular-black-cl rounded-lg border-2 border-regular-white-cl transition-all duration-300 ease-out ${
-          isOpen && !isClosing ? "translate-x-0" : "translate-x-full"
+        className={`absolute inset-0 bg-regular-black-cl rounded-lg transition-all duration-400 ease-out ${
+          isOpen && isOpening && !isClosing ? "translate-x-0" : "translate-x-full"
         }`}
-        style={{ minHeight: "100%" }}
+        style={{
+          minHeight: "100%",
+          transform: isOpen && isOpening && !isClosing ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 400ms ease-out",
+        }}
       >
         {innerContent}
       </div>

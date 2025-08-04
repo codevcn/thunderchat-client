@@ -29,7 +29,6 @@ import { expressionService } from "@/services/expression.service"
 import Image from "next/image"
 import { chattingService } from "@/services/chatting.service"
 import { CustomTooltip } from "@/components/materials"
-import { Pin } from "lucide-react"
 import { PinMessageModal } from "./pin-message"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
@@ -47,8 +46,6 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
   const [greetingSticker, setGreetingSticker] = useState<TSticker | null>(null)
   const { id: directChatId, recipientId, creatorId } = directChat
   const tempFlagUseEffectRef = useRef<boolean>(true)
-
-  console.log("canSend", canSend)
 
   const fetchRandomSticker = async () => {
     await expressionService

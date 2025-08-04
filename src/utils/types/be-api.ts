@@ -407,3 +407,25 @@ export type TGetMediaStatisticsResponse = {
   errorCode?: string | null
   errors?: any
 }
+
+// ================================= Report Types =================================
+
+export type TReportedMessage = {
+  id?: number
+  messageId: number
+  messageType: EMessageTypes
+  messageContent: string
+  reportId?: number | null
+  createdAt?: string
+}
+
+export type TViolationReport = {
+  id?: number
+  reporterId: number
+  reportedUserId: number
+  reason: string
+  description: string
+  status: "PENDING" | "REVIEWED" | "RESOLVED"
+  createdAt?: string
+  updatedAt?: string
+}

@@ -332,7 +332,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
           </div>
         </div>
       </div>
-      <InfoBar friendInfo={friendInfo} />
+      <InfoBar friendInfo={friendInfo} directChatId={directChat.id} />
     </div>
   )
 }

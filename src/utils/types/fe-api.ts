@@ -52,3 +52,21 @@ export type TMediaCacheState = {
   memoryUsage: number
   maxCacheSize: number
 }
+
+// ================================= Report Frontend Types =================================
+
+export type TReportedMessageFE = {
+  messageId: number
+  messageType: string
+  messageContent: string
+  conversationId: number
+  conversationType: "direct" | "group"
+}
+
+export type TReportSession = {
+  conversationId: number
+  conversationType: "direct" | "group"
+  reportedMessages: TReportedMessageFE[]
+  reason?: string
+  description?: string
+}

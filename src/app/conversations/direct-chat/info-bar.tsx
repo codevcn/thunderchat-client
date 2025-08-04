@@ -52,7 +52,10 @@ type TProfileInfoProps = {
   recipient: TUserWithProfile
 }
 
-const ProfileInfo = ({ recipient }: TProfileInfoProps) => {
+const ProfileInfo = ({
+  recipient,
+  directChatId,
+}: TProfileInfoProps & { directChatId?: number }) => {
   const { Profile, email } = recipient
   const { about } = Profile
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
@@ -106,16 +109,23 @@ const ProfileInfo = ({ recipient }: TProfileInfoProps) => {
       </div>
 
       {/* Report Modal */}
-      <ReportModal isOpen={isReportModalOpen} onClose={handleCloseReportModal} user={recipient} />
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={handleCloseReportModal}
+        user={recipient}
+        conversationId={directChatId}
+        conversationType="direct"
+      />
     </div>
   )
 }
 
 type TInfoBarProps = {
   friendInfo: TUserWithProfile
+  directChatId?: number
 }
 
-export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
+export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
 
@@ -143,7 +153,7 @@ export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
       <div className="flex-1 min-h-0 w-full">
         <div className="overflow-y-auto STYLE-styled-scrollbar h-full min-h-0 bg-regular-info-bar-bgcl">
           <Avatar recipient={friendInfo} />
-          <ProfileInfo recipient={friendInfo} />
+          <ProfileInfo recipient={friendInfo} directChatId={directChatId} />
           <MediaPanel />
         </div>
       </div>

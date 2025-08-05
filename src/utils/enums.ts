@@ -4,6 +4,19 @@ export enum EAuthStatus {
   UNAUTHENTICATED = "AUTH_STATUS_UNAUTHENTICATED",
 }
 
+export enum EAdminAuthStatus {
+  UNKNOWN = "ADMIN_AUTH_STATUS_UNKNOWN",
+  AUTHENTICATED = "ADMIN_AUTH_STATUS_AUTHENTICATED",
+  UNAUTHENTICATED = "ADMIN_AUTH_STATUS_UNAUTHENTICATED",
+}
+
+export enum EAdminMessages {
+  ADMIN_ACCESS_REQUIRED = "Admin access required",
+  USER_NOT_AUTHENTICATED = "User not authenticated",
+  INVALID_ADMIN_CREDENTIALS = "Invalid admin credentials",
+  ADMIN_NOT_FOUND = "Admin not found",
+}
+
 export enum EPaginations {
   FRIEND_REQUESTS_PAGE_SIZE = 5,
   FRIENDS_PAGE_SIZE = 5,
@@ -85,4 +98,30 @@ export enum EGroupChatRole {
 export enum EChatType {
   DIRECT = "DIRECT",
   GROUP = "GROUP",
+}
+
+export enum EAppRole {
+  USER = "USER",
+  ADMIN = "ADMIN",
+}
+
+export enum EReportCategory {
+  SENSITIVE_CONTENT = "SENSITIVE_CONTENT",
+  BOTHER = "BOTHER",
+  FRAUD = "FRAUD",
+  OTHER = "OTHER",
+}
+
+// Violation Report Status
+export enum EViolationReportStatus {
+  PENDING = "PENDING",
+  RESOLVED = "RESOLVED",
+  DISMISSED = "DISMISSED",
+}
+
+// Ban Type
+export enum EBanType {
+  WARNING = "WARNING",
+  TEMPORARY_BAN = "TEMPORARY_BAN",
+  PERMANENT_BAN = "PERMANENT_BAN",
 }

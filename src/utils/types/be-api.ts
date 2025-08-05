@@ -8,6 +8,10 @@ import type {
   ESortTypes,
   EChatType,
   EMessageMediaTypes,
+  EAppRole,
+  EReportCategory,
+  EViolationReportStatus,
+  EBanType,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 
@@ -17,6 +21,7 @@ export type TUser = {
   email: string
   password: string
   createdAt: string
+  role: EAppRole
 }
 
 export type TProfile = {
@@ -329,4 +334,275 @@ export type TUploadFileRes = {
   fileType: string
   thumbnailUrl?: string
   fileSize: string
+}
+// ================================= Admin API Types =================================
+
+export type TAdminUsersParams = {
+  page: number
+  limit: number
+  search?: string
+  status?: "all" | "NORMAL" | "WARNING" | "TEMPORARY_BAN" | "PERMANENT_BAN"
+}
+
+export type TAdminUser = {
+  id: number
+  email: string
+  fullName: string
+  avatar?: string
+  birthday?: string | null
+  about?: string | null
+  status: string
+  createdAt: string
+}
+
+export type TAdminUsersData = {
+  users: TAdminUser[]
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+}
+
+export type TAdminUserActionParams = {
+  userId: number
+  isActive: boolean
+}
+
+export type TUpdateUserEmailResponse = {
+  success: boolean
+  message: string
+  error?: string
+}
+
+export type TAdminStatisticsData = {
+  systemHealth: "good" | "warning" | "error"
+  totalUsers: number
+  activeUsers: number
+  lockedUsers: number
+  newUsersToday: number
+  totalMessages: number
+  totalChats: number
+  totalFiles: number
+}
+
+// ================================= Media Pagination API Types =================================
+
+export type TMediaItem = TMessageFullInfo
+
+export type TMediaPaginationInfo = {
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  hasMore: boolean
+  limit: number
+}
+
+export type TGetMediaMessagesResponse = {
+  success: boolean
+  data: {
+    items: TMediaItem[]
+    pagination: TMediaPaginationInfo
+  }
+  message?: string
+  errorCode?: string | null
+  errors?: any
+}
+
+export type TMediaFilters = {
+  type?: "image" | "video" | "file" | "voice"
+  types?: ("image" | "video" | "file" | "voice")[]
+  senderId?: number
+  fromDate?: string
+  toDate?: string
+}
+
+export type TGetMediaMessagesParams = {
+  directChatId: number
+  type?: "image" | "video" | "file" | "voice"
+  types?: ("image" | "video" | "file" | "voice")[]
+  senderId?: number
+  fromDate?: string
+  toDate?: string
+  page?: number
+  limit?: number
+  sort?: "asc" | "desc"
+}
+
+export type TMediaStatisticsData = {
+  total: number
+  images: number
+  videos: number
+  files: number
+  voices: number
+}
+
+export type TGetMediaStatisticsResponse = {
+  success: boolean
+  data: TMediaStatisticsData
+  message?: string
+  errorCode?: string | null
+  errors?: any
+}
+
+// ================================= Report Types =================================
+
+export type TReportedMessage = {
+  id?: number
+  messageId: number
+  messageType: EMessageTypes
+  messageContent: string
+  reportId?: number | null
+  createdAt?: string
+}
+
+export type TViolationReport = {
+  id?: number
+  reporterId: number
+  reportedUserId: number
+  reportCategory: EReportCategory
+  reasonText?: string
+  status: "PENDING" | "REVIEWED" | "RESOLVED"
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type TCreateViolationReportData = {
+  reportedUserId: number
+  reportCategory: EReportCategory
+  reasonText?: string
+  reportedMessages?: TReportedMessage[]
+}
+
+export type TCreateViolationReportResponse = {
+  success: boolean
+  reportId?: number
+  message?: string
+  error?: string
+  code?: string
+  details?: any
+}
+
+// ================================= Admin Violation Reports Types =================================
+
+export type TViolationReportStatus = EViolationReportStatus
+export type TViolationReportCategory = EReportCategory
+
+export type TAdminViolationReport = {
+  id: number
+  reporterId: number
+  reporterName: string
+  reporterEmail: string
+  reportedUserId: number
+  reportedUserName: string
+  reportedUserEmail: string
+  reportCategory: TViolationReportCategory
+  reasonText?: string | null
+  status: TViolationReportStatus
+  evidenceCount: {
+    images: number
+    messages: number
+  }
+  createdAt: string
+  updatedAt: string
+}
+
+export type TAdminViolationReportDetail = {
+  id: number
+  reporterId: number
+  reporterName: string
+  reporterEmail: string
+  reportedUserId: number
+  reportedUserName: string
+  reportedUserEmail: string
+  reportCategory: TViolationReportCategory
+  reasonText?: string | null
+  status: TViolationReportStatus
+  evidenceCount: {
+    images: number
+    messages: number
+  }
+  reportImages: Array<{
+    id: number
+    imageUrl: string
+    createdAt: string
+  }>
+  reportedMessages: Array<{
+    id: number
+    messageId: number
+    messageType: string
+    messageContent: string
+    createdAt: string
+  }>
+  createdAt: string
+  updatedAt: string
+}
+
+export type TAdminViolationReportsData = {
+  reports: TAdminViolationReport[]
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+  statistics: {
+    total: number
+    pending: number
+    resolved: number
+    dismissed: number
+  }
+}
+
+export type TGetAdminViolationReportsParams = {
+  page?: number
+  limit?: number
+  search?: string
+  status?: TViolationReportStatus | "ALL"
+  category?: TViolationReportCategory | "ALL"
+  startDate?: string
+  endDate?: string
+  sortBy?: "createdAt" | "updatedAt"
+  sortOrder?: "asc" | "desc"
+}
+
+export type TUpdateAdminViolationReportStatusResponse = {
+  success: boolean
+  message: string
+  error?: string
+}
+
+export type TAdminBanUserResponse = {
+  success: boolean
+  message: string
+  error?: string
+}
+
+export type TUserReportHistoryItem = {
+  id: number
+  reportCategory: TViolationReportCategory
+  status: TViolationReportStatus
+  createdAt: string
+  reasonText: string | null
+  // For 'reported' type (reports made by user)
+  reportedUserName?: string
+  reportedUserEmail?: string
+  // For 'reportedBy' type (reports about user)
+  reporterName?: string
+  reporterEmail?: string
+}
+
+export type TUserReportHistoryData = {
+  reports: TUserReportHistoryItem[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
 }

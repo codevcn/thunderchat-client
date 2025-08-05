@@ -3,6 +3,9 @@ import ReactDOM from "react-dom"
 import { Download, Share2, MoreHorizontal } from "lucide-react"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
+import { directChatService } from "@/services/direct-chat.service"
+import { toast } from "sonner"
+import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
 
 interface ActionIconsProps {
   onDownload?: () => void
@@ -25,65 +28,50 @@ const ActionIcons = ({
   onMore,
   showDownload = true,
   className = "",
-  onViewOriginalMessage,
-  onDeleteForMe,
-  onDeleteForEveryone,
   isSender = false,
   messageId,
 }: ActionIconsProps) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const moreButtonRef = useRef<HTMLButtonElement>(null)
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
+
+  // Sử dụng floating-ui cho positioning
+  const { refs, floatingStyles, update } = useFloating({
+    placement: "bottom-end",
+    middleware: [
+      offset(4),
+      flip({ fallbackPlacements: ["top-end", "bottom-end", "top-start", "bottom-start"] }),
+      shift({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
   })
 
   // Đóng menu khi click ra ngoài
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (moreButtonRef.current && !moreButtonRef.current.contains(event.target as Node)) {
+    if (!showMoreMenu) return
+    const handleClick = (e: MouseEvent) => {
+      const floatingEl = refs.floating.current
+      const referenceEl = refs.reference.current
+      const isRefEl = referenceEl instanceof HTMLElement
+      if (
+        floatingEl &&
+        !floatingEl.contains(e.target as Node) &&
+        (!isRefEl || !referenceEl.contains(e.target as Node))
+      ) {
         setShowMoreMenu(false)
       }
     }
-    if (showMoreMenu) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [showMoreMenu])
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [showMoreMenu, refs])
 
   // Tính vị trí menu khi mở
   const handleMoreClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (moreButtonRef.current) {
-      const rect = moreButtonRef.current.getBoundingClientRect()
-
-      // Thử đặt menu bên trái trước
-      let left = rect.left + window.scrollX - MENU_WIDTH
-
-      // Kiểm tra nếu bên trái không đủ chỗ
-      if (left < 8) {
-        // Đặt bên phải
-        left = rect.right + window.scrollX
-        // Kiểm tra nếu bên phải cũng không đủ chỗ
-        if (left + MENU_WIDTH > window.innerWidth) {
-          // Đặt bên phải nhưng giới hạn trong màn hình
-          left = window.innerWidth - MENU_WIDTH - 8
-        }
-      }
-
-      let top = rect.bottom + window.scrollY + 4
-      if (top + 300 > window.innerHeight) top = window.innerHeight - 320
-      setMenuPosition({ top, left })
-    }
     setShowMoreMenu(!showMoreMenu)
+    if (!showMoreMenu) {
+      setTimeout(update, 0)
+    }
     onMore && onMore()
-  }
-
-  const handleMenuItemClick = (action?: () => void) => {
-    setShowMoreMenu(false)
-    action && action()
   }
 
   const handleViewOriginalMessage = () => {
@@ -94,16 +82,35 @@ const ActionIcons = ({
     setShowMoreMenu(false)
   }
 
+  // Logic thu hồi tin nhắn
+  const handleRecallMessage = async () => {
+    if (!messageId || !isSender) {
+      toast.error("Bạn chỉ có thể thu hồi tin nhắn của mình")
+      return
+    }
+
+    try {
+      setShowMoreMenu(false)
+
+      const response = await directChatService.deleteMessage(messageId)
+
+      if (response.success) {
+        toast.success("Đã thu hồi tin nhắn thành công")
+        // Emit event để cập nhật UI
+      } else {
+        toast.error(response.message || "Thu hồi tin nhắn thất bại")
+      }
+    } catch (error: any) {
+      console.error("Error recalling message:", error)
+      toast.error(error.message || "Thu hồi tin nhắn thất bại")
+    }
+  }
+
   const menu = (
     <div
-      style={{
-        position: "absolute",
-        top: menuPosition.top,
-        left: menuPosition.left,
-        minWidth: MENU_WIDTH,
-        zIndex: 9999,
-      }}
-      className="bg-[#2C2E31] rounded-lg shadow-lg border border-gray-700"
+      ref={refs.setFloating}
+      style={floatingStyles}
+      className="bg-[#2C2E31] rounded-lg shadow-lg border border-gray-700 z-50"
     >
       <div className="py-1">
         {messageId ? (
@@ -115,23 +122,23 @@ const ActionIcons = ({
               handleViewOriginalMessage()
             }}
           >
-            Xem tin nhắn gốc
+            View Original Message
           </button>
         ) : null}
-        <div className="border-t border-gray-600 my-1"></div>
-        <button
-          className="w-full px-4 py-2 text-left text-red-400 hover:bg-[#35363A] text-sm"
-          onClick={() => handleMenuItemClick(onDeleteForMe)}
-        >
-          Xoá chỉ ở mình tôi
-        </button>
-        {isSender && (
-          <button
-            className="w-full px-4 py-2 text-left text-red-400 hover:bg-[#35363A] text-sm"
-            onClick={() => handleMenuItemClick(onDeleteForEveryone)}
-          >
-            Xoá ở cả người nhận (Thu hồi)
-          </button>
+        {isSender && messageId && (
+          <>
+            <div className="border-t border-gray-600 my-1"></div>
+            <button
+              className="w-full px-4 py-2 text-left text-red-400 hover:bg-[#35363A] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleRecallMessage()
+              }}
+            >
+              Recall Message
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -146,7 +153,7 @@ const ActionIcons = ({
             e.stopPropagation()
             onDownload && onDownload()
           }}
-          title="Tải về"
+          title="Download"
         >
           <Download className="w-5 h-5" />
         </button>
@@ -157,15 +164,15 @@ const ActionIcons = ({
           e.stopPropagation()
           onShare && onShare()
         }}
-        title="Chia sẻ"
+        title="Share"
       >
         <Share2 className="w-5 h-5" />
       </button>
       <button
-        ref={moreButtonRef}
+        ref={refs.setReference}
         className="p-1 rounded hover:bg-[#232526] text-white"
         onClick={handleMoreClick}
-        title="Khác"
+        title="More"
       >
         <MoreHorizontal className="w-5 h-5" />
       </button>

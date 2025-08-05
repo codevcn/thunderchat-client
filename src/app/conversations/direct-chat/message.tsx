@@ -1,4 +1,4 @@
-import { EMessageTypes, ETimeFormats } from "@/utils/enums"
+import { EMessageMediaTypes, EMessageTypes, ETimeFormats } from "@/utils/enums"
 import { santizeMsgContent } from "@/utils/helpers"
 import { EMessageStatus } from "@/utils/socket/enums"
 import type {
@@ -6,6 +6,7 @@ import type {
   TUserWithoutPassword,
   TGetFriendsData,
   TMessageFullInfo,
+  TMessageMedia,
 } from "@/utils/types/be-api"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import dayjs from "dayjs"
@@ -31,7 +32,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
-import VoiceMessage from "../(voice-chat)/VoiceMessage"
+import VoiceMessage from "../../../components/voice-message/voice-message"
 import React, { useState, forwardRef, useEffect, useRef } from "react"
 import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
@@ -44,8 +45,16 @@ import { directChatService } from "@/services/direct-chat.service"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { clientSocket } from "@/utils/socket/client-socket"
-import axios from "axios"
 import { FileService } from "@/services/file.service"
+
+type TContentProps = {
+  content: string
+  stickerUrl: string | null
+  type: string
+  Media: TMessageMedia | null
+  message?: TStateDirectMessage
+  user: TUserWithoutPassword
+}
 
 const ImageModal = ({
   imageUrl,
@@ -149,27 +158,8 @@ const FileIcon = ({ fileTypeText, onDownload, fileIconRef }: TFileIconProps) => 
   )
 }
 
-type TContentProps = {
-  content: string
-  stickerUrl: string | null
-  mediaUrl: string | null
-  type: string
-  fileName?: string
-  fileType?: string
-  fileSize?: number
-  message?: TStateDirectMessage
-}
-
-const Content = ({
-  content,
-  stickerUrl,
-  mediaUrl,
-  type,
-  fileName,
-  fileType,
-  fileSize,
-  message,
-}: TContentProps) => {
+const Content = ({ content, stickerUrl, type, Media, message, user }: TContentProps) => {
+  const { url: mediaUrl, fileName, type: fileType, fileSize } = Media || {}
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const fileIconRef = useRef<HTMLDivElement>(null)
 
@@ -177,7 +167,7 @@ const Content = ({
     return (
       <div
         className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent("Tin nhắn này đã được thu hồi") }}
+        dangerouslySetInnerHTML={{ __html: santizeMsgContent("This message has been deleted") }}
       ></div>
     )
   }
@@ -280,8 +270,16 @@ const Content = ({
     )
   }
 
-  if (type === EMessageTypes.MEDIA && mediaUrl && message) {
-    return <VoiceMessage audioUrl={mediaUrl} message={message} />
+  // if (type === EMessageTypes.MEDIA && mediaUrl && message) {
+  //   return <VoiceMessage audioUrl={mediaUrl} message={message} />
+  if (
+    type === EMessageTypes.MEDIA &&
+    fileType === EMessageMediaTypes.AUDIO &&
+    mediaUrl &&
+    message
+  ) {
+    const isSender = user.id === message.authorId
+    return <VoiceMessage audioUrl={mediaUrl} message={message} isSender={isSender} />
   }
 
   // Hiển thị sticker
@@ -323,10 +321,19 @@ const StickyTime = ({ stickyTime }: TStickyTimeProps) => {
 }
 
 const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
-  const { type, Media, Sticker, content } = replyTo
+  const { type, Media, Sticker, content, isDeleted } = replyTo
   const mediaUrl = Media?.url
-  const mediaFileName = Media?.fileName
+  const fileName = Media?.fileName
   const stickerUrl = Sticker?.imageUrl
+
+  // Nếu tin nhắn gốc đã bị thu hồi, hiển thị thông báo thu hồi
+  if (isDeleted) {
+    return (
+      <span className="text-xs rounded mt-0.5 inline-block text-gray-400 italic">
+        This message has been deleted
+      </span>
+    )
+  }
 
   // Nếu là ảnh
   if (type === EMessageTypes.MEDIA && mediaUrl) {
@@ -350,7 +357,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <FileVideo size={16} />
-        <span className="text-xs rounded mt-0.5 inline-block">{mediaFileName}</span>
+        <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
       </div>
     )
   }
@@ -359,7 +366,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <Paperclip size={16} />
-        <span className="text-xs rounded mt-0.5 inline-block">{mediaFileName}</span>
+        <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
       </div>
     )
   }
@@ -453,18 +460,20 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               className="max-w-[300px] text-sm truncate"
               dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
             ></div>
-            {/* Nút xem nếu có ReplyTo */}
-            {message.ReplyTo && typeof message.ReplyTo.id !== "undefined" && (
-              <button
-                className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
-                onClick={() => {
-                  if (message.ReplyTo && onReplyPreviewClick)
-                    onReplyPreviewClick(message.ReplyTo.id)
-                }}
-              >
-                Xem
-              </button>
-            )}
+            {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi */}
+            {message.ReplyTo &&
+              typeof message.ReplyTo.id !== "undefined" &&
+              !message.ReplyTo.isDeleted && (
+                <button
+                  className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
+                  onClick={() => {
+                    if (message.ReplyTo && onReplyPreviewClick)
+                      onReplyPreviewClick(message.ReplyTo.id)
+                  }}
+                >
+                  Xem
+                </button>
+              )}
           </div>
         </div>
       )
@@ -537,7 +546,11 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
           {user.id === authorId ? (
             <div className={`QUERY-user-message-${id} flex justify-end w-full`} data-msg-id={id}>
               <div
-                className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${Sticker ? "" : "bg-regular-violet-cl"} group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
+                className={
+                  `${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
+                  `${Sticker ? "" : message.isDeleted ? "bg-regular-violet-cl opacity-60 text-white italic" : "bg-regular-violet-cl"} ` +
+                  "group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1"
+                }
               >
                 <div
                   className={
@@ -652,7 +665,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && (
+                {ReplyTo && !message.isDeleted && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -673,12 +686,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                 <Content
                   content={content}
                   stickerUrl={Sticker?.imageUrl ?? null}
-                  mediaUrl={Media?.url ?? null}
-                  type={type}
-                  fileName={Media?.fileName}
-                  fileType={Media?.type}
-                  fileSize={Media?.fileSize}
                   message={message}
+                  Media={Media}
+                  type={type}
+                  user={user}
                 />
                 <div className="flex justify-end items-center gap-x-1 mt-1.5 w-full">
                   <span className="text-xs text-regular-creator-msg-time-cl leading-none">
@@ -707,7 +718,11 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               data-msg-id={id}
             >
               <div
-                className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${Sticker ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
+                className={
+                  `group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
+                  `${Sticker ? "" : message.isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white italic" : "w-max bg-regular-dark-gray-cl"} ` +
+                  "max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative"
+                }
               >
                 <div
                   className={
@@ -822,7 +837,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && (
+                {ReplyTo && !message.isDeleted && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -843,12 +858,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                 <Content
                   content={content}
                   stickerUrl={Sticker?.imageUrl ?? null}
-                  mediaUrl={Media?.url ?? null}
                   type={type}
-                  fileName={Media?.fileName}
-                  fileType={Media?.type}
-                  fileSize={Media?.fileSize}
                   message={message}
+                  Media={Media}
+                  user={user}
                 />
               </div>
             </div>

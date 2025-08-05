@@ -4,7 +4,7 @@ import { messageService } from "@/services/message.service"
 import { EMessageTypes, ESortTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TMessageFullInfo, TMsgWithMediaSticker } from "@/utils/types/be-api"
+import type { TMessage, TMessageFullInfo, TMsgWithMediaSticker } from "@/utils/types/be-api"
 
 const isUrl = (text: string) => {
   try {
@@ -27,6 +27,61 @@ export const useMediaMessages = () => {
   const [mediaMessages, setMediaMessages] = useState<TMessageFullInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [statistics, setStatistics] = useState<{
+    images: number
+    videos: number
+    files: number
+    voices: number
+    links: number
+  }>({
+    images: 0,
+    videos: 0,
+    files: 0,
+    voices: 0,
+    links: 0,
+  })
+
+  // Hàm kiểm tra URL
+  const isUrl = useCallback((text: string) => {
+    try {
+      new URL(text)
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Hàm kiểm tra xem tin nhắn có phải là media không
+  const isMediaMessage = useCallback(
+    (message: TMessage) => {
+      return (
+        message.type === EMessageTypes.MEDIA ||
+        (message.type === EMessageTypes.TEXT && message.content && isUrl(message.content))
+      )
+    },
+    [isUrl]
+  )
+
+  // Hàm fetch statistics
+  const fetchStatistics = useCallback(async () => {
+    if (!directChat?.id) return
+
+    try {
+      const response = await messageService.getMediaStatistics(directChat.id)
+      if (response.success) {
+        const { images, videos, files, voices } = response.data
+        setStatistics({
+          images,
+          videos,
+          files,
+          voices,
+          links: 0, // Links count is not available in statistics API
+        })
+      }
+    } catch (err) {
+      console.error("Failed to fetch media statistics:", err)
+    }
+  }, [directChat?.id])
 
   // Hàm fetch media messages từ API chuyên dụng
   const fetchMediaMessages = useCallback(async () => {
@@ -36,33 +91,138 @@ export const useMediaMessages = () => {
     setError(null)
 
     try {
-      const messages = await messageService.fetchDirectMedia(directChat.id, 100, 0, ESortTypes.DESC)
-      setMediaMessages(messages)
+      // Fetch images/videos (6 items)
+      const imagesVideosResponse = await messageService.getMediaMessagesWithMultipleTypes(
+        directChat.id,
+        ["image", "video"],
+        {},
+        1, // page
+        6, // limit
+        "desc" // sort
+      )
+
+      // Fetch files (3 items)
+      const filesResponse = await messageService.getMediaMessagesWithFilters(
+        directChat.id,
+        { type: "file" },
+        1, // page
+        3, // limit
+        "desc" // sort
+      )
+
+      // Fetch voices (3 items)
+      const voicesResponse = await messageService.getMediaMessagesWithFilters(
+        directChat.id,
+        { type: "voice" },
+        1, // page
+        3, // limit
+        "desc" // sort
+      )
+
+      // Fetch links (3 items) - TEXT messages with URLs
+      const linksResponse = await messageService.getMediaMessagesWithFilters(
+        directChat.id,
+        {}, // No type filter, will filter TEXT with URLs on frontend
+        1, // page
+        10, // Get more to filter for URLs
+        "desc" // sort
+      )
+
+      // Combine all responses
+      const allMessages: TMessageFullInfo[] = []
+
+      if (imagesVideosResponse.success) {
+        allMessages.push(...imagesVideosResponse.data.items)
+      }
+      if (filesResponse.success) {
+        allMessages.push(...filesResponse.data.items)
+      }
+      if (voicesResponse.success) {
+        allMessages.push(...voicesResponse.data.items)
+      }
+      if (linksResponse.success) {
+        // Filter for TEXT messages with URLs and limit to 3
+        const linkMessages = linksResponse.data.items
+          .filter(
+            (msg: TMessage) =>
+              msg.type === EMessageTypes.TEXT &&
+              msg.content &&
+              (msg.content.includes("http://") || msg.content.includes("https://"))
+          )
+          .slice(0, 3)
+        allMessages.push(...linkMessages)
+      }
+
+      // Lọc ra tin nhắn chưa bị xóa và sắp xếp theo thời gian
+      const nonDeletedMessages = allMessages
+        .filter((msg: TMessage) => !msg.isDeleted)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+      setMediaMessages(nonDeletedMessages)
+
+      // Fetch statistics after media messages are updated
+      await fetchStatistics()
     } catch (err: any) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [directChat?.id])
+  }, [directChat?.id, fetchStatistics])
 
-  // Hàm xử lý tin nhắn mới từ socket
-  const handleNewMessage = useCallback(
-    (newMessage: TMessageFullInfo) => {
-      if (isMediaMessage(newMessage)) {
-        setMediaMessages((prev) => {
-          // Kiểm tra xem tin nhắn đã tồn tại chưa
-          const exists = prev.some((msg) => msg.id === newMessage.id)
-          if (exists) return prev
+  // Hàm xử lý tin nhắn mới hoặc cập nhật từ socket
+  const handleMessageUpdate = useCallback(
+    (updatedMessage: TMessageFullInfo) => {
+      setMediaMessages((prev) => {
+        const existingIndex = prev.findIndex((msg) => msg.id === updatedMessage.id)
 
-          const newMediaMessages = [newMessage, ...prev]
-          // Sắp xếp theo thời gian mới nhất
-          return newMediaMessages.sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-        })
-      }
+        // Nếu tin nhắn đã bị xóa và là media message, loại bỏ khỏi danh sách
+        if (updatedMessage.isDeleted && isMediaMessage(updatedMessage)) {
+          if (existingIndex !== -1) {
+            const newMessages = prev.filter((msg) => msg.id !== updatedMessage.id)
+            const sortedMessages = newMessages.sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+
+            // Update statistics after removing message
+            setTimeout(() => fetchStatistics(), 100)
+
+            return sortedMessages
+          }
+          return prev
+        }
+
+        // Nếu tin nhắn chưa bị xóa và là media message
+        if (!updatedMessage.isDeleted && isMediaMessage(updatedMessage)) {
+          if (existingIndex !== -1) {
+            // Cập nhật tin nhắn hiện có
+            const newMessages = [...prev]
+            newMessages[existingIndex] = updatedMessage
+            const sortedMessages = newMessages.sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+
+            // Update statistics after updating message
+            setTimeout(() => fetchStatistics(), 100)
+
+            return sortedMessages
+          } else {
+            // Thêm tin nhắn mới
+            const newMediaMessages = [updatedMessage, ...prev]
+            const sortedMessages = newMediaMessages.sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+
+            // Update statistics after adding new message
+            setTimeout(() => fetchStatistics(), 100)
+
+            return sortedMessages
+          }
+        }
+
+        return prev
+      })
     },
-    [isMediaMessage]
+    [isMediaMessage, fetchStatistics]
   )
 
   // Effect để fetch media messages ban đầu
@@ -74,18 +234,19 @@ export const useMediaMessages = () => {
   useEffect(() => {
     if (!directChat?.id) return
 
-    // Lắng nghe tin nhắn mới từ socket
-    clientSocket.socket.on(ESocketEvents.send_message_direct, handleNewMessage)
+    // Lắng nghe tin nhắn mới/cập nhật từ socket
+    clientSocket.socket.on(ESocketEvents.send_message_direct, handleMessageUpdate)
 
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, handleNewMessage)
+      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, handleMessageUpdate)
     }
-  }, [directChat?.id, handleNewMessage])
+  }, [directChat?.id, handleMessageUpdate])
 
   return {
     mediaMessages,
     loading,
     error,
+    statistics,
     refetch: fetchMediaMessages,
   }
 }

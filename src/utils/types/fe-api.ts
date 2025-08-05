@@ -4,6 +4,7 @@
 import type { TEmoji } from "@/utils/types/global"
 import type { TUserWithoutPassword, TProfile } from "@/utils/types/be-api"
 import type { TUserSettings } from "./be-api"
+import type { EReportCategory } from "@/utils/enums"
 
 export type TGetEmojisRes = {
   foodDrink: TEmoji[]
@@ -25,4 +26,158 @@ export type TUpdateUserSettingsReq = {
 
 export type TCheckCanSendDirectMessageRes = {
   canSend: boolean
+}
+
+// ================================= Media Pagination Frontend Types =================================
+
+export type TMediaPaginationState = {
+  items: any[]
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  hasMore: boolean
+  loading: boolean
+  error: string | null
+  filters: {
+    type?: "image" | "video" | "file" | "voice"
+    senderId?: number
+    fromDate?: string
+    toDate?: string
+  }
+  sortOrder: "asc" | "desc"
+}
+
+export type TMediaCacheState = {
+  cachedPages: Map<number, any[]>
+  lastUpdated: Map<number, Date>
+  memoryUsage: number
+  maxCacheSize: number
+}
+
+// ================================= Report Frontend Types =================================
+
+export type TReportedMessageFE = {
+  messageId: number
+  messageType: string
+  messageContent: string
+  conversationId: number
+  conversationType: "direct" | "group"
+}
+
+export type TReportSession = {
+  conversationId: number
+  conversationType: "direct" | "group"
+  reportedMessages: TReportedMessageFE[]
+  reason?: string
+  description?: string
+}
+
+export type TCreateViolationReportDataFE = {
+  reportedUserId: number
+  reportCategory: EReportCategory
+  reasonText?: string
+  reportedMessages?: TReportedMessageFE[]
+}
+
+export type TCreateViolationReportResponseFE = {
+  success: boolean
+  reportId?: number
+  message?: string
+  error?: string
+  code?: string
+  details?: any
+}
+
+// ================================= Admin Violation Reports Frontend Types =================================
+
+export type TAdminViolationReportFE = {
+  id: number
+  reporterId: number
+  reporterName: string
+  reporterEmail: string
+  reportedUserId: number
+  reportedUserName: string
+  reportedUserEmail: string
+  reportCategory: "SENSITIVE_CONTENT" | "BOTHER" | "FRAUD" | "OTHER"
+  reasonText?: string | null
+  status: "PENDING" | "RESOLVED" | "DISMISSED"
+  evidenceCount: {
+    images: number
+    messages: number
+  }
+  createdAt: string
+  updatedAt: string
+}
+
+export type TAdminViolationReportDetailFE = {
+  id: number
+  reporterId: number
+  reporterName: string
+  reporterEmail: string
+  reportedUserId: number
+  reportedUserName: string
+  reportedUserEmail: string
+  reportCategory: "SENSITIVE_CONTENT" | "BOTHER" | "FRAUD" | "OTHER"
+  reasonText?: string | null
+  status: "PENDING" | "RESOLVED" | "DISMISSED"
+  evidenceCount: {
+    images: number
+    messages: number
+  }
+  reportImages: Array<{
+    id: number
+    imageUrl: string
+    createdAt: string
+  }>
+  reportedMessages: Array<{
+    id: number
+    messageId: number
+    messageType: string
+    messageContent: string
+    createdAt: string
+  }>
+  createdAt: string
+  updatedAt: string
+}
+
+export type TAdminViolationReportsDataFE = {
+  reports: TAdminViolationReportFE[]
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+  statistics: {
+    total: number
+    pending: number
+    resolved: number
+    dismissed: number
+  }
+}
+
+export type TGetAdminViolationReportsParamsFE = {
+  page?: number
+  limit?: number
+  search?: string
+  status?: "PENDING" | "RESOLVED" | "DISMISSED" | "ALL"
+  category?: "SENSITIVE_CONTENT" | "BOTHER" | "FRAUD" | "OTHER" | "ALL"
+  startDate?: string
+  endDate?: string
+  sortBy?: "createdAt" | "updatedAt"
+  sortOrder?: "asc" | "desc"
+}
+
+export type TUpdateAdminViolationReportStatusResponseFE = {
+  success: boolean
+  message: string
+  error?: string
+}
+
+export type TAdminBanUserResponseFE = {
+  success: boolean
+  message: string
+  error?: string
 }

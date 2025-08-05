@@ -186,6 +186,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                 password: user.password,
                 createdAt: user.createdAt,
                 Profile: user.Profile,
+                role: user.role,
               },
               Recipient: {
                 id: otherUserId,
@@ -193,6 +194,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                 password: otherUser.password,
                 createdAt: otherUser.createdAt,
                 Profile: otherUser.Profile,
+                role: otherUser.role,
               },
             }
             const tempId = randomInRange(1, 100000)

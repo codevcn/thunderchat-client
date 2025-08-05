@@ -1,4 +1,5 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
+import { EAppRole } from "@/utils/enums"
 import { TMessageMedia, TSticker } from "@/utils/types/be-api"
 
 // Types for pin API responses
@@ -47,7 +48,7 @@ export type TPinnedMessage = {
   pinnedAt: string
   Sticker?: TSticker
   Media?: TMessageMedia
-  DirectMessage: {
+  Message: {
     id: number
     content: string
     authorId: number
@@ -67,6 +68,7 @@ export type TPinnedMessage = {
       id: number
       email: string
       createdAt: string
+      role: EAppRole
       Profile: {
         id: number
         fullName: string
@@ -84,6 +86,7 @@ export type TPinnedMessage = {
       Author: {
         id: number
         email: string
+        role: EAppRole
         Profile: {
           id: number
           fullName: string

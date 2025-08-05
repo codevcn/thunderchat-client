@@ -638,6 +638,11 @@ export const TypeMessageBar = memo(
     }
 
     function renderReplyPreview(msg: TStateDirectMessage) {
+      // Nếu tin nhắn đã bị thu hồi, hiển thị thông báo thu hồi
+      if (msg.isDeleted) {
+        return <span className="text-sm text-gray-400 italic">This message has been deleted</span>
+      }
+
       const type = msg.type.toUpperCase()
       const { Media, Sticker } = msg
       switch (type) {
@@ -830,15 +835,24 @@ export const TypeMessageBar = memo(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl, isRecording])
 
+    {
+      /* Hiển thị thông báo khi không thể gửi tin nhắn */
+    }
     if (canSend === false) {
-      return null
+      return (
+        <div className="flex-1 flex items-center justify-center w-full py-10">
+          <div className="system-message text-center text-gray-500 py-4 w-full">
+            Người này chỉ nhận tin nhắn từ bạn bè. Bạn không thể gửi tin nhắn.
+          </div>
+        </div>
+      )
     }
 
     return (
       <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border relative">
         <div className="flex flex-col grow">
           {/* Reply Preview */}
-          {replyMessage && (
+          {replyMessage && !replyMessage.isDeleted && (
             <div
               id="STYLE-message-reply-preview"
               className="flex items-center w-type-message-bar gap-2 bg-regular-dark-gray-cl border-l-2 border-red-600 rounded-lg px-2 py-2 mb-1 text-xs"

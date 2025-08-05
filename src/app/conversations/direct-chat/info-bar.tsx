@@ -1,6 +1,6 @@
 import { dev_test_values } from "../../../../temp/test"
 
-import { X, Info, AtSign, Mail } from "lucide-react"
+import { X, Info, AtSign, Mail, AlertTriangle } from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
@@ -8,7 +8,9 @@ import { ProgressiveImage } from "@/components/materials/progressive-image"
 import { setLastSeen } from "@/utils/helpers"
 import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
-import MediaPanel from "./(conversation-media)/media-panel"
+import MediaPanel from "../../../components/conversation-media/media-panel"
+import { ReportModal } from "../../../components/chatbox/user-report/report-model"
+import { useState } from "react"
 
 type TAvatarProps = {
   recipient: TUserWithProfile
@@ -50,9 +52,21 @@ type TProfileInfoProps = {
   recipient: TUserWithProfile
 }
 
-const ProfileInfo = ({ recipient }: TProfileInfoProps) => {
+const ProfileInfo = ({
+  recipient,
+  directChatId,
+}: TProfileInfoProps & { directChatId?: number }) => {
   const { Profile, email } = recipient
   const { about } = Profile
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+
+  const handleOpenReportModal = () => {
+    setIsReportModalOpen(true)
+  }
+
+  const handleCloseReportModal = () => {
+    setIsReportModalOpen(false)
+  }
 
   return (
     <div className="flex flex-col gap-2 px-2 pt-[0.87rem] pb-[0.87rem]">
@@ -79,15 +93,39 @@ const ProfileInfo = ({ recipient }: TProfileInfoProps) => {
           </div>
         </div>
       )}
+
+      <div className="flex gap-4 items-center px-4 py-2">
+        <div className="text-red-500">
+          <AlertTriangle color="currentColor" />
+        </div>
+        <div className="w-info-bar">
+          <button
+            onClick={handleOpenReportModal}
+            className="text-base leading-5 w-full text-left text-red-500 hover:text-red-400 transition-colors"
+          >
+            Report user
+          </button>
+        </div>
+      </div>
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={handleCloseReportModal}
+        user={recipient}
+        conversationId={directChatId}
+        conversationType="direct"
+      />
     </div>
   )
 }
 
 type TInfoBarProps = {
   friendInfo: TUserWithProfile
+  directChatId?: number
 }
 
-export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
+export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
 
@@ -107,7 +145,7 @@ export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
           <X />
         </IconButton>
         <div className="text-xl">
-          <h2>Thông tin hội thoại</h2>
+          <h2>Conversation information</h2>
         </div>
       </div>
 
@@ -115,7 +153,7 @@ export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
       <div className="flex-1 min-h-0 w-full">
         <div className="overflow-y-auto STYLE-styled-scrollbar h-full min-h-0 bg-regular-info-bar-bgcl">
           <Avatar recipient={friendInfo} />
-          <ProfileInfo recipient={friendInfo} />
+          <ProfileInfo recipient={friendInfo} directChatId={directChatId} />
           <MediaPanel />
         </div>
       </div>

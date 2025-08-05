@@ -1,9 +1,9 @@
 "use client"
 
-import React, { createContext, useContext, useState, useRef, useCallback } from "react"
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react"
 import type { TStateDirectMessage } from "@/utils/types/global"
 
-// Hàm preload metadata của audio với fallback graceful
+// Logic preloadAudioMetadata từ VoiceMessage component
 const preloadAudioMetadata = (url: string): Promise<number> => {
   return new Promise((resolve) => {
     const audio = new Audio()
@@ -63,33 +63,35 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
   })
 }
 
-type VoicePlayerContextType = {
-  // State
+// Tách thành 2 context riêng biệt
+type VoicePlayerStateContextType = {
   isPlaying: boolean
   currentTime: number
   duration: number
   currentAudioUrl: string | null
   currentMessage: TStateDirectMessage | null
+  showPlayer: boolean
   playbackRate: number
-  audioMessages: TStateDirectMessage[] // Danh sách tất cả audio messages
-  currentAudioIndex: number // Vị trí hiện tại trong danh sách
+  audioMessages: TStateDirectMessage[]
+  currentAudioIndex: number
+  volume: number
+}
 
-  // Actions
-  playAudio: (message: TStateDirectMessage) => void
+type VoicePlayerActionsContextType = {
+  playAudio: (message: TStateDirectMessage) => Promise<void>
   pauseAudio: () => void
   seekAudio: (time: number) => void
   stopAudio: () => void
   setPlaybackRate: (rate: number) => void
+  setVolume: (volume: number) => void
   playNext: () => void
   playPrevious: () => void
   setAudioMessages: (messages: TStateDirectMessage[]) => void
-
-  // Player visibility
-  showPlayer: boolean
   setShowPlayer: (show: boolean) => void
 }
 
-const VoicePlayerContext = createContext<VoicePlayerContextType | null>(null)
+const VoicePlayerStateContext = createContext<VoicePlayerStateContextType | null>(null)
+const VoicePlayerActionsContext = createContext<VoicePlayerActionsContextType | null>(null)
 
 export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -101,197 +103,290 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [playbackRate, setPlaybackRate] = useState(1)
   const [audioMessages, setAudioMessages] = useState<TStateDirectMessage[]>([])
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0)
+  const [volume, setVolume] = useState(1)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const lastPausedTimeRef = useRef<number>(0) // Lưu vị trí khi pause
+  const lastPausedTimeRef = useRef<number>(0)
+  const durationCacheRef = useRef<Map<string, number>>(new Map()) // Cache duration theo audioUrl
+  const pausedTimeCacheRef = useRef<Map<string, number>>(new Map()) // Cache vị trí pause theo audioUrl
 
+  // Actions - đặt ở top level
   const playAudio = useCallback(
     async (message: TStateDirectMessage) => {
-      if (!message.Media?.url) return
-
-      // Cập nhật currentAudioIndex nếu message có trong danh sách
-      const messageIndex = audioMessages.findIndex((msg) => msg.id === message.id)
-      if (messageIndex !== -1) {
-        setCurrentAudioIndex(messageIndex)
-      }
-
-      // Nếu đang phát audio khác, dừng lại
-      if (audioRef.current && currentAudioUrl !== message.Media?.url) {
+      if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current.currentTime = 0
+      }
+
+      const audioUrl = message.Media?.url || ""
+
+      // Kiểm tra xem có phải chuyển sang voice mới không
+      const isNewVoice = currentAudioUrl !== audioUrl
+
+      if (isNewVoice) {
+        // Reset khi chuyển sang voice mới
+        setCurrentTime(0)
+        setDuration(0)
         lastPausedTimeRef.current = 0
-      }
-
-      setCurrentMessage(message)
-      setCurrentAudioUrl(message.Media?.url)
-      setShowPlayer(true)
-
-      // Preload metadata trước
-      const audioDuration = await preloadAudioMetadata(message.Media?.url)
-      setDuration(audioDuration)
-
-      // Tạo audio element mới nếu cần
-      if (!audioRef.current) {
-        audioRef.current = new Audio()
-      }
-
-      audioRef.current.src = message.Media?.url
-      audioRef.current.playbackRate = playbackRate // Áp dụng playback rate hiện tại
-
-      // Nếu là cùng audio và đã có vị trí pause, tiếp tục từ đó
-      if (currentAudioUrl === message.Media?.url && lastPausedTimeRef.current > 0) {
-        audioRef.current.currentTime = lastPausedTimeRef.current
-        setCurrentTime(lastPausedTimeRef.current)
       } else {
-        // Audio mới hoặc chưa có vị trí pause, bắt đầu từ đầu
-        audioRef.current.currentTime = 0
-        setCurrentTime(0)
-        lastPausedTimeRef.current = 0
+        // Giữ nguyên currentTime khi resume cùng voice
+        setCurrentTime(lastPausedTimeRef.current)
       }
 
-      // Event listeners
-      audioRef.current.addEventListener("loadedmetadata", () => {
-        setDuration(audioRef.current?.duration || 0)
-      })
+      // Kiểm tra cache trước
+      let cachedDuration = durationCacheRef.current.get(audioUrl)
 
-      audioRef.current.addEventListener("timeupdate", () => {
-        const time = audioRef.current?.currentTime || 0
-        setCurrentTime(time)
-        // Cập nhật vị trí pause khi đang phát
-        if (isPlaying) {
-          lastPausedTimeRef.current = time
+      // Nếu chưa có trong cache, preload để lấy duration
+      if (!cachedDuration) {
+        try {
+          cachedDuration = await preloadAudioMetadata(audioUrl)
+          durationCacheRef.current.set(audioUrl, cachedDuration)
+        } catch (error) {
+          console.error("Error preloading audio metadata:", error)
+          cachedDuration = 0
         }
-      })
+      }
 
-      audioRef.current.addEventListener("ended", () => {
+      // Set duration từ cache
+      if (cachedDuration && cachedDuration > 0) {
+        setDuration(cachedDuration)
+      }
+
+      const newAudio = new Audio(audioUrl)
+      newAudio.volume = volume
+      newAudio.playbackRate = playbackRate
+
+      // Set vị trí bắt đầu phát
+      if (!isNewVoice) {
+        // Resume từ vị trí đã pause
+        const pausedTime = pausedTimeCacheRef.current.get(audioUrl) || 0
+        newAudio.currentTime = pausedTime
+        setCurrentTime(pausedTime)
+      }
+
+      const handleTimeUpdate = () => {
+        setCurrentTime(newAudio.currentTime)
+        lastPausedTimeRef.current = newAudio.currentTime
+      }
+
+      const handleLoadedMetadata = () => {
+        const audioDuration = newAudio.duration
+
+        // Kiểm tra nếu duration hợp lệ
+        if (audioDuration && isFinite(audioDuration) && audioDuration > 0) {
+          setDuration(audioDuration)
+          // Cập nhật cache
+          durationCacheRef.current.set(audioUrl, audioDuration)
+        }
+      }
+
+      const handleLoadedData = () => {
+        const audioDuration = newAudio.duration
+
+        // Kiểm tra nếu duration hợp lệ
+        if (audioDuration && isFinite(audioDuration) && audioDuration > 0) {
+          setDuration(audioDuration)
+          // Cập nhật cache
+          durationCacheRef.current.set(audioUrl, audioDuration)
+        }
+      }
+
+      const handleEnded = () => {
         setIsPlaying(false)
         setCurrentTime(0)
-        lastPausedTimeRef.current = 0 // Reset khi kết thúc
-      })
+        lastPausedTimeRef.current = 0
+        // Xóa vị trí pause khi voice kết thúc
+        pausedTimeCacheRef.current.delete(audioUrl)
+        newAudio.removeEventListener("timeupdate", handleTimeUpdate)
+        newAudio.removeEventListener("loadedmetadata", handleLoadedMetadata)
+        newAudio.removeEventListener("loadeddata", handleLoadedData)
+        newAudio.removeEventListener("ended", handleEnded)
+      }
 
-      audioRef.current.addEventListener("pause", () => {
-        setIsPlaying(false)
-        // Lưu vị trí hiện tại khi pause
-        lastPausedTimeRef.current = audioRef.current?.currentTime || 0
-      })
+      newAudio.addEventListener("timeupdate", handleTimeUpdate)
+      newAudio.addEventListener("loadedmetadata", handleLoadedMetadata)
+      newAudio.addEventListener("loadeddata", handleLoadedData)
+      newAudio.addEventListener("ended", handleEnded)
 
-      audioRef.current.addEventListener("play", () => {
+      try {
+        await newAudio.play()
         setIsPlaying(true)
-      })
+        setCurrentAudioUrl(audioUrl)
+        setCurrentMessage(message)
+        setShowPlayer(true)
 
-      // Bắt đầu phát
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true)
-        })
-        .catch((error) => {
-          console.error("Error playing audio:", error)
-        })
+        // Tìm index của message trong audioMessages
+        const messageIndex = audioMessages.findIndex((msg) => msg.id === message.id)
+        if (messageIndex !== -1) {
+          setCurrentAudioIndex(messageIndex)
+        }
+
+        audioRef.current = newAudio
+      } catch (error) {
+        console.error("Error playing audio:", error)
+      }
     },
-    [currentAudioUrl, isPlaying, playbackRate, audioMessages]
+    [volume, playbackRate, audioMessages, currentAudioUrl]
   )
 
   const pauseAudio = useCallback(() => {
-    if (audioRef.current) {
+    if (audioRef.current && currentAudioUrl) {
       audioRef.current.pause()
       setIsPlaying(false)
-      // Lưu vị trí hiện tại khi pause
-      lastPausedTimeRef.current = audioRef.current.currentTime
+      const pausedTime = audioRef.current.currentTime
+      lastPausedTimeRef.current = pausedTime
+      // Lưu vị trí pause vào cache
+      pausedTimeCacheRef.current.set(currentAudioUrl, pausedTime)
     }
-  }, [])
+  }, [currentAudioUrl])
 
-  const seekAudio = useCallback((time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time
-      setCurrentTime(time)
-      // Cập nhật vị trí pause khi seek
-      lastPausedTimeRef.current = time
-    }
-  }, [])
+  const seekAudio = useCallback(
+    (time: number) => {
+      if (audioRef.current && currentAudioUrl) {
+        audioRef.current.currentTime = time
+        setCurrentTime(time)
+        lastPausedTimeRef.current = time
+        // Cập nhật vị trí pause trong cache
+        pausedTimeCacheRef.current.set(currentAudioUrl, time)
+      }
+    },
+    [currentAudioUrl]
+  )
 
   const stopAudio = useCallback(() => {
-    if (audioRef.current) {
+    if (audioRef.current && currentAudioUrl) {
       audioRef.current.pause()
       audioRef.current.currentTime = 0
       setIsPlaying(false)
       setCurrentTime(0)
-      setCurrentAudioUrl(null)
-      setCurrentMessage(null)
-      setShowPlayer(false)
-      setDuration(0)
-      lastPausedTimeRef.current = 0 // Reset khi stop
+      lastPausedTimeRef.current = 0
+      // Xóa vị trí pause khi stop
+      pausedTimeCacheRef.current.delete(currentAudioUrl)
+    }
+  }, [currentAudioUrl])
+
+  const handleSetPlaybackRate = useCallback((rate: number) => {
+    setPlaybackRate(rate)
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate
     }
   }, [])
 
-  const handleSetPlaybackRate = useCallback((rate: number) => {
+  const handleSetVolume = useCallback((vol: number) => {
+    setVolume(vol)
     if (audioRef.current) {
-      audioRef.current.playbackRate = rate
-      setPlaybackRate(rate)
+      audioRef.current.volume = vol
     }
   }, [])
 
   const playNext = useCallback(() => {
     if (currentAudioIndex < audioMessages.length - 1) {
-      const nextIndex = currentAudioIndex + 1
-      const nextMessage = audioMessages[nextIndex]
-      setCurrentAudioIndex(nextIndex)
-      setCurrentMessage(nextMessage)
-      setCurrentAudioUrl(nextMessage.Media?.url ?? null)
-      // Tự động phát audio tiếp theo
-      if (isPlaying) {
-        playAudio(nextMessage)
-      }
+      const nextMessage = audioMessages[currentAudioIndex + 1]
+      playAudio(nextMessage)
     }
-  }, [currentAudioIndex, audioMessages, isPlaying, playAudio])
+  }, [currentAudioIndex, audioMessages, playAudio])
 
   const playPrevious = useCallback(() => {
     if (currentAudioIndex > 0) {
-      const prevIndex = currentAudioIndex - 1
-      const prevMessage = audioMessages[prevIndex]
-      setCurrentAudioIndex(prevIndex)
-      setCurrentMessage(prevMessage)
-      setCurrentAudioUrl(prevMessage.Media?.url ?? null)
-      // Tự động phát audio trước đó
-      if (isPlaying) {
-        playAudio(prevMessage)
-      }
+      const prevMessage = audioMessages[currentAudioIndex - 1]
+      playAudio(prevMessage)
     }
-  }, [currentAudioIndex, audioMessages, isPlaying, playAudio])
+  }, [currentAudioIndex, audioMessages, playAudio])
 
   const handleSetAudioMessages = useCallback((messages: TStateDirectMessage[]) => {
     setAudioMessages(messages)
-    setCurrentAudioIndex(0)
-    setCurrentAudioUrl(messages[0]?.Media?.url ?? null)
   }, [])
 
-  const value: VoicePlayerContextType = {
-    isPlaying,
-    currentTime,
-    duration,
-    currentAudioUrl,
-    currentMessage,
-    playbackRate,
-    audioMessages,
-    currentAudioIndex,
-    playAudio,
-    pauseAudio,
-    seekAudio,
-    stopAudio,
-    setPlaybackRate: handleSetPlaybackRate,
-    playNext,
-    playPrevious,
-    setAudioMessages: handleSetAudioMessages,
-    showPlayer,
-    setShowPlayer,
-  }
-  return <VoicePlayerContext.Provider value={value}>{children}</VoicePlayerContext.Provider>
+  const handleSetShowPlayer = useCallback((show: boolean) => {
+    setShowPlayer(show)
+  }, [])
+
+  // State context value - chỉ thay đổi khi state thực sự thay đổi
+  const stateValue = React.useMemo(
+    () => ({
+      isPlaying,
+      currentTime,
+      duration,
+      currentAudioUrl,
+      currentMessage,
+      showPlayer,
+      playbackRate,
+      audioMessages,
+      currentAudioIndex,
+      volume,
+    }),
+    [
+      isPlaying,
+      currentTime,
+      duration,
+      currentAudioUrl,
+      currentMessage,
+      showPlayer,
+      playbackRate,
+      audioMessages,
+      currentAudioIndex,
+      volume,
+    ]
+  )
+
+  // Actions context value - ổn định, không thay đổi
+  const actionsValue = React.useMemo(
+    () => ({
+      playAudio,
+      pauseAudio,
+      seekAudio,
+      stopAudio,
+      setPlaybackRate: handleSetPlaybackRate,
+      setVolume: handleSetVolume,
+      playNext,
+      playPrevious,
+      setAudioMessages: handleSetAudioMessages,
+      setShowPlayer: handleSetShowPlayer,
+    }),
+    [
+      playAudio,
+      pauseAudio,
+      seekAudio,
+      stopAudio,
+      handleSetPlaybackRate,
+      handleSetVolume,
+      playNext,
+      playPrevious,
+      handleSetAudioMessages,
+      handleSetShowPlayer,
+    ]
+  )
+
+  return (
+    <VoicePlayerStateContext.Provider value={stateValue}>
+      <VoicePlayerActionsContext.Provider value={actionsValue}>
+        {children}
+      </VoicePlayerActionsContext.Provider>
+    </VoicePlayerStateContext.Provider>
+  )
 }
 
-export const useVoicePlayer = () => {
-  const context = useContext(VoicePlayerContext)
+// Hook để sử dụng state (cho components cần currentTime, duration)
+export const useVoicePlayerState = () => {
+  const context = useContext(VoicePlayerStateContext)
   if (!context) {
-    throw new Error("useVoicePlayer must be used within a VoicePlayerProvider")
+    throw new Error("useVoicePlayerState must be used within VoicePlayerProvider")
   }
   return context
+}
+
+// Hook để sử dụng actions (cho components chỉ cần play/pause)
+export const useVoicePlayerActions = () => {
+  const context = useContext(VoicePlayerActionsContext)
+  if (!context) {
+    throw new Error("useVoicePlayerActions must be used within VoicePlayerProvider")
+  }
+  return context
+}
+
+// Hook cũ để backward compatibility
+export const useVoicePlayer = () => {
+  const state = useVoicePlayerState()
+  const actions = useVoicePlayerActions()
+  return { ...state, ...actions }
 }

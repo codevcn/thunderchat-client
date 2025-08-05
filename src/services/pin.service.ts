@@ -16,6 +16,7 @@ import {
   type TUnpinDirectChatResponse,
   type TPinnedDirectChat,
 } from "@/apis/pin"
+import { EAppRole } from "@/utils/enums"
 import type { TStateDirectMessage } from "@/utils/types/global"
 
 class PinService {
@@ -78,8 +79,9 @@ class PinService {
 
   // Helper function để chuyển đổi TPinnedMessage sang TStateDirectMessage
   private convertPinnedMessageToStateMessage(pinnedMessage: TPinnedMessage): TStateDirectMessage {
-    const directMessage = pinnedMessage.DirectMessage
+    const directMessage = pinnedMessage.Message
     const { Media, Sticker } = pinnedMessage
+    const { ReplyTo } = directMessage
     return {
       id: directMessage.id,
       content: directMessage.content,
@@ -91,19 +93,21 @@ class PinService {
       Author: {
         ...directMessage.Author,
         password: "", // Add missing password field
+        role: directMessage.Author.role as EAppRole, // Cast to EAppRole
       },
-      ReplyTo: directMessage.ReplyTo
+      ReplyTo: ReplyTo
         ? {
-            id: directMessage.ReplyTo.id,
-            content: directMessage.ReplyTo.content,
-            authorId: directMessage.ReplyTo.authorId,
+            id: ReplyTo.id,
+            content: ReplyTo.content,
+            authorId: ReplyTo.authorId,
             directChatId: directMessage.directChatId,
             status: "SEEN" as any,
             type: "TEXT" as any,
             createdAt: directMessage.createdAt,
             Author: {
-              ...directMessage.ReplyTo.Author,
+              ...ReplyTo.Author,
               password: "", // Add missing password field
+              role: ReplyTo.Author.role as EAppRole, // Cast to EAppRole
             },
           }
         : null,

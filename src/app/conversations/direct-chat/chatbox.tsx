@@ -15,9 +15,9 @@ import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TDirectChatData, TUserWithProfile } from "@/utils/types/be-api"
-import { VoiceMessagePlayer } from "../(voice-chat)/VoiceMessagePlayerProps"
+import { VoiceMessagePlayer } from "../../../components/voice-message/voice-message-player-props"
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
-import { useAudioMessages } from "@/hooks/audio-messages"
+import { useAudioMessages } from "@/hooks/voice-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import { setDirectChat } from "@/redux/messages/messages.slice"
@@ -254,7 +254,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
   }
 
   // Hook để quản lý danh sách audio messages
-  const { loading: audioLoading } = useAudioMessages()
+  useAudioMessages()
 
   const friendInfo = useMemo<TUserWithProfile>(() => {
     return user.id === Creator.id ? Recipient : Creator
@@ -273,15 +273,6 @@ const Main = ({ directChat, canSend }: TMainProps) => {
           canSend={canSend}
           directChat={directChat}
         />
-
-        {/* Hiển thị thông báo khi không thể gửi tin nhắn */}
-        {canSend === false && (
-          <div className="flex-1 flex items-center justify-center w-full">
-            <div className="system-message text-center text-gray-500 py-4 w-full">
-              Người này chỉ nhận tin nhắn từ bạn bè. Bạn không thể gửi tin nhắn.
-            </div>
-          </div>
-        )}
 
         {/* Box pinned messages ngay dưới header */}
         {pinnedMessages.length > 0 && canSend !== false && (
@@ -322,46 +313,44 @@ const Main = ({ directChat, canSend }: TMainProps) => {
         )}
 
         {/* Chỉ hiển thị chat content khi có thể gửi tin nhắn */}
-        {canSend !== false && (
-          <div
-            className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden relative`}
-          >
-            {/* Voice Player floating layer */}
-            {showPlayer && (
-              <div
-                className="absolute top-0 left-0 right-0 z-[70] flex justify-center"
-                style={{ pointerEvents: "none" }}
-              >
-                <div className="w-full max-w-[480px] px-4" style={{ pointerEvents: "auto" }}>
-                  <VoiceMessagePlayer />
-                </div>
-              </div>
-            )}
-            <div className="flex flex-col flex-1 w-full justify-between h-0">
-              <div className="flex-1 w-full overflow-y-auto">
-                <Messages
-                  directChat={directChat}
-                  onReply={handleSetReplyMessage}
-                  pinnedMessages={pinnedMessages}
-                  setPinnedMessages={setPinnedMessages}
-                  showPinnedModal={showPinnedModal}
-                  setShowPinnedModal={setShowPinnedModal}
-                  canSend={canSend}
-                />
-              </div>
-              <div className="w-full flex justify-center">
-                <TypeMessageBar
-                  directChat={directChat}
-                  replyMessage={replyMessage}
-                  setReplyMessage={handleSetReplyMessage}
-                  canSend={canSend}
-                />
+        <div
+          className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-chat-container screen-large-chatting:w-msgs-container" : "translate-x-0 w-full"} flex flex-col justify-between items-center h-chat-container transition duration-300 ease-slide-info-bar-timing overflow-hidden relative`}
+        >
+          {/* Voice Player floating layer */}
+          {showPlayer && (
+            <div
+              className="absolute top-0 left-0 right-0 z-[70] flex justify-center"
+              style={{ pointerEvents: "none" }}
+            >
+              <div className="w-full max-w-[480px] px-4" style={{ pointerEvents: "auto" }}>
+                <VoiceMessagePlayer />
               </div>
             </div>
+          )}
+          <div className="flex flex-col flex-1 w-full justify-between h-0">
+            <div className="flex-1 w-full overflow-y-auto">
+              <Messages
+                directChat={directChat}
+                onReply={handleSetReplyMessage}
+                pinnedMessages={pinnedMessages}
+                setPinnedMessages={setPinnedMessages}
+                showPinnedModal={showPinnedModal}
+                setShowPinnedModal={setShowPinnedModal}
+                canSend={canSend}
+              />
+            </div>
+            <div className="w-full flex justify-center">
+              <TypeMessageBar
+                directChat={directChat}
+                replyMessage={replyMessage}
+                setReplyMessage={handleSetReplyMessage}
+                canSend={canSend}
+              />
+            </div>
           </div>
-        )}
+        </div>
       </div>
-      <InfoBar friendInfo={friendInfo} />
+      <InfoBar friendInfo={friendInfo} directChatId={directChat.id} />
     </div>
   )
 }
@@ -400,7 +389,15 @@ export const DirectChatbox = () => {
     if (!directChat) return
     const receiverId =
       user?.id === directChat.recipientId ? directChat.creatorId : directChat.recipientId
-    directChatService.checkCanSendMessage(receiverId).then(setCanSend)
+    directChatService
+      .checkCanSendMessage(receiverId)
+      .then((result) => {
+        setCanSend(result)
+      })
+      .catch((error) => {
+        console.error("[DEBUG] Error checking canSend:", error)
+        setCanSend(true) // Default to true on error
+      })
   }, [directChat?.id, user?.id])
 
   return (

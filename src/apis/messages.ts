@@ -42,3 +42,37 @@ export const getFetchVoiceMessages = (
     ...requestConfig,
     params: { limit, offset, sortType },
   })
+
+// ================================= Media Pagination API =================================
+
+import type {
+  TGetMediaMessagesResponse,
+  TGetMediaStatisticsResponse,
+  TGetMediaMessagesParams,
+} from "../utils/types/be-api"
+
+/**
+ * Get media messages with pagination and filters
+ */
+export const getMediaMessages = (params: TGetMediaMessagesParams) =>
+  clientAxios.get<TGetMediaMessagesResponse>(`media-message/${params.directChatId}`, {
+    ...requestConfig,
+    params: {
+      type: params.type,
+      types: params.types,
+      senderId: params.senderId,
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      page: params.page,
+      limit: params.limit,
+      sort: params.sort,
+    },
+  })
+
+/**
+ * Get media statistics for a chat
+ */
+export const getMediaStatistics = (directChatId: number) =>
+  clientAxios.get<TGetMediaStatisticsResponse>(`media-message/${directChatId}/statistics`, {
+    ...requestConfig,
+  })

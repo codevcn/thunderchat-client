@@ -49,8 +49,6 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
   const [greetingSticker, setGreetingSticker] = useState<TSticker | null>(null)
   const { recipientId, creatorId } = directChat
 
-  console.log("canSend", canSend)
-
   const fetchRandomSticker = async () => {
     await expressionService
       .fetchGreetingSticker()

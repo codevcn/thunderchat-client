@@ -40,6 +40,7 @@ type AppNavigationProps = {
 
 export const AppNavigation = memo((props: AppNavigationProps) => {
   const { openAccount } = useAccountModal()
+
   return (
     <div className="screen-medium-chatting:flex hidden w-[55px] h-screen relative">
       <div className="flex justify-between flex-col gap-4 bg-regular-dark-gray-cl pt-6 pb-3 w-[inherit] h-[inherit]">

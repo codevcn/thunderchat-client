@@ -106,3 +106,17 @@ export enum EReportCategory {
   FRAUD = "FRAUD",
   OTHER = "OTHER",
 }
+
+// Violation Report Status
+export enum EViolationReportStatus {
+  PENDING = "PENDING",
+  RESOLVED = "RESOLVED",
+  DISMISSED = "DISMISSED",
+}
+
+// Ban Type
+export enum EBanType {
+  WARNING = "WARNING",
+  TEMPORARY_BAN = "TEMPORARY_BAN",
+  PERMANENT_BAN = "PERMANENT_BAN",
+}

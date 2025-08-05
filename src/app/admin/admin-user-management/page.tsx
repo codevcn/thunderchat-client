@@ -6,7 +6,7 @@ import { AdminHeader } from "../../../components/admin/admin-header"
 
 export default function AdminUserManagementPage() {
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-regular-black-cl">
       {/* Admin Navigation */}
       <AdminNavigation />
 
@@ -16,10 +16,13 @@ export default function AdminUserManagementPage() {
           <div className="p-6">
             <div className="max-w-7xl mx-auto">
               {/* Header */}
-              <AdminHeader />
+              <AdminHeader
+                title="User Management"
+                description="Manage user accounts, view profiles, and control user status"
+              />
 
               {/* Content */}
-              <div className="bg-card rounded-lg shadow border border-border">
+              <div className="bg-regular-dark-gray-cl rounded-lg shadow border border-regular-hover-card-cl">
                 <AdminUserManagement />
               </div>
             </div>

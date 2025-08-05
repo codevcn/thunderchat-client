@@ -12,59 +12,59 @@ type User = TAdminUser
 // Skeleton component for table rows
 const TableSkeleton = () => {
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-regular-dark-gray-cl border border-regular-hover-card-cl rounded-lg overflow-hidden">
       <div className="overflow-x-auto STYLE-styled-scrollbar">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted sticky top-0 z-10">
+        <table className="min-w-full divide-y divide-regular-hover-card-cl">
+          <thead className="bg-regular-black-cl sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                 User
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                 Birthday
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                 About
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                 Created Date
               </th>
             </tr>
           </thead>
-          <tbody className="bg-card divide-y divide-border">
+          <tbody className="bg-regular-dark-gray-cl divide-y divide-regular-hover-card-cl">
             {Array.from({ length: 10 }).map((_, index) => (
               <tr key={index} className="animate-pulse">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                      <div className="h-10 w-10 rounded-full bg-regular-hover-card-cl"></div>
                     </div>
                     <div className="ml-4">
-                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 mb-2"></div>
-                      <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+                      <div className="h-4 bg-regular-hover-card-cl rounded w-24 mb-2"></div>
+                      <div className="h-3 bg-regular-hover-card-cl rounded w-16"></div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+                  <div className="h-4 bg-regular-hover-card-cl rounded w-32"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                  <div className="h-4 bg-regular-hover-card-cl rounded w-20"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+                  <div className="h-4 bg-regular-hover-card-cl rounded w-32"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
+                  <div className="h-6 bg-regular-hover-card-cl rounded-full w-16"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                  <div className="h-4 bg-regular-hover-card-cl rounded w-20"></div>
                 </td>
               </tr>
             ))}
@@ -122,14 +122,14 @@ const Pagination = ({
 
   return (
     <div className="mt-6 flex items-center justify-between">
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-regular-text-secondary-cl">
         Page {currentPage} of {totalPages}
       </div>
       <div className="flex items-center space-x-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-2 border border-regular-hover-card-cl rounded-md text-sm font-medium text-regular-white-cl bg-regular-dark-gray-cl hover:bg-regular-hover-card-cl disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Previous
         </button>
@@ -139,12 +139,12 @@ const Pagination = ({
             key={index}
             onClick={() => typeof page === "number" && onPageChange(page)}
             disabled={page === "..."}
-            className={`px-3 py-2 border border-border rounded-md text-sm font-medium ${
+            className={`px-3 py-2 border border-regular-hover-card-cl rounded-md text-sm font-medium ${
               page === currentPage
-                ? "bg-primary text-primary-foreground border-primary"
+                ? "bg-regular-violet-cl text-regular-white-cl border-regular-violet-cl"
                 : page === "..."
-                  ? "text-muted-foreground cursor-default"
-                  : "text-foreground bg-background hover:bg-accent"
+                  ? "text-regular-text-secondary-cl cursor-default"
+                  : "text-regular-white-cl bg-regular-dark-gray-cl hover:bg-regular-hover-card-cl"
             }`}
           >
             {page}
@@ -154,7 +154,7 @@ const Pagination = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-2 border border-regular-hover-card-cl rounded-md text-sm font-medium text-regular-white-cl bg-regular-dark-gray-cl hover:bg-regular-hover-card-cl disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next
         </button>
@@ -291,10 +291,10 @@ export const AdminUserManagement = () => {
   if (error) {
     return (
       <div className="p-8 text-center">
-        <div className="text-red-600 mb-4">❌ {error}</div>
+        <div className="text-red-400 mb-4">❌ {error}</div>
         <button
           onClick={fetchUsers}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 bg-regular-violet-cl text-regular-white-cl rounded hover:bg-regular-tooltip-bgcl"
         >
           Try Again
         </button>
@@ -307,8 +307,8 @@ export const AdminUserManagement = () => {
       {/* Header with search and filters */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">User Management</h2>
-          <p className="text-sm text-muted-foreground">Total {users.length} users</p>
+          <h2 className="text-xl font-semibold text-regular-white-cl">User Management</h2>
+          <p className="text-sm text-regular-text-secondary-cl">Total {users.length} users</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -319,10 +319,10 @@ export const AdminUserManagement = () => {
               placeholder="Search by email or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 h-10 border border-border rounded-lg focus:outline-none bg-background text-foreground placeholder-muted-foreground"
+              className="w-full pl-10 pr-4 h-10 border border-regular-hover-card-cl rounded-lg focus:outline-none bg-regular-dark-gray-cl text-regular-white-cl placeholder-regular-placeholder-cl"
               style={{ minWidth: "300px" }}
             />
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-regular-text-secondary-cl" />
           </div>
 
           {/* Filter */}
@@ -334,7 +334,7 @@ export const AdminUserManagement = () => {
                   e.target.value as "all" | "NORMAL" | "WARNING" | "TEMPORARY_BAN" | "PERMANENT_BAN"
                 )
               }
-              className="px-4 pr-10 h-10 border border-border rounded-lg focus:outline-none bg-background text-foreground appearance-none cursor-pointer min-w-[120px]"
+              className="px-4 pr-10 h-10 border border-regular-hover-card-cl rounded-lg focus:outline-none bg-regular-dark-gray-cl text-regular-white-cl appearance-none cursor-pointer min-w-[120px]"
             >
               <option value="all">All Status</option>
               <option value="NORMAL">Normal</option>
@@ -342,7 +342,7 @@ export const AdminUserManagement = () => {
               <option value="TEMPORARY_BAN">Temporary Ban</option>
               <option value="PERMANENT_BAN">Permanent Ban</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-regular-text-secondary-cl pointer-events-none" />
           </div>
         </div>
       </div>
@@ -351,34 +351,34 @@ export const AdminUserManagement = () => {
       {loading ? (
         <TableSkeleton />
       ) : (
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="bg-regular-dark-gray-cl border border-regular-hover-card-cl rounded-lg overflow-hidden">
           <div className="overflow-x-auto STYLE-styled-scrollbar">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-muted sticky top-0 z-10">
+            <table className="min-w-full divide-y divide-regular-hover-card-cl">
+              <thead className="bg-regular-black-cl sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                     Birthday
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                     About
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
                     Created Date
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-card divide-y divide-border">
+              <tbody className="bg-regular-dark-gray-cl divide-y divide-regular-hover-card-cl">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-accent">
+                  <tr key={user.id} className="hover:bg-regular-hover-card-cl">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
@@ -389,8 +389,12 @@ export const AdminUserManagement = () => {
                           />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-foreground">{user.fullName}</div>
-                          <div className="text-sm text-muted-foreground">ID: {user.id}</div>
+                          <div className="text-sm font-medium text-regular-white-cl">
+                            {user.fullName}
+                          </div>
+                          <div className="text-sm text-regular-text-secondary-cl">
+                            ID: {user.id}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -402,7 +406,7 @@ export const AdminUserManagement = () => {
                             type="email"
                             value={editingEmailValue}
                             onChange={(e) => setEditingEmailValue(e.target.value)}
-                            className="flex-1 px-2 py-1 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
+                            className="flex-1 px-2 py-1 text-sm border border-regular-hover-card-cl rounded focus:outline-none focus:ring-2 focus:ring-regular-violet-cl bg-regular-dark-gray-cl text-regular-white-cl"
                             autoFocus
                           />
                           <button
@@ -422,10 +426,10 @@ export const AdminUserManagement = () => {
                         </div>
                       ) : (
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-foreground">{user.email}</span>
+                          <span className="text-sm text-regular-white-cl">{user.email}</span>
                           <button
                             onClick={() => handleStartEditEmail(user)}
-                            className="p-1 text-muted-foreground hover:text-foreground"
+                            className="p-1 text-regular-text-secondary-cl hover:text-regular-white-cl"
                             title="Edit email"
                           >
                             <Edit className="h-3 w-3" />
@@ -434,12 +438,12 @@ export const AdminUserManagement = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground">
+                      <div className="text-sm text-regular-white-cl">
                         {user.birthday ? formatDate(user.birthday, true) : "Not set"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground max-w-xs truncate">
+                      <div className="text-sm text-regular-white-cl max-w-xs truncate">
                         {user.about || ""}
                       </div>
                     </td>
@@ -459,7 +463,9 @@ export const AdminUserManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground">{formatDate(user.createdAt)}</div>
+                      <div className="text-sm text-regular-white-cl">
+                        {formatDate(user.createdAt)}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -479,7 +485,7 @@ export const AdminUserManagement = () => {
       )}
 
       {users.length === 0 && !loading && (
-        <div className="text-center py-8 text-muted-foreground">No users found</div>
+        <div className="text-center py-8 text-regular-text-secondary-cl">No users found</div>
       )}
     </div>
   )

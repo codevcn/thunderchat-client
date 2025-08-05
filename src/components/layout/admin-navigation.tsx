@@ -35,31 +35,31 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
     {
       label: "Dashboard",
       href: "/admin/dashboard",
-      icon: <Home size={20} className="text-foreground" />,
+      icon: <Home size={20} className="text-regular-white-cl" />,
       active: currentActiveTab === "dashboard",
     },
     {
       label: "User Management",
       href: "/admin/admin-user-management",
-      icon: <Users size={20} className="text-foreground" />,
+      icon: <Users size={20} className="text-regular-white-cl" />,
       active: currentActiveTab === "users",
     },
     {
       label: "Violation Management",
       href: "/admin/admin-violation-management",
-      icon: <AlertTriangle size={20} className="text-foreground" />,
+      icon: <AlertTriangle size={20} className="text-regular-white-cl" />,
       active: currentActiveTab === "violations",
     },
   ]
 
   return (
     <div className="screen-medium-chatting:flex hidden w-[55px] h-screen relative">
-      <div className="flex justify-between flex-col gap-4 bg-card pt-6 pb-3 w-[inherit] h-[inherit]">
+      <div className="flex justify-between flex-col gap-4 bg-regular-black-cl pt-6 pb-3 w-[inherit] h-[inherit]">
         {/* Admin Avatar */}
         <CustomTooltip title="Admin Panel" placement="right">
-          <div className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-accent py-3">
+          <div className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3">
             <div className="m-auto">
-              <CustomAvatar fallback={<Shield size={30} className="text-foreground" />} />
+              <CustomAvatar fallback={<Shield size={30} className="text-regular-white-cl" />} />
             </div>
           </div>
         </CustomTooltip>
@@ -71,16 +71,16 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
               {href ? (
                 <Link
                   href={href}
-                  className={`flex w-[55px] cursor-pointer transition duration-200 hover:bg-accent py-3 ${
-                    active ? "bg-accent" : ""
+                  className={`flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3 ${
+                    active ? "bg-regular-hover-card-cl" : ""
                   }`}
                 >
-                  <div className="m-auto text-foreground">{icon}</div>
+                  <div className="m-auto text-regular-white-cl">{icon}</div>
                 </Link>
               ) : (
                 <div
-                  className={`flex w-[55px] cursor-pointer transition duration-200 hover:bg-accent py-3 ${
-                    active ? "bg-accent" : ""
+                  className={`flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3 ${
+                    active ? "bg-regular-hover-card-cl" : ""
                   }`}
                   onClick={() => {
                     if (onTabChange) {
@@ -93,7 +93,7 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
                     }
                   }}
                 >
-                  <div className="m-auto text-foreground">{icon}</div>
+                  <div className="m-auto text-regular-white-cl">{icon}</div>
                 </div>
               )}
             </CustomTooltip>
@@ -106,10 +106,10 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
           <CustomTooltip placement="right" title="Settings">
             <Link
               href="/admin/admin-settings"
-              className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-accent py-3"
+              className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
             >
               <div className="m-auto">
-                <Settings size={20} className="text-foreground" />
+                <Settings size={20} className="text-regular-white-cl" />
               </div>
             </Link>
           </CustomTooltip>
@@ -118,16 +118,16 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
           <CustomTooltip placement="right" title="Back to Main App">
             <Link
               href="/"
-              className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-accent py-3"
+              className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
             >
               <div className="m-auto">
-                <LogOut size={20} className="text-foreground" />
+                <LogOut size={20} className="text-regular-white-cl" />
               </div>
             </Link>
           </CustomTooltip>
         </div>
       </div>
-      <div className="absolute top-0 right-0 min-w-[0.5px] h-full bg-border"></div>
+      <div className="absolute top-0 right-0 min-w-[0.5px] h-full bg-regular-hover-card-cl"></div>
     </div>
   )
 })

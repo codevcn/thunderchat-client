@@ -1,6 +1,15 @@
 "use client"
 
-import { Home, Users, Shield, Settings, BarChart3, AlertTriangle, LogOut } from "lucide-react"
+import {
+  Home,
+  Users,
+  Shield,
+  Settings,
+  BarChart3,
+  AlertTriangle,
+  LogOut,
+  MessageSquare,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { memo, JSX } from "react"
@@ -26,6 +35,7 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
     if (pathname === "/admin" || pathname === "/admin/dashboard") return "dashboard"
     if (pathname === "/admin/admin-user-management") return "users"
     if (pathname === "/admin/admin-violation-management") return "violations"
+    if (pathname === "/admin/message-stats") return "message-stats"
     return "dashboard"
   }
 
@@ -37,6 +47,12 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
       href: "/admin/dashboard",
       icon: <Home size={20} className="text-foreground" />,
       active: currentActiveTab === "dashboard",
+    },
+    {
+      label: "Message Stats",
+      href: "/admin/message-stats",
+      icon: <MessageSquare size={20} className="text-foreground" />,
+      active: currentActiveTab === "message-stats",
     },
     {
       label: "User Management",
@@ -86,6 +102,7 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
                     if (onTabChange) {
                       const tabMap: { [key: string]: string } = {
                         Dashboard: "dashboard",
+                        "Message Stats": "message-stats",
                         "User Management": "users",
                         "Violation Management": "violations",
                       }

@@ -4,6 +4,9 @@ import type {
   TAdminUserActionParams,
   TAdminStatisticsData,
   TUpdateUserEmailResponse,
+  TAdminOverviewData,
+  TAdminUserMessageStatsData,
+  TAdminUserMessageStatsParams,
 } from "@/utils/types/be-api"
 import {
   getAdminUsers,
@@ -11,6 +14,8 @@ import {
   deleteUser,
   getAdminStatistics,
   updateUserEmail,
+  getAdminOverview,
+  getAdminUserMessageStats,
 } from "@/apis/admin"
 import type { TSuccess } from "@/utils/types/global"
 
@@ -37,6 +42,28 @@ class AdminService {
 
   async updateUserEmail(userId: number, email: string): Promise<TUpdateUserEmailResponse> {
     const { data } = await updateUserEmail(userId, email)
+    return data
+  }
+
+  async getOverview(params?: {
+    timeRange?: "day" | "week" | "month" | "year"
+    startDate?: string
+    endDate?: string
+  }): Promise<TAdminOverviewData> {
+    // Nếu có startDate và endDate, ưu tiên sử dụng chúng thay vì timeRange
+    const apiParams =
+      params?.startDate && params?.endDate
+        ? { startDate: params.startDate, endDate: params.endDate }
+        : params
+
+    const { data } = await getAdminOverview(apiParams)
+    return data
+  }
+
+  async getUserMessageStats(
+    params: TAdminUserMessageStatsParams
+  ): Promise<TAdminUserMessageStatsData> {
+    const { data } = await getAdminUserMessageStats(params)
     return data
   }
 }

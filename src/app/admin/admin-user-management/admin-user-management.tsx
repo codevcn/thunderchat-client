@@ -1,7 +1,19 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Search, ChevronDown, Edit, X, Check } from "lucide-react"
+import {
+  Search,
+  ChevronDown,
+  Edit,
+  X,
+  Check,
+  Users,
+  Filter,
+  Calendar,
+  UserCheck,
+  UserX,
+  AlertTriangle,
+} from "lucide-react"
 import { toast } from "sonner"
 import { adminService } from "@/services/admin.service"
 import type { TAdminUser } from "@/utils/types/be-api"
@@ -12,59 +24,59 @@ type User = TAdminUser
 // Skeleton component for table rows
 const TableSkeleton = () => {
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
       <div className="overflow-x-auto STYLE-styled-scrollbar">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted sticky top-0 z-10">
+        <table className="min-w-full divide-y divide-gray-700">
+          <thead className="bg-gray-900 sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 User
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Birthday
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 About
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Created Date
               </th>
             </tr>
           </thead>
-          <tbody className="bg-card divide-y divide-border">
+          <tbody className="bg-gray-800 divide-y divide-gray-700">
             {Array.from({ length: 10 }).map((_, index) => (
               <tr key={index} className="animate-pulse">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                      <div className="h-10 w-10 rounded-full bg-gray-600"></div>
                     </div>
                     <div className="ml-4">
-                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 mb-2"></div>
-                      <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+                      <div className="h-4 bg-gray-600 rounded w-24 mb-2"></div>
+                      <div className="h-3 bg-gray-600 rounded w-16"></div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+                  <div className="h-4 bg-gray-600 rounded w-32"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                  <div className="h-4 bg-gray-600 rounded w-20"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+                  <div className="h-4 bg-gray-600 rounded w-32"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
+                  <div className="h-6 bg-gray-600 rounded-full w-16"></div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                  <div className="h-4 bg-gray-600 rounded w-20"></div>
                 </td>
               </tr>
             ))}
@@ -122,14 +134,14 @@ const Pagination = ({
 
   return (
     <div className="mt-6 flex items-center justify-between">
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-gray-400">
         Page {currentPage} of {totalPages}
       </div>
       <div className="flex items-center space-x-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-2 border border-gray-600 rounded-md text-sm font-medium text-white bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Previous
         </button>
@@ -139,12 +151,12 @@ const Pagination = ({
             key={index}
             onClick={() => typeof page === "number" && onPageChange(page)}
             disabled={page === "..."}
-            className={`px-3 py-2 border border-border rounded-md text-sm font-medium ${
+            className={`px-3 py-2 border border-gray-600 rounded-md text-sm font-medium ${
               page === currentPage
-                ? "bg-primary text-primary-foreground border-primary"
+                ? "bg-red-600 text-white border-red-600"
                 : page === "..."
-                  ? "text-muted-foreground cursor-default"
-                  : "text-foreground bg-background hover:bg-accent"
+                  ? "text-gray-500 cursor-default"
+                  : "text-white bg-gray-800 hover:bg-gray-700"
             }`}
           >
             {page}
@@ -154,7 +166,7 @@ const Pagination = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-2 border border-gray-600 rounded-md text-sm font-medium text-white bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next
         </button>
@@ -288,199 +300,284 @@ export const AdminUserManagement = () => {
     })
   }
 
+  const getStatusStats = () => {
+    const stats = {
+      normal: users.filter((u) => u.status === "NORMAL").length,
+      warning: users.filter((u) => u.status === "WARNING").length,
+      temporaryBan: users.filter((u) => u.status === "TEMPORARY_BAN").length,
+      permanentBan: users.filter((u) => u.status === "PERMANENT_BAN").length,
+    }
+    return stats
+  }
+
   if (error) {
     return (
-      <div className="p-8 text-center">
-        <div className="text-red-600 mb-4">❌ {error}</div>
-        <button
-          onClick={fetchUsers}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Try Again
-        </button>
+      <div className="flex min-h-screen bg-gray-900 text-white">
+        <div className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center py-12">
+              <div className="text-red-400 mb-4">❌ {error}</div>
+              <button
+                onClick={fetchUsers}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
+  const statusStats = getStatusStats()
+
   return (
-    <div className="p-8">
-      {/* Header with search and filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">User Management</h2>
-          <p className="text-sm text-muted-foreground">Total {users.length} users</p>
-        </div>
+    <div className="flex min-h-screen bg-gray-900 text-white">
+      <div className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-red-400">User Management</h1>
+              <p className="text-gray-400 mt-2">Quản lý người dùng hệ thống</p>
+            </div>
+          </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="relative flex-1 min-w-0">
-            <input
-              type="text"
-              placeholder="Search by email or name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 h-10 border border-border rounded-lg focus:outline-none bg-background text-foreground placeholder-muted-foreground"
-              style={{ minWidth: "300px" }}
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-200 text-sm font-medium">Tổng người dùng</p>
+                  <p className="text-2xl font-bold text-white">{users.length}</p>
+                </div>
+                <Users className="w-8 h-8 text-blue-200" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-green-600 to-green-700 p-6 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-200 text-sm font-medium">Người dùng bình thường</p>
+                  <p className="text-2xl font-bold text-white">{statusStats.normal}</p>
+                </div>
+                <UserCheck className="w-8 h-8 text-green-200" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-6 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-yellow-200 text-sm font-medium">Cảnh báo</p>
+                  <p className="text-2xl font-bold text-white">{statusStats.warning}</p>
+                </div>
+                <AlertTriangle className="w-8 h-8 text-yellow-200" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-200 text-sm font-medium">Bị cấm</p>
+                  <p className="text-2xl font-bold text-white">
+                    {statusStats.temporaryBan + statusStats.permanentBan}
+                  </p>
+                </div>
+                <UserX className="w-8 h-8 text-red-200" />
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Filter Section */}
+          <div className="bg-gray-800 p-6 rounded-lg mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-400" />
+                  Danh sách người dùng
+                </h3>
+                <p className="text-sm text-gray-400">Tổng {users.length} người dùng</p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search */}
+                <div className="relative flex-1 min-w-0">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm theo email hoặc tên..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 h-10 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-gray-700 text-white placeholder-gray-400"
+                    style={{ minWidth: "300px" }}
+                  />
+                  <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                </div>
+
+                {/* Filter */}
+                <div className="relative">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) =>
+                      setFilterStatus(
+                        e.target.value as
+                          | "all"
+                          | "NORMAL"
+                          | "WARNING"
+                          | "TEMPORARY_BAN"
+                          | "PERMANENT_BAN"
+                      )
+                    }
+                    className="px-4 pr-10 h-10 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-gray-700 text-white appearance-none cursor-pointer min-w-[120px]"
+                  >
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="NORMAL">Bình thường</option>
+                    <option value="WARNING">Cảnh báo</option>
+                    <option value="TEMPORARY_BAN">Cấm tạm thời</option>
+                    <option value="PERMANENT_BAN">Cấm vĩnh viễn</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Users Table */}
+          {loading ? (
+            <TableSkeleton />
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto STYLE-styled-scrollbar">
+                <table className="min-w-full divide-y divide-gray-700">
+                  <thead className="bg-gray-900 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Birthday
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        About
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Created Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-gray-800 divide-y divide-gray-700">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-700 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <img
+                                className="h-10 w-10 rounded-full"
+                                src={user.avatar || "/images/user/default-avatar-black.webp"}
+                                alt={user.fullName}
+                              />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-white">{user.fullName}</div>
+                              <div className="text-sm text-gray-400">ID: {user.id}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {editingEmail === user.id ? (
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="email"
+                                value={editingEmailValue}
+                                onChange={(e) => setEditingEmailValue(e.target.value)}
+                                className="flex-1 px-2 py-1 text-sm border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-red-500 bg-gray-700 text-white"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleSaveEmail(user.id)}
+                                className="p-1 text-green-400 hover:text-green-300"
+                                title="Save"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={handleCancelEditEmail}
+                                className="p-1 text-red-400 hover:text-red-300"
+                                title="Cancel"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-white">{user.email}</span>
+                              <button
+                                onClick={() => handleStartEditEmail(user)}
+                                className="p-1 text-gray-400 hover:text-white"
+                                title="Edit email"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white">
+                            {user.birthday ? formatDate(user.birthday, true) : "Chưa thiết lập"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white max-w-xs truncate">
+                            {user.about || ""}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              user.status === "NORMAL"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                : user.status === "WARNING"
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                  : user.status === "TEMPORARY_BAN"
+                                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            }`}
+                          >
+                            {user.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white">{formatDate(user.createdAt)}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
             />
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-          </div>
+          )}
 
-          {/* Filter */}
-          <div className="relative">
-            <select
-              value={filterStatus}
-              onChange={(e) =>
-                setFilterStatus(
-                  e.target.value as "all" | "NORMAL" | "WARNING" | "TEMPORARY_BAN" | "PERMANENT_BAN"
-                )
-              }
-              className="px-4 pr-10 h-10 border border-border rounded-lg focus:outline-none bg-background text-foreground appearance-none cursor-pointer min-w-[120px]"
-            >
-              <option value="all">All Status</option>
-              <option value="NORMAL">Normal</option>
-              <option value="WARNING">Warning</option>
-              <option value="TEMPORARY_BAN">Temporary Ban</option>
-              <option value="PERMANENT_BAN">Permanent Ban</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          </div>
+          {users.length === 0 && !loading && (
+            <div className="text-center py-8 text-gray-400">Không tìm thấy người dùng nào</div>
+          )}
         </div>
       </div>
-
-      {/* Users Table */}
-      {loading ? (
-        <TableSkeleton />
-      ) : (
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="overflow-x-auto STYLE-styled-scrollbar">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-muted sticky top-0 z-10">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Birthday
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    About
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Created Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-card divide-y divide-border">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-accent">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <img
-                            className="h-10 w-10 rounded-full"
-                            src={user.avatar || "/images/user/default-avatar-black.webp"}
-                            alt={user.fullName}
-                          />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-foreground">{user.fullName}</div>
-                          <div className="text-sm text-muted-foreground">ID: {user.id}</div>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {editingEmail === user.id ? (
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="email"
-                            value={editingEmailValue}
-                            onChange={(e) => setEditingEmailValue(e.target.value)}
-                            className="flex-1 px-2 py-1 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => handleSaveEmail(user.id)}
-                            className="p-1 text-green-600 hover:text-green-800"
-                            title="Save"
-                          >
-                            <Check className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={handleCancelEditEmail}
-                            className="p-1 text-red-600 hover:text-red-800"
-                            title="Cancel"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-foreground">{user.email}</span>
-                          <button
-                            onClick={() => handleStartEditEmail(user)}
-                            className="p-1 text-muted-foreground hover:text-foreground"
-                            title="Edit email"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground">
-                        {user.birthday ? formatDate(user.birthday, true) : "Not set"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground max-w-xs truncate">
-                        {user.about || ""}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.status === "NORMAL"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : user.status === "WARNING"
-                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                              : user.status === "TEMPORARY_BAN"
-                                ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
-                                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                        }`}
-                      >
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground">{formatDate(user.createdAt)}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
-
-      {users.length === 0 && !loading && (
-        <div className="text-center py-8 text-muted-foreground">No users found</div>
-      )}
     </div>
   )
 }

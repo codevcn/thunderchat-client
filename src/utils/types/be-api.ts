@@ -407,3 +407,70 @@ export type TGetMediaStatisticsResponse = {
   errorCode?: string | null
   errors?: any
 }
+
+// Admin Overview Types
+export type TAdminOverviewTimeRange = {
+  startDate: string
+  endDate: string
+  period: "day" | "week" | "month" | "year" | "custom"
+}
+
+export type TAdminOverviewChartData = {
+  date: string
+  count: number
+}
+
+export type TAdminOverviewCharts = {
+  userGrowth?: TAdminOverviewChartData[]
+  messageActivity?: TAdminOverviewChartData[]
+  groupChatActivity?: TAdminOverviewChartData[]
+}
+
+export type TAdminOverviewData = {
+  activeUsers: number
+  totalMessages: number
+  totalDirectMessages: number
+  totalGroupMessages: number
+  activeGroupChats: number
+  totalUsers: number
+  newUsersThisPeriod: number
+  messagesThisPeriod: number
+  groupChatsThisPeriod: number
+  totalViolationReports: number
+  resolvedViolationReports: number
+  pendingViolationReports: number
+  timeRange: TAdminOverviewTimeRange
+  charts?: TAdminOverviewCharts
+}
+
+// Admin User Message Statistics Types
+export type TAdminUserMessageStats = {
+  userId: number
+  email: string
+  fullName: string
+  avatar?: string
+  directMessageCount: number
+  groupMessageCount: number
+  totalMessageCount: number
+  lastMessageAt: string
+}
+
+export type TAdminUserMessageStatsParams = {
+  page: number
+  limit: number
+  search?: string
+  sortBy?: "directMessageCount" | "groupMessageCount" | "totalMessageCount" | "lastMessageAt"
+  sortOrder?: "asc" | "desc"
+}
+
+export type TAdminUserMessageStatsData = {
+  users: TAdminUserMessageStats[]
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+}

@@ -436,7 +436,7 @@ export const AdminViolationManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-regular-white-cl">
-                          {new Date(violation.createdAt).toLocaleDateString()}
+                          {new Date(violation.createdAt).toLocaleString()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

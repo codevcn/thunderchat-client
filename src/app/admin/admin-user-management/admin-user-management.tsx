@@ -459,7 +459,13 @@ export const AdminUserManagement = () => {
                                 : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                         }`}
                       >
-                        {user.status}
+                        {user.status === "NORMAL"
+                          ? "Normal"
+                          : user.status === "WARNING"
+                            ? "Warning"
+                            : user.status === "TEMPORARY_BAN"
+                              ? "Temporary Ban"
+                              : "Permanent Ban"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

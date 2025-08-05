@@ -149,6 +149,86 @@ const ConfirmationModal = ({
   )
 }
 
+// Warning User Modal Component
+const WarningUserModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  reportedUserName,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: (reason: string) => void
+  reportedUserName: string
+}) => {
+  const [reason, setReason] = useState<string>("")
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleConfirm = async () => {
+    if (!reason.trim()) return
+
+    setIsLoading(true)
+    try {
+      await onConfirm(reason.trim())
+      onClose()
+    } catch (error) {
+      console.error("Error warning user:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+      <div className="bg-regular-dark-gray-cl rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 className="text-lg font-semibold text-regular-white-cl mb-4">Warning User</h3>
+
+        <div className="space-y-4">
+          {/* User Info */}
+          <div>
+            <p className="text-regular-text-secondary-cl text-sm mb-1">User to warn:</p>
+            <p className="text-regular-white-cl font-medium">{reportedUserName}</p>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <p className="text-regular-text-secondary-cl text-sm mb-2">Reason:</p>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Enter the reason for warning this user..."
+              className="w-full bg-regular-black-cl border border-regular-hover-card-cl rounded-lg px-3 py-2 text-regular-white-cl focus:border-regular-violet-cl focus:outline-none resize-none"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 justify-end mt-6">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="px-4 py-2 text-regular-text-secondary-cl hover:text-regular-white-cl disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={isLoading || !reason.trim()}
+            className="px-4 py-2 bg-yellow-500 text-regular-white-cl rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            {isLoading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            )}
+            Warning User
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Ban User Modal Component
 const BanUserModal = ({
   isOpen,
@@ -381,6 +461,7 @@ export const ViolationDetailModal = ({
   const [hasReviewed, setHasReviewed] = useState(false)
   const [showDismissConfirm, setShowDismissConfirm] = useState(false)
   const [isDismissing, setIsDismissing] = useState(false)
+  const [showWarningModal, setShowWarningModal] = useState(false)
   const [showBanModal, setShowBanModal] = useState(false)
   const [showUserHistory, setShowUserHistory] = useState(false)
   const [selectedUser, setSelectedUser] = useState<{
@@ -401,6 +482,7 @@ export const ViolationDetailModal = ({
       setExpandedMessages(false)
       setExpandedImages(false)
       setShowDismissConfirm(false)
+      setShowWarningModal(false)
       setShowBanModal(false)
       setIsDismissing(false)
       setShowUserHistory(false)
@@ -495,14 +577,18 @@ export const ViolationDetailModal = ({
     setShowDismissConfirm(false)
   }
 
-  const handleWarning = async () => {
+  const handleWarningClick = () => {
+    setShowWarningModal(true)
+  }
+
+  const handleWarningConfirm = async (reason: string) => {
     if (onBanUser) {
-      await onBanUser(
-        violation.id,
-        EBanType.WARNING,
-        "Warning issued for violation of community guidelines"
-      )
+      await onBanUser(violation.id, EBanType.WARNING, reason)
     }
+  }
+
+  const handleWarningModalClose = () => {
+    setShowWarningModal(false)
   }
 
   const handleBanUserClick = () => {
@@ -631,19 +717,19 @@ export const ViolationDetailModal = ({
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-regular-text-secondary-cl text-sm">Report ID</p>
+                    <p className="text-regular-text-secondary-cl text-sm mb-2">Report ID</p>
                     <p className="text-regular-white-cl">#{violation.id}</p>
                   </div>
                   <div>
-                    <p className="text-regular-text-secondary-cl text-sm">Status</p>
+                    <p className="text-regular-text-secondary-cl text-sm mb-2">Status</p>
                     <StatusBadge status={violation.status} />
                   </div>
                   <div>
-                    <p className="text-regular-text-secondary-cl text-sm">Category</p>
+                    <p className="text-regular-text-secondary-cl text-sm mb-2">Category</p>
                     <CategoryBadge category={violation.reportCategory} />
                   </div>
                   <div>
-                    <p className="text-regular-text-secondary-cl text-sm">Reported Date</p>
+                    <p className="text-regular-text-secondary-cl text-sm mb-2">Reported Date</p>
                     <p className="text-regular-white-cl">
                       {new Date(violation.createdAt).toLocaleString()}
                     </p>
@@ -909,18 +995,18 @@ export const ViolationDetailModal = ({
                   Dismiss Report
                 </button>
                 <button
-                  onClick={handleWarning}
+                  onClick={handleWarningClick}
                   className="bg-yellow-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-yellow-600 flex items-center gap-2 transition-colors"
                 >
                   <AlertTriangle className="h-4 w-4" />
-                  Warning User
+                  Warning Reported User
                 </button>
                 <button
                   onClick={handleBanUserClick}
                   className="bg-red-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-red-600 flex items-center gap-2 transition-colors"
                 >
                   <Ban className="h-4 w-4" />
-                  Ban User
+                  Ban Reported User
                 </button>
               </div>
             </div>
@@ -958,6 +1044,14 @@ export const ViolationDetailModal = ({
         message={`Are you sure you want to dismiss this violation report (#${violation.id})? This action will mark the report as dismissed and cannot be undone.`}
         confirmText="Dismiss Report"
         isLoading={isDismissing}
+      />
+
+      {/* Warning User Modal */}
+      <WarningUserModal
+        isOpen={showWarningModal}
+        onClose={handleWarningModalClose}
+        onConfirm={handleWarningConfirm}
+        reportedUserName={violation.reportedUserName}
       />
 
       {/* Ban User Modal */}

@@ -80,9 +80,20 @@ export const UserReportHistoryModal = ({
 
   useEffect(() => {
     if (isOpen && userId) {
+      // Load data for both tabs when modal opens
+      fetchUserReportHistory()
+      // Load data for the other tab
+      const otherTab = activeTab === "reported" ? "reportedBy" : "reported"
+      fetchUserReportHistoryForTab(otherTab)
+    }
+  }, [isOpen, userId])
+
+  // Separate effect for active tab changes
+  useEffect(() => {
+    if (isOpen && userId && activeTab) {
       fetchUserReportHistory()
     }
-  }, [isOpen, userId, activeTab])
+  }, [activeTab])
 
   const fetchUserReportHistory = async () => {
     setLoading(true)
@@ -103,8 +114,29 @@ export const UserReportHistoryModal = ({
     }
   }
 
+  const fetchUserReportHistoryForTab = async (tab: "reported" | "reportedBy") => {
+    try {
+      const result = await getUserReportHistory(userId, tab)
+
+      if (tab === "reported") {
+        setReportedData(result)
+      } else {
+        setReportedByData(result)
+      }
+    } catch (error: any) {
+      console.error("Error fetching user report history for tab:", error)
+    }
+  }
+
   // Get current data based on active tab
   const currentData = activeTab === "reported" ? reportedData : reportedByData
+
+  // Calculate unique reporters count for "reportedBy" tab
+  const getUniqueReportersCount = () => {
+    if (!reportedByData?.reports) return 0
+    const uniqueReporters = new Set(reportedByData.reports.map((report) => report.reporterEmail))
+    return uniqueReporters.size
+  }
 
   if (!isOpen) return null
 
@@ -180,6 +212,17 @@ export const UserReportHistoryModal = ({
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Show unique reporters count for "reportedBy" tab */}
+              {activeTab === "reportedBy" &&
+                reportedByData?.reports &&
+                reportedByData.reports.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-regular-violet-cl text-sm font-medium">
+                      This user has been reported by {getUniqueReportersCount()} people
+                    </p>
+                  </div>
+                )}
+
               {currentData?.reports && currentData.reports.length > 0 ? (
                 currentData.reports.map((report) => (
                   <div key={report.id} className="bg-regular-hover-card-cl p-4 rounded-lg">

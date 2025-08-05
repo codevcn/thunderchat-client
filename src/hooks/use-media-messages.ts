@@ -4,39 +4,29 @@ import { messageService } from "@/services/message.service"
 import { EMessageTypes, ESortTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TDirectMessage } from "@/utils/types/be-api"
+import type { TMessageFullInfo, TMsgWithMediaSticker } from "@/utils/types/be-api"
+
+const isUrl = (text: string) => {
+  try {
+    new URL(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const isMediaMessage = (message: TMessageFullInfo): boolean => {
+  return (
+    message.type === EMessageTypes.MEDIA ||
+    (message.type === EMessageTypes.TEXT && isUrl(message.content))
+  )
+}
 
 export const useMediaMessages = () => {
   const { directChat } = useAppSelector(({ messages }) => messages)
-  const [mediaMessages, setMediaMessages] = useState<TDirectMessage[]>([])
+  const [mediaMessages, setMediaMessages] = useState<TMessageFullInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Hàm kiểm tra URL
-  const isUrl = useCallback((text: string) => {
-    try {
-      new URL(text)
-      return true
-    } catch {
-      return false
-    }
-  }, [])
-
-  // Hàm kiểm tra xem tin nhắn có phải là media không
-  const isMediaMessage = useCallback(
-    (message: TDirectMessage) => {
-      return (
-        [
-          EMessageTypes.IMAGE,
-          EMessageTypes.VIDEO,
-          EMessageTypes.DOCUMENT,
-          EMessageTypes.AUDIO,
-        ].includes(message.type as EMessageTypes) ||
-        (message.type === EMessageTypes.TEXT && message.content && isUrl(message.content))
-      )
-    },
-    [isUrl]
-  )
 
   // Hàm fetch media messages từ API chuyên dụng
   const fetchMediaMessages = useCallback(async () => {
@@ -57,7 +47,7 @@ export const useMediaMessages = () => {
 
   // Hàm xử lý tin nhắn mới từ socket
   const handleNewMessage = useCallback(
-    (newMessage: TDirectMessage) => {
+    (newMessage: TMessageFullInfo) => {
       if (isMediaMessage(newMessage)) {
         setMediaMessages((prev) => {
           // Kiểm tra xem tin nhắn đã tồn tại chưa

@@ -2,11 +2,7 @@
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useRef, useState, useEffect, memo } from "react"
-import type {
-  TGetDirectMessagesMessage,
-  TSticker,
-  TUserWithoutPassword,
-} from "@/utils/types/be-api"
+import type { TGetMessagesMessage, TSticker, TUserWithoutPassword } from "@/utils/types/be-api"
 import { Spinner } from "@/components/materials/spinner"
 import { EChatType, EMessageTypes, EPaginations, ESortTypes } from "@/utils/enums"
 import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
@@ -199,8 +195,8 @@ export const Messages = memo(
               top: msgsContainerEle.scrollHeight,
               behavior: "instant",
             })
-            // Lưu ID của tin nhắn cuối cùng
           }
+          // Lưu ID của tin nhắn cuối cùng
           const finalMessageData = messages[messages.length - 1]
           if (finalMessageId.current !== finalMessageData.id) {
             // Nếu tin nhắn mới là PIN_NOTICE thì không cuộn xuống cuối
@@ -315,7 +311,7 @@ export const Messages = memo(
     }
 
     // Xử lý sự kiện gửi tin nhắn từ đối phương
-    const listenSendDirectMessage = (newMessage: TGetDirectMessagesMessage) => {
+    const listenSendDirectMessage = (newMessage: TGetMessagesMessage) => {
       const { id } = newMessage
       if (newMessage.directChatId !== directChatId) return
       dispatch(pushNewMessages([newMessage]))
@@ -324,7 +320,7 @@ export const Messages = memo(
     }
 
     // Xử lý sự kiện kết nối lại từ server
-    const handleRecoverdConnection = (newMessages: TGetDirectMessagesMessage[]) => {
+    const handleRecoverdConnection = (newMessages: TGetMessagesMessage[]) => {
       if (newMessages && newMessages.length > 0) {
         dispatch(pushNewMessages(newMessages))
         const { id } = newMessages[newMessages.length - 1]
@@ -697,8 +693,6 @@ export const Messages = memo(
           </div>
         )
       })
-
-    // XÓA nút reset context và logic liên quan
 
     return (
       <div className="relative h-full flex flex-col">

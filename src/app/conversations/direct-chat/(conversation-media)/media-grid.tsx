@@ -7,6 +7,7 @@ import { FixedSizeGrid as Grid } from "react-window"
 
 import { useVoicePlayer } from "@/contexts/voice-player.context"
 import { EMessageTypes } from "@/utils/enums"
+import { TMediaData } from "@/utils/types/global"
 
 // Helper function to get file icon based on file extension
 const getFileIcon = (fileName: string) => {
@@ -158,9 +159,6 @@ export const MediaGrid = ({
             onDeleteForMe={() => console.log("Delete for me:", item.id)}
             onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
             messageId={item.id}
-            mediaUrl={item.mediaUrl || item.fileUrl}
-            fileName={item.fileName}
-            fileType={item.fileType}
           />
         </div>
         {/* Skeleton loading */}
@@ -296,9 +294,6 @@ export const FilesList = ({ items }: { items: any[] }) => {
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
-              mediaUrl={item.fileUrl}
-              fileName={item.fileName}
-              fileType={item.fileType}
             />
           </div>
         </div>
@@ -307,21 +302,25 @@ export const FilesList = ({ items }: { items: any[] }) => {
   )
 }
 
+type TAudioListProps = {
+  items: TMediaData[]
+}
+
 // Audio List Component
-export const AudioList = ({ items }: { items: any[] }) => {
+export const AudioList = ({ items }: TAudioListProps) => {
   const currentUser = useUser()
   const { playAudio, setShowPlayer } = useVoicePlayer()
 
   // Hàm xử lý click vào voice message
   const handleVoiceClick = (voiceMessage: any) => {
-    // Chuyển đổi format message để phù hợp với voice player
-    const messageForPlayer = {
+    // Phát audio và hiển thị player
+    playAudio({
       id: voiceMessage.id,
       authorId: voiceMessage.authorId,
       createdAt: voiceMessage.createdAt,
-      mediaUrl: voiceMessage.mediaUrl,
-      type: EMessageTypes.AUDIO,
-      fileName: voiceMessage.fileName || "Audio message",
+      Media: voiceMessage.Media,
+      Sticker: voiceMessage.Sticker,
+      type: EMessageTypes.MEDIA,
       content: "",
       directChatId: voiceMessage.directChatId || 0,
       status: "SENT" as any,
@@ -329,16 +328,13 @@ export const AudioList = ({ items }: { items: any[] }) => {
       isDeleted: false, // Thêm property thiếu
       Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
       ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
-    }
-
-    // Phát audio và hiển thị player
-    playAudio(messageForPlayer)
+    })
     setShowPlayer(true)
   }
 
   return (
     <div className="space-y-2">
-      {items.map((item: any) => (
+      {items.map((item) => (
         <div
           key={item.id}
           className="flex items-center justify-between p-3 bg-gray-800 rounded-lg group cursor-pointer"
@@ -380,9 +376,6 @@ export const AudioList = ({ items }: { items: any[] }) => {
               onDeleteForMe={() => console.log("Delete for me:", item.id)}
               onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
               messageId={item.id}
-              mediaUrl={item.fileUrl}
-              fileName={item.fileName}
-              fileType={item.fileType}
             />
           </div>
         </div>
@@ -452,7 +445,7 @@ export const MediaGridContent = ({
   setSelectedMediaIndex,
   setIsMediaViewerOpen,
 }: {
-  grouped: [string, any[]][]
+  grouped: [string, TMediaData[]][]
   tab: "Images/Video" | "files" | "voices" | "links"
   mixedMedia: any[]
   setSelectedMediaIndex: (idx: number) => void

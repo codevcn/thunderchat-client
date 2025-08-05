@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useAppSelector } from "./redux"
 import { useVoicePlayer } from "@/contexts/voice-player.context"
 import { messageService } from "@/services/message.service"
-import { EMessageTypes, ESortTypes } from "@/utils/enums"
+import { EMessageMediaTypes, EMessageTypes, ESortTypes } from "@/utils/enums"
 import type { TStateDirectMessage } from "@/utils/types/global"
 
 export const useAudioMessages = () => {
@@ -34,7 +34,9 @@ export const useAudioMessages = () => {
         // Fallback: sử dụng cách cũ nếu API mới fail
         if (directMessages) {
           const audioMessages = directMessages.filter(
-            (message: TStateDirectMessage) => message.type === "AUDIO" && message.mediaUrl
+            (message: TStateDirectMessage) =>
+              message.type === EMessageTypes.MEDIA &&
+              message.Media?.type === EMessageMediaTypes.AUDIO
           )
           setAudioMessages(audioMessages)
         }

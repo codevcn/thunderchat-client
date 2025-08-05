@@ -51,7 +51,7 @@ const initialState: TStatisticsState = {
   },
 }
 
-const statisticsSlice = createSlice({
+export const statisticsSlice = createSlice({
   name: "statistics",
   initialState,
   reducers: {

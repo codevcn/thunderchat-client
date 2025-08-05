@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from "react"
 import { CustomAvatar, toast } from "@/components/materials"
 import AvatarCropperModal from "@/components/materials/avatar-cropper-modal"
-import { uploadFile } from "@/apis/upload"
 import { Pencil } from "lucide-react"
+import { FileService } from "@/services/file.service"
 
 function toDateInputValue(dateString: string) {
   if (!dateString) return ""
@@ -122,7 +122,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
           setUploading(false)
           return
         }
-        const { url } = await uploadFile(file)
+        const { url } = await FileService.uploadFile(file)
         avatarUrl = url
       } catch (err) {
         toast.error("Error uploading avatar!")

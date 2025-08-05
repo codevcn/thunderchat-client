@@ -6,11 +6,11 @@ import {
 } from "@/apis/messages"
 import { ESortTypes } from "@/utils/enums"
 import type {
-  TDirectMessage,
   TGetDirectMessagesData,
   TGetDirectMsgsParams,
   TGetGroupMessagesData,
   TGetGroupMsgsParams,
+  TMessageFullInfo,
 } from "@/utils/types/be-api"
 
 class MessageService {
@@ -29,7 +29,7 @@ class MessageService {
     limit = 100,
     offset = 0,
     sortType: ESortTypes
-  ): Promise<TDirectMessage[]> {
+  ): Promise<TMessageFullInfo[]> {
     const { data } = await getFetchDirectMedia(directChatId, limit, offset, sortType)
     return data
   }

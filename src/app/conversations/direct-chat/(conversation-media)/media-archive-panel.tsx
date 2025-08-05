@@ -4,6 +4,7 @@ import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import Filters from "./filter"
 import { MediaGridContent } from "./media-grid"
 import { ChevronLeft } from "lucide-react"
+import type { TMediaData, TMediaDataCollection } from "@/utils/types/global"
 
 // Header component
 const Header = ({ onClose }: { onClose: () => void }) => (
@@ -65,20 +66,22 @@ const Tabs = ({
   </div>
 )
 
+type TMediaArchivePanelProps = {
+  onClose: () => void
+  mediaData: TMediaDataCollection
+  allMediaItems: any[]
+  creator: any
+  recipient: any
+  initialTab?: "Images/Video" | "files" | "voices" | "links"
+}
+
 const MediaArchivePanel = ({
   onClose,
   mediaData,
   creator,
   recipient,
   initialTab = "Images/Video",
-}: {
-  onClose: () => void
-  mediaData: any
-  allMediaItems: any[]
-  creator: any
-  recipient: any
-  initialTab?: "Images/Video" | "files" | "voices" | "links"
-}) => {
+}: TMediaArchivePanelProps) => {
   const [tab, setTab] = useState<"Images/Video" | "files" | "voices" | "links">(initialTab)
   const [senderFilter, setSenderFilter] = useState("all")
   const [dateSort, setDateSort] = useState("desc")
@@ -119,8 +122,8 @@ const MediaArchivePanel = ({
   }
 
   // Nhóm media theo ngày
-  const groupByDate = (items: any[]) => {
-    const groups: { [date: string]: any[] } = {}
+  const groupByDate = (items: TMediaData[]) => {
+    const groups: { [date: string]: TMediaData[] } = {}
     items.forEach((item) => {
       const date =
         item.createdAt && dayjs(item.createdAt).isValid()
@@ -143,7 +146,7 @@ const MediaArchivePanel = ({
   }, [mediaData.images, mediaData.videos])
 
   // Lọc dữ liệu theo tab và filter
-  let items: any[] = []
+  let items: TMediaData[] = []
   if (tab === "Images/Video") {
     items = filterItems(mixedMedia)
   }

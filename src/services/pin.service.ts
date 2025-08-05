@@ -79,6 +79,7 @@ class PinService {
   // Helper function để chuyển đổi TPinnedMessage sang TStateDirectMessage
   private convertPinnedMessageToStateMessage(pinnedMessage: TPinnedMessage): TStateDirectMessage {
     const directMessage = pinnedMessage.DirectMessage
+    const { Media, Sticker } = pinnedMessage
     return {
       id: directMessage.id,
       content: directMessage.content,
@@ -87,12 +88,6 @@ class PinService {
       status: directMessage.status as any, // Cast to EMessageStatus
       type: directMessage.type as any, // Cast to EMessageTypes
       createdAt: directMessage.createdAt,
-      // Giữ nguyên các trường media nếu có trong response
-      stickerUrl: directMessage.stickerUrl,
-      mediaUrl: directMessage.mediaUrl,
-      fileName: directMessage.fileName,
-      fileType: directMessage.fileType,
-      fileSize: directMessage.fileSize,
       Author: {
         ...directMessage.Author,
         password: "", // Add missing password field
@@ -113,6 +108,23 @@ class PinService {
           }
         : null,
       isNewMsg: false,
+      isDeleted: false,
+      Media: {
+        id: Media?.id,
+        type: Media?.type,
+        createdAt: Media?.createdAt,
+        url: Media?.url,
+        fileSize: Media?.fileSize,
+        fileName: Media?.fileName,
+        thumbnailUrl: Media?.thumbnailUrl,
+      },
+      Sticker: {
+        id: Sticker?.id,
+        stickerName: Sticker?.stickerName,
+        imageUrl: Sticker?.imageUrl,
+        categoryId: Sticker?.categoryId,
+        createdAt: Sticker?.createdAt,
+      },
     } as TStateDirectMessage
   }
 }

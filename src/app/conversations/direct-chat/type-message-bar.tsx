@@ -1,6 +1,6 @@
 "use client"
 
-import { CustomTooltip, IconButton } from "@/components/materials"
+import { CustomTooltip, IconButton, Spinner, CircularProgress } from "@/components/materials"
 import {
   Download,
   FileVideo,
@@ -32,9 +32,9 @@ import type { TDirectChat, TSticker } from "@/utils/types/be-api"
 import type { TEmoji, TStateDirectMessage } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
 import { toast } from "sonner"
-import { uploadFile } from "@/apis/upload"
 import { santizeMsgContent, extractEmojisFromMessage, unescapeHtml } from "@/utils/helpers"
 import { TChattingPayload } from "@/utils/types/socket"
+import { FileService } from "@/services/file.service"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -476,6 +476,7 @@ export const TypeMessageBar = memo(
     const [fileAccept, setFileAccept] = useState<string>("")
     const [fileMode, setFileMode] = useState<string>("")
     const [fileInputKey, setFileInputKey] = useState<number>(0)
+    const [uploadProgress, setUploadProgress] = useState<number>(0)
 
     const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
       const textField = textFieldRef.current
@@ -580,28 +581,21 @@ export const TypeMessageBar = memo(
             continue
           }
           // Upload file lên server
-          const { url, fileName, fileType, thumbnailUrl } = await uploadFile(file)
-          let messageType = EMessageTypes.IMAGE
-          if (file.type.startsWith("image/")) messageType = EMessageTypes.IMAGE
-          else if (file.type.startsWith("video/")) messageType = EMessageTypes.VIDEO
-          else messageType = EMessageTypes.DOCUMENT
+          const { id } = await FileService.uploadFile(file, (loaded, total) => {
+            const progress = total ? Math.round((loaded / total) * 100) : 0
+            setUploadProgress(progress)
+          })
+          let messageType = EMessageTypes.MEDIA
+          if (file.type.startsWith("image/")) messageType = EMessageTypes.MEDIA
+          else if (file.type.startsWith("video/")) messageType = EMessageTypes.MEDIA
+          else messageType = EMessageTypes.MEDIA
 
           const msgPayload: TChattingPayload["msgPayload"] = {
-            content: "", // hoặc caption nếu có
-            mediaUrl: url,
-            fileName,
-            fileType,
+            content: `${id}`, // hoặc caption nếu có
             receiverId: user.id === recipientId ? creatorId : recipientId,
             token: chattingService.getMessageToken(),
             timestamp: new Date(),
           }
-          // if (messageType === EMessageTypes.DOCUMENT) {
-          //   msgPayload.fileSize = file.size
-          // }
-          if (messageType === EMessageTypes.VIDEO && thumbnailUrl) {
-            msgPayload.thumbnailUrl = thumbnailUrl
-          }
-
           chattingService.sendMessage(messageType, msgPayload, (data) => {
             if ("success" in data && data.success) {
               chattingService.setAcknowledgmentFlag(true)
@@ -645,35 +639,37 @@ export const TypeMessageBar = memo(
 
     function renderReplyPreview(msg: TStateDirectMessage) {
       const type = msg.type.toUpperCase()
+      const { Media, Sticker } = msg
       switch (type) {
-        case EMessageTypes.IMAGE:
-          if (msg.mediaUrl) {
+        case EMessageTypes.MEDIA:
+          if (Media?.url) {
             return (
               <span className="inline-block mt-1">
-                <img src={msg.mediaUrl} alt="sticker" className="h-10" />
+                <img src={Media.url} alt="sticker" className="h-10" />
               </span>
             )
           }
           return "Unknown content"
-        case EMessageTypes.VIDEO:
+        case EMessageTypes.MEDIA:
           return (
             <span className="flex items-center gap-2 mt-1 text-sm">
               <FileVideo size={16} />
-              <span>{msg.fileName || "File unnamed"}</span>
+              <span>{Media?.fileName || "File unnamed"}</span>
             </span>
           )
-        case EMessageTypes.DOCUMENT:
+        case EMessageTypes.MEDIA:
           return (
             <span className="flex items-center gap-2 mt-1 text-sm">
               <Paperclip size={16} />
-              <span>{msg.fileName || "File unnamed"}</span>
+              <span>{Media?.fileName || "File unnamed"}</span>
             </span>
           )
         case EMessageTypes.STICKER:
-          if (msg.stickerUrl) {
+          const stickerUrl = Sticker?.imageUrl
+          if (stickerUrl) {
             return (
               <span className="inline-block mt-1">
-                <img src={msg.stickerUrl} alt="sticker" className="h-8" />
+                <img src={stickerUrl} alt="sticker" className="h-8" />
               </span>
             )
           }
@@ -687,15 +683,16 @@ export const TypeMessageBar = memo(
               }}
             />
           )
-        case EMessageTypes.AUDIO:
+        case EMessageTypes.MEDIA:
           return <span className="text-sm">Voice message</span>
         default:
+          const msgContent = msg.content
           if (
-            msg.content &&
-            typeof msg.content === "string" &&
-            (msg.content.includes("<img") || msg.content.includes("<svg"))
+            msgContent &&
+            typeof msgContent === "string" &&
+            (msgContent.includes("<img") || msgContent.includes("<svg"))
           ) {
-            const cleanContent = keepOnlyImgAndSvgTags(msg.content)
+            const cleanContent = keepOnlyImgAndSvgTags(msgContent)
             return <span className="" dangerouslySetInnerHTML={{ __html: cleanContent }} />
           }
           return "[Không có nội dung]"
@@ -764,21 +761,18 @@ export const TypeMessageBar = memo(
         })
 
         // Upload lên AWS S3, lấy url về (dùng hàm uploadFile của bạn)
-        const { url, fileName, fileType } = await uploadFile(webmFile)
+        const { id } = await FileService.uploadFile(webmFile)
 
         // Gửi message (BE sẽ nhận type là AUDIO, mediaUrl là link S3 .webm)
         const { recipientId, creatorId } = directChat
         const msgPayload = {
-          content: "", // hoặc chú thích
-          mediaUrl: url,
-          fileName,
-          fileType,
+          content: `${id}`, // hoặc chú thích
           receiverId: user!.id === recipientId ? creatorId : recipientId,
           token: chattingService.getMessageToken(),
           timestamp: new Date(),
         }
 
-        chattingService.sendMessage(EMessageTypes.AUDIO, msgPayload, (data) => {
+        chattingService.sendMessage(EMessageTypes.MEDIA, msgPayload, (data) => {
           if ("success" in data && data.success) {
             chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()
@@ -901,7 +895,12 @@ export const TypeMessageBar = memo(
                 style={{ outline: "none" }}
               >
                 {isUploading ? (
-                  <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+                  <CircularProgress
+                    progress={uploadProgress}
+                    size={35}
+                    strokeWidth={8}
+                    progressColor="#ef4444"
+                  />
                 ) : (
                   <Paperclip />
                 )}

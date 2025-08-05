@@ -351,10 +351,12 @@ svg {
 }
 
 .STYLE-file-icon {
+  $width: 50px;
+
   display: flex;
   justify-content: center;
-  width: 50px;
-  height: 50px;
+  width: $width;
+  height: $width;
   border-radius: 6px;
   background-color: var(--tdc-regular-red-cl);
   position: relative;
@@ -368,7 +370,8 @@ svg {
   position: relative;
 
   .STYLE-file-icon-extension,
-  .STYLE-file-icon-download {
+  .STYLE-file-icon-download,
+  .STYLE-file-icon-progress {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -379,9 +382,29 @@ svg {
     color: var(--tdc-regular-white-cl);
   }
 
-  .STYLE-file-icon-download {
+  .STYLE-file-icon-extension {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: $width;
+  }
+
+  .STYLE-file-icon-download,
+  .STYLE-file-icon-progress {
     opacity: 0;
     transform: translate(-50%, -20%);
+  }
+
+  &.downloading {
+    .STYLE-file-icon-progress {
+      opacity: 1;
+    }
+    .STYLE-file-icon-download {
+      opacity: 0;
+    }
+    .STYLE-file-icon-extension {
+      opacity: 0;
+    }
   }
 
   &::after {

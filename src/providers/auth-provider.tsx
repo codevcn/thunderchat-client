@@ -23,7 +23,8 @@ export const AuthProvider = ({ children }: { children: JSX.Element }) => {
             dispatch(setAuthStatus(EAuthStatus.UNAUTHENTICATED))
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.log(">>> check auth failed:", err)
           dispatch(setAuthStatus(EAuthStatus.UNAUTHENTICATED))
         })
     }

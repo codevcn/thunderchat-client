@@ -8,7 +8,7 @@ import { AppNavigation } from "@/components/layout/app-navigation"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { SwitchChatbox } from "./switch-chatbox"
-import type { TGetDirectMessagesMessage } from "@/utils/types/be-api"
+import type { TGetMessagesMessage } from "@/utils/types/be-api"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 
@@ -33,7 +33,7 @@ const ConversationPage = () => {
     eventEmitter.emit(EInternalEvents.CLICK_ON_LAYOUT, e)
   }
 
-  const listenSendDirectMessage = (newMessage: TGetDirectMessagesMessage) => {
+  const listenSendDirectMessage = (newMessage: TGetMessagesMessage) => {
     eventEmitter.emit(EInternalEvents.SEND_MESSAGE_DIRECT, newMessage)
   }
 

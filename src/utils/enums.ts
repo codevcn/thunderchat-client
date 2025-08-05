@@ -66,11 +66,15 @@ export enum EStickerCategory {
 export enum EMessageTypes {
   TEXT = "TEXT",
   STICKER = "STICKER",
+  MEDIA = "MEDIA",
+  PIN_NOTICE = "PIN_NOTICE",
+}
+
+export enum EMessageMediaTypes {
   IMAGE = "IMAGE",
   VIDEO = "VIDEO",
-  DOCUMENT = "DOCUMENT",
   AUDIO = "AUDIO",
-  PIN_NOTICE = "PIN_NOTICE",
+  DOCUMENT = "DOCUMENT",
 }
 
 export enum EGroupChatRole {

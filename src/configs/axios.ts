@@ -10,12 +10,12 @@ clientAxios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (
-      error.response.status === HttpStatusCode.Unauthorized &&
+      error.response?.status === HttpStatusCode.Unauthorized &&
       getCurrentPathOnBrowserURL() !== "/"
     ) {
       pureNavigator("/")
     }
-    return error
+    throw error
   }
 )
 

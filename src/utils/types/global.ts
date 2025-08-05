@@ -1,14 +1,14 @@
 import type { AxiosError, HttpStatusCode } from "axios"
 import type {
-  TDirectMessage,
+  TMessage,
   TDirectChat,
   TGroupMessage,
-  TDirectMessageWithAuthorAndReplyTo,
+  TMessageFullInfo,
   TDirectChatData,
 } from "@/utils/types/be-api"
-import type { EChatType, EMessageTypes } from "../enums"
+import type { EChatType, EMessageMediaTypes, EMessageTypes } from "../enums"
 
-export type TStateDirectMessage = TDirectMessageWithAuthorAndReplyTo & {
+export type TStateDirectMessage = TMessageFullInfo & {
   isNewMsg?: boolean
   originMsgId?: number // id tin nhắn gốc nếu là PIN_NOTICE
 }
@@ -17,7 +17,7 @@ export type TStateGroupMessage = TGroupMessage & {
   isNewMsg?: boolean
 }
 
-export type TDirectChatWithMessages = TDirectChat & { messages: TDirectMessage[] }
+export type TDirectChatWithMessages = TDirectChat & { messages: TMessage[] }
 
 export type THttpErrorResBody =
   | {
@@ -125,4 +125,25 @@ export type TLastDirectChatData = {
 export type TUpdateUnreadMsgCountState = {
   count: number
   directChatId: number
+}
+
+export type TMediaData = {
+  id: number
+  type: EMessageTypes
+  mediaUrl: string
+  fileName: string
+  content: string
+  createdAt: string
+  authorId: number
+  fileSize: number
+  thumbnailUrl: string
+  mediaType: EMessageMediaTypes
+}
+
+export type TMediaDataCollection = {
+  images: TMediaData[]
+  videos: TMediaData[]
+  files: TMediaData[]
+  audios: TMediaData[]
+  links: TMediaData[]
 }

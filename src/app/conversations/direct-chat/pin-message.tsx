@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { TStateDirectMessage } from "@/utils/types/global"
-import { EMessageTypes } from "@/utils/enums"
+import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
 //import { useUser } from "@/hooks/user"
 import {
   FileText,
@@ -24,7 +24,12 @@ export type PinMessageModalProps = {
 
 // Helper function to render message content based on type
 export const renderMessageContent = (message: TStateDirectMessage) => {
-  const { type, content, mediaUrl, stickerUrl, fileName, fileType, fileSize } = message
+  const { type, content, Media, Sticker } = message
+  const mediaType = Media?.type
+  const mediaFileName = Media?.fileName
+  const mediaFileSize = Media?.fileSize
+  const mediaUrl = Media?.url
+  const stickerUrl = Sticker?.imageUrl
 
   // Helper function to get file icon
   const getFileIcon = (fileName: string) => {
@@ -59,13 +64,13 @@ export const renderMessageContent = (message: TStateDirectMessage) => {
   }
 
   // Image message - hiển thị thu nhỏ ảnh
-  if (type === EMessageTypes.IMAGE) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.IMAGE) {
     return (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
-          {mediaUrl ? (
+          {Media?.url ? (
             <Image
-              src={mediaUrl}
+              src={Media.url}
               alt="Image"
               width={32}
               height={32}
@@ -83,7 +88,7 @@ export const renderMessageContent = (message: TStateDirectMessage) => {
   }
 
   // Video message - hiển thị thu nhỏ video
-  if (type === EMessageTypes.VIDEO) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.VIDEO) {
     return (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center relative">
@@ -103,28 +108,30 @@ export const renderMessageContent = (message: TStateDirectMessage) => {
             <FileVideo className="w-4 h-4 text-red-400" />
           )}
         </div>
-        <span className="text-xs text-gray-300">{fileName || "Video"}</span>
+        <span className="text-xs text-gray-300">{Media?.fileName || "Video"}</span>
       </div>
     )
   }
 
   // Document message - hiển thị thu nhỏ document
-  if (type === EMessageTypes.DOCUMENT) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT) {
     return (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
-          {getFileIcon(fileName || "document")}
+          {getFileIcon(mediaFileName || "document")}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-gray-300 truncate">{fileName || "Tệp tin"}</div>
-          {fileSize && <div className="text-xs text-gray-400">{formatBytes(fileSize)}</div>}
+          <div className="text-xs text-gray-300 truncate">{mediaFileName || "Tệp tin"}</div>
+          {mediaFileSize && (
+            <div className="text-xs text-gray-400">{formatBytes(mediaFileSize)}</div>
+          )}
         </div>
       </div>
     )
   }
 
   // Audio message - hiển thị thu nhỏ audio
-  if (type === EMessageTypes.AUDIO) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.AUDIO) {
     return (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
@@ -136,7 +143,7 @@ export const renderMessageContent = (message: TStateDirectMessage) => {
   }
 
   // Sticker message - hiển thị thu nhỏ sticker
-  if (type === EMessageTypes.STICKER) {
+  if (type === EMessageTypes.STICKER && stickerUrl) {
     return (
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0">

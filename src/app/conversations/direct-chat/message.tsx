@@ -2,9 +2,10 @@ import { EMessageTypes, ETimeFormats } from "@/utils/enums"
 import { santizeMsgContent } from "@/utils/helpers"
 import { EMessageStatus } from "@/utils/socket/enums"
 import type {
-  TDirectMessageWithAuthor,
+  TMessageWithAuthor,
   TUserWithoutPassword,
   TGetFriendsData,
+  TMessageFullInfo,
 } from "@/utils/types/be-api"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import dayjs from "dayjs"
@@ -43,6 +44,8 @@ import { directChatService } from "@/services/direct-chat.service"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { clientSocket } from "@/utils/socket/client-socket"
+import axios from "axios"
+import { FileService } from "@/services/file.service"
 
 const ImageModal = ({
   imageUrl,
@@ -91,13 +94,11 @@ const ImageModal = ({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div className="relative max-w-[90vw] max-h-[90vh]">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="top-0 left-0 right-0 bottom-0 z-10 absolute" onClick={onClose}></div>
+      <div className="flex flex-col max-w-[90vw] max-h-[90vh] relative z-20">
         {/* Thanh nút chức năng trên cùng */}
-        <div className="absolute -top-12 left-0 w-full flex flex-row items-center justify-end z-10 px-2">
+        <div className="w-full flex flex-row items-center justify-end z-10 mb-4">
           {/* Nhóm nút chức năng */}
           <div className="flex gap-2">
             <button
@@ -114,13 +115,6 @@ const ImageModal = ({
             >
               <RotateCw size={22} />
             </button>
-            <button
-              className="text-white hover:bg-white/20 rounded-full p-2 transition-colors flex items-center justify-center"
-              title="Tùy chọn khác"
-              tabIndex={-1}
-            >
-              <MoreHorizontal size={22} />
-            </button>
           </div>
         </div>
         <Image
@@ -128,7 +122,7 @@ const ImageModal = ({
           alt="Zoomed image"
           width={800}
           height={600}
-          className="max-w-full max-h-full object-contain rounded-lg"
+          className="max-w-full w-fit max-h-[80vh] grow object-contain rounded-lg"
           style={{ transform: `rotate(${rotation}deg)` }}
           onClick={(e) => e.stopPropagation()}
         />
@@ -140,15 +134,17 @@ const ImageModal = ({
 type TFileIconProps = {
   fileTypeText: string
   onDownload: (e: React.MouseEvent) => void
+  fileIconRef: React.RefObject<HTMLDivElement | null>
 }
 
-const FileIcon = ({ fileTypeText, onDownload }: TFileIconProps) => {
+const FileIcon = ({ fileTypeText, onDownload, fileIconRef }: TFileIconProps) => {
   return (
-    <div className="STYLE-file-icon" onClick={onDownload}>
+    <div className="STYLE-file-icon" onClick={onDownload} ref={fileIconRef}>
       <span className="STYLE-file-icon-extension">{fileTypeText}</span>
       <div className="STYLE-file-icon-download">
         <Download size={20} />
       </div>
+      <div className="STYLE-file-icon-progress"></div>
     </div>
   )
 }
@@ -175,6 +171,7 @@ const Content = ({
   message,
 }: TContentProps) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const fileIconRef = useRef<HTMLDivElement>(null)
 
   if (message?.isDeleted) {
     return (
@@ -186,7 +183,7 @@ const Content = ({
   }
 
   // Hiển thị ảnh
-  if (type === EMessageTypes.IMAGE && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
     return (
       <>
         <div className="max-w-xs relative group">
@@ -214,65 +211,46 @@ const Content = ({
   }
 
   // Hiển thị video
-  if (type === EMessageTypes.VIDEO && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
     return (
-      <div className="max-w-xs">
-        <video src={mediaUrl} controls className="rounded-lg max-w-full" preload="metadata" />
+      <div className="max-w-[320px] h-[180px]">
+        <video
+          src={mediaUrl}
+          controls
+          className="rounded-lg max-w-full h-full"
+          preload="metadata"
+        />
       </div>
     )
   }
   // Hiển thị document
-  if (type === EMessageTypes.DOCUMENT && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
     const downloadFile = async (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
-
       try {
-        // Fetch file từ S3
-        const response = await fetch(mediaUrl)
-        if (!response.ok) throw new Error("Không thể tải file")
+        const response = await FileService.downloadFile(mediaUrl, (loaded, total) => {
+          const percent = Math.round((loaded * 100) / (total || 1))
+          fileIconRef.current!.classList.add("downloading")
+          fileIconRef.current!.querySelector(".STYLE-file-icon-progress")!.textContent =
+            `${percent}%`
+        })
 
-        // Tạo blob từ response
-        const blob = await response.blob()
+        fileIconRef.current!.classList.remove("downloading")
+        fileIconRef.current!.querySelector(".STYLE-file-icon-progress")!.textContent = ""
 
-        // Tạo URL cho blob
-        const blobUrl = window.URL.createObjectURL(blob)
-
-        // Tạo thẻ a để tải file
+        // Tạo URL từ blob để tải
+        const url = window.URL.createObjectURL(new Blob([response.data]))
         const link = document.createElement("a")
-        link.href = blobUrl
-
-        // Đảm bảo tên file có extension
-        const fileNameWithExt = fileName || "document"
-        const hasExtension = fileNameWithExt.includes(".")
-        const finalFileName = hasExtension
-          ? fileNameWithExt
-          : `${fileNameWithExt}.${fileType || "pdf"}`
-
-        link.download = finalFileName
-
-        // Thêm vào DOM, click và xóa
+        link.href = url
+        link.download = fileName || "file"
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-
-        // Giải phóng blob URL
-        window.URL.revokeObjectURL(blobUrl)
+        window.URL.revokeObjectURL(url)
       } catch (error) {
-        console.error("Lỗi khi tải file:", error)
-        // Fallback: thử cách cũ
-        const link = document.createElement("a")
-        link.href = mediaUrl
-        const fileNameWithExt = fileName || "document"
-        const hasExtension = fileNameWithExt.includes(".")
-        const finalFileName = hasExtension
-          ? fileNameWithExt
-          : `${fileNameWithExt}.${fileType || "pdf"}`
-        link.download = finalFileName
-        link.target = "_blank"
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        fileIconRef.current!.classList.remove("downloading")
+        fileIconRef.current!.querySelector(".STYLE-file-icon-progress")!.textContent = ""
       }
     }
 
@@ -289,10 +267,11 @@ const Content = ({
           <FileIcon
             fileTypeText={fileType || fileName?.split(".").pop()?.toUpperCase() || "Unknown"}
             onDownload={downloadFile}
+            fileIconRef={fileIconRef}
           />
           <div className="flex-1 min-w-0">
             <div className="truncate font-medium text-sm text-regular-white-cl">
-              {fileName || "Tệp tin"}
+              {fileName || "File"}
             </div>
             <div className="text-xs text-gray-400">{formatBytes(fileSize)}</div>
           </div>
@@ -301,7 +280,7 @@ const Content = ({
     )
   }
 
-  if (type === EMessageTypes.AUDIO && mediaUrl && message) {
+  if (type === EMessageTypes.MEDIA && mediaUrl && message) {
     return <VoiceMessage audioUrl={mediaUrl} message={message} />
   }
 
@@ -343,21 +322,14 @@ const StickyTime = ({ stickyTime }: TStickyTimeProps) => {
   )
 }
 
-type TMessageProps = {
-  message: TStateDirectMessage
-  user: TUserWithoutPassword
-  stickyTime: string | null
-  onReply: (msg: TStateDirectMessage) => void
-  isPinned: boolean
-  onPinChange: (newState: boolean) => void
-  pinnedCount: number
-}
-
-const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
-  const { type, mediaUrl, fileName, stickerUrl, content } = replyTo
+const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
+  const { type, Media, Sticker, content } = replyTo
+  const mediaUrl = Media?.url
+  const mediaFileName = Media?.fileName
+  const stickerUrl = Sticker?.imageUrl
 
   // Nếu là ảnh
-  if (type === EMessageTypes.IMAGE && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
     return (
       <div className="flex items-center gap-2 rounded p-0.5 mt-0.5">
         <img src={mediaUrl} alt="img" className="object-cover h-8" />
@@ -365,7 +337,7 @@ const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
     )
   }
   // Nếu là audio
-  if (type === EMessageTypes.AUDIO && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <Mic size={16} />
@@ -374,20 +346,20 @@ const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
     )
   }
   // Nếu là video
-  if (type === EMessageTypes.VIDEO && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <FileVideo size={16} />
-        <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
+        <span className="text-xs rounded mt-0.5 inline-block">{mediaFileName}</span>
       </div>
     )
   }
   // Nếu là file tài liệu
-  if (type === EMessageTypes.DOCUMENT && fileName) {
+  if (type === EMessageTypes.MEDIA && Media?.url) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <Paperclip size={16} />
-        <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
+        <span className="text-xs rounded mt-0.5 inline-block">{mediaFileName}</span>
       </div>
     )
   }
@@ -412,29 +384,24 @@ const getReplyPreview = (replyTo: TDirectMessageWithAuthor) => {
   return <></>
 }
 
-export const Message = forwardRef<
-  HTMLDivElement,
-  TMessageProps & { onReplyPreviewClick?: (replyToId: number) => void }
->(
+type TMessageProps = {
+  message: TStateDirectMessage
+  user: TUserWithoutPassword
+  stickyTime: string | null
+  onReply: (msg: TStateDirectMessage) => void
+  isPinned: boolean
+  onPinChange: (newState: boolean) => void
+  pinnedCount: number
+  onReplyPreviewClick?: (replyToId: number) => void
+}
+
+export const Message = forwardRef<HTMLDivElement, TMessageProps>(
   (
     { message, user, stickyTime, onReply, isPinned, onPinChange, pinnedCount, onReplyPreviewClick },
     ref
   ) => {
-    const {
-      authorId,
-      content,
-      createdAt,
-      isNewMsg,
-      id,
-      status,
-      stickerUrl,
-      mediaUrl,
-      type,
-      fileName,
-      fileType,
-      fileSize,
-      ReplyTo,
-    } = message
+    const { authorId, content, createdAt, isNewMsg, id, status, Media, Sticker, type, ReplyTo } =
+      message
 
     const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
 
@@ -447,7 +414,7 @@ export const Message = forwardRef<
       try {
         const response = await pinService.togglePinMessage(
           message.id,
-          message.directChatId,
+          (message.directChatId || message.groupChatId)!,
           !isPinned
         )
 
@@ -570,7 +537,7 @@ export const Message = forwardRef<
           {user.id === authorId ? (
             <div className={`QUERY-user-message-${id} flex justify-end w-full`} data-msg-id={id}>
               <div
-                className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "bg-regular-violet-cl"} group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
+                className={`${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${Sticker ? "" : "bg-regular-violet-cl"} group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1`}
               >
                 <div
                   className={
@@ -654,7 +621,7 @@ export const Message = forwardRef<
                       document.body
                     )}
                   <button
-                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-regular-violet-cl text-regular-white-cl" : "bg-white/20"}`}
                     title={
                       isPinned
                         ? "Bỏ ghim tin nhắn"
@@ -673,11 +640,11 @@ export const Message = forwardRef<
                     }}
                     disabled={loadingPin}
                   >
-                    <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
+                    <Pin size={14} fill={isPinned ? "#fff" : "none"} />
                   </button>
                   <button
                     ref={refs.setReference}
-                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    className="p-1 ml-1 rounded bg-white/20"
                     title="More actions"
                     onClick={handleShowDropdown}
                   >
@@ -705,12 +672,12 @@ export const Message = forwardRef<
                 )}
                 <Content
                   content={content}
-                  stickerUrl={stickerUrl ?? null}
-                  mediaUrl={mediaUrl ?? null}
+                  stickerUrl={Sticker?.imageUrl ?? null}
+                  mediaUrl={Media?.url ?? null}
                   type={type}
-                  fileName={fileName}
-                  fileType={fileType}
-                  fileSize={fileSize}
+                  fileName={Media?.fileName}
+                  fileType={Media?.type}
+                  fileSize={Media?.fileSize}
                   message={message}
                 />
                 <div className="flex justify-end items-center gap-x-1 mt-1.5 w-full">
@@ -740,7 +707,7 @@ export const Message = forwardRef<
               data-msg-id={id}
             >
               <div
-                className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${stickerUrl ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
+                className={`group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ${Sticker ? "" : "w-max bg-regular-dark-gray-cl"} max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative`}
               >
                 <div
                   className={
@@ -824,7 +791,7 @@ export const Message = forwardRef<
                       document.body
                     )}
                   <button
-                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-yellow-400/80 text-yellow-700" : "bg-white/20"}`}
+                    className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-regular-violet-cl text-regular-white-cl" : "bg-white/20"}`}
                     title={
                       isPinned
                         ? "Bỏ ghim tin nhắn"
@@ -843,11 +810,11 @@ export const Message = forwardRef<
                     }}
                     disabled={loadingPin}
                   >
-                    <Pin size={14} fill={isPinned ? "#facc15" : "none"} />
+                    <Pin size={14} fill={isPinned ? "#fff" : "none"} />
                   </button>
                   <button
                     ref={refs.setReference}
-                    className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
+                    className="p-1 ml-1 rounded bg-white/20"
                     title="More actions"
                     onClick={handleShowDropdown}
                   >
@@ -875,12 +842,12 @@ export const Message = forwardRef<
                 )}
                 <Content
                   content={content}
-                  stickerUrl={stickerUrl ?? null}
-                  mediaUrl={mediaUrl ?? null}
+                  stickerUrl={Sticker?.imageUrl ?? null}
+                  mediaUrl={Media?.url ?? null}
                   type={type}
-                  fileName={fileName}
-                  fileType={fileType}
-                  fileSize={fileSize}
+                  fileName={Media?.fileName}
+                  fileType={Media?.type}
+                  fileSize={Media?.fileSize}
                   message={message}
                 />
               </div>

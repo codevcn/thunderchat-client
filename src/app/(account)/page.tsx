@@ -41,6 +41,7 @@ import { userService } from "@/services/user.service"
 import { authService } from "@/services/auth.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { pureNavigator } from "@/utils/helpers"
+import { FileService } from "@/services/file.service"
 
 function toDateInputValue(dateString: string) {
   if (!dateString) return ""
@@ -118,7 +119,7 @@ const AccountPage = ({
       }
 
       // Upload to AWS S3
-      const { url, fileName, fileType } = await uploadFile(file)
+      const { url, fileName, fileType } = await FileService.uploadFile(file)
 
       // Set avatar URL from AWS
       setAvatar(url)

@@ -2,7 +2,7 @@ import type { HttpStatusCode } from "axios"
 import type { EMessageStatus } from "../socket/enums"
 import type { EFriendRequestStatus, EMessageTypes } from "@/utils/enums"
 import type { TSuccess } from "./global"
-import type { TDirectChat, TDirectMessage } from "./be-api"
+import type { TDirectChat, TMessage } from "./be-api"
 
 export type TWsErrorResponse = {
   isError: boolean
@@ -17,11 +17,7 @@ export type TChattingPayload = {
     content: string
     token: string
     timestamp: Date
-    mediaUrl?: string
-    fileName?: string
-    fileType?: string
     replyToId?: number
-    thumbnailUrl?: string
   }
 }
 
@@ -62,6 +58,6 @@ export type TPinDirectChatEventData = {
 
 export type TSendDirectMessageRes = TSuccess & {
   directChat: TDirectChat
-  newMessage: TDirectMessage
+  newMessage: TMessage
   isNewDirectChat: boolean
 }

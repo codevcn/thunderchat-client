@@ -107,7 +107,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const playAudio = useCallback(
     async (message: TStateDirectMessage) => {
-      if (!message.mediaUrl) return
+      if (!message.Media?.url) return
 
       // Cập nhật currentAudioIndex nếu message có trong danh sách
       const messageIndex = audioMessages.findIndex((msg) => msg.id === message.id)
@@ -116,18 +116,18 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
 
       // Nếu đang phát audio khác, dừng lại
-      if (audioRef.current && currentAudioUrl !== message.mediaUrl) {
+      if (audioRef.current && currentAudioUrl !== message.Media?.url) {
         audioRef.current.pause()
         audioRef.current.currentTime = 0
         lastPausedTimeRef.current = 0
       }
 
       setCurrentMessage(message)
-      setCurrentAudioUrl(message.mediaUrl)
+      setCurrentAudioUrl(message.Media?.url)
       setShowPlayer(true)
 
       // Preload metadata trước
-      const audioDuration = await preloadAudioMetadata(message.mediaUrl)
+      const audioDuration = await preloadAudioMetadata(message.Media?.url)
       setDuration(audioDuration)
 
       // Tạo audio element mới nếu cần
@@ -135,11 +135,11 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         audioRef.current = new Audio()
       }
 
-      audioRef.current.src = message.mediaUrl
+      audioRef.current.src = message.Media?.url
       audioRef.current.playbackRate = playbackRate // Áp dụng playback rate hiện tại
 
       // Nếu là cùng audio và đã có vị trí pause, tiếp tục từ đó
-      if (currentAudioUrl === message.mediaUrl && lastPausedTimeRef.current > 0) {
+      if (currentAudioUrl === message.Media?.url && lastPausedTimeRef.current > 0) {
         audioRef.current.currentTime = lastPausedTimeRef.current
         setCurrentTime(lastPausedTimeRef.current)
       } else {
@@ -237,7 +237,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const nextMessage = audioMessages[nextIndex]
       setCurrentAudioIndex(nextIndex)
       setCurrentMessage(nextMessage)
-      setCurrentAudioUrl(nextMessage.mediaUrl ?? null)
+      setCurrentAudioUrl(nextMessage.Media?.url ?? null)
       // Tự động phát audio tiếp theo
       if (isPlaying) {
         playAudio(nextMessage)
@@ -251,7 +251,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const prevMessage = audioMessages[prevIndex]
       setCurrentAudioIndex(prevIndex)
       setCurrentMessage(prevMessage)
-      setCurrentAudioUrl(prevMessage.mediaUrl ?? null)
+      setCurrentAudioUrl(prevMessage.Media?.url ?? null)
       // Tự động phát audio trước đó
       if (isPlaying) {
         playAudio(prevMessage)
@@ -262,7 +262,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const handleSetAudioMessages = useCallback((messages: TStateDirectMessage[]) => {
     setAudioMessages(messages)
     setCurrentAudioIndex(0)
-    setCurrentAudioUrl(messages[0]?.mediaUrl ?? null)
+    setCurrentAudioUrl(messages[0]?.Media?.url ?? null)
   }, [])
 
   const value: VoicePlayerContextType = {

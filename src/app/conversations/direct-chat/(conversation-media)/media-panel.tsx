@@ -11,7 +11,7 @@ import {
   Play,
 } from "lucide-react"
 import { useAppSelector } from "@/hooks/redux"
-import { EMessageTypes } from "@/utils/enums"
+import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
 import dayjs from "dayjs"
 import Image from "next/image"
 import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
@@ -20,6 +20,7 @@ import ActionIcons from "@/components/materials/action-icons"
 import { useUser } from "@/hooks/user"
 import { useVoicePlayer } from "@/contexts/voice-player.context"
 import { useMediaMessages } from "@/hooks/use-media-messages"
+import type { TMediaData, TMediaDataCollection } from "@/utils/types/global"
 
 const Section = ({
   title,
@@ -72,63 +73,44 @@ const MediaPanel = () => {
   }
 
   // Lọc các loại media từ tin nhắn
-  const mediaData = useMemo(() => {
+  const mediaData = useMemo<TMediaDataCollection>(() => {
     if (!mediaMessages || mediaMessages.length === 0)
       return { images: [], videos: [], files: [], audios: [], links: [] }
 
-    const images: any[] = []
-    const videos: any[] = []
-    const files: any[] = []
-    const audios: any[] = []
-    const links: any[] = []
+    const images: TMediaData[] = []
+    const videos: TMediaData[] = []
+    const files: TMediaData[] = []
+    const audios: TMediaData[] = []
+    const links: TMediaData[] = []
 
     mediaMessages.forEach((message) => {
-      if (!message.mediaUrl && !message.content) return
+      if (!message.Media || !message.content) return
 
-      const messageData = {
+      const messageData: TMediaData = {
         id: message.id,
         type: message.type,
-        mediaUrl: message.mediaUrl,
-        fileName: message.fileName,
+        mediaUrl: message.Media.url,
+        fileName: message.Media.fileName,
         content: message.content,
         createdAt: message.createdAt,
         authorId: message.authorId,
-        fileSize: message.fileSize,
-        thumbnailUrl: message.thumbnailUrl,
+        fileSize: message.Media.fileSize,
+        thumbnailUrl: message.Media.thumbnailUrl,
+        mediaType: message.Media.type,
       }
 
-      switch (message.type) {
-        case EMessageTypes.IMAGE:
-          if (message.mediaUrl) {
-            images.push(messageData)
-          }
-          break
-        case EMessageTypes.VIDEO:
-          if (message.mediaUrl) {
-            videos.push(messageData)
-          }
-          break
-        case EMessageTypes.DOCUMENT:
-          if (message.mediaUrl) {
-            files.push(messageData)
-          }
-          break
-        case EMessageTypes.AUDIO:
-          if (message.mediaUrl) {
-            audios.push(messageData)
-          }
-          break
-        case EMessageTypes.TEXT:
-          // Kiểm tra nếu content chứa URL
-          if (message.content && isUrl(message.content)) {
-            links.push(messageData)
-          }
-          break
+      if (message.type === EMessageTypes.MEDIA) {
+        if (message.Media.type === EMessageMediaTypes.IMAGE) images.push(messageData)
+        else if (message.Media.type === EMessageMediaTypes.VIDEO) videos.push(messageData)
+        else if (message.Media.type === EMessageMediaTypes.AUDIO) audios.push(messageData)
+        else if (message.Media.type === EMessageMediaTypes.DOCUMENT) files.push(messageData)
+      } else if (message.type === EMessageTypes.TEXT && isUrl(message.content)) {
+        links.push(messageData)
       }
     })
 
     // Sắp xếp theo thời gian mới nhất (createdAt giảm dần)
-    const sortByLatest = (a: any, b: any) =>
+    const sortByLatest = (a: TMediaData, b: TMediaData) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 
     return {
@@ -148,7 +130,7 @@ const MediaPanel = () => {
   }, [mediaData.images, mediaData.videos])
 
   // Hàm mở media viewer
-  const openMediaViewer = (mediaItem: any) => {
+  const openMediaViewer = (mediaItem: TMediaData) => {
     // Tìm index trong mixedMedia (danh sách đã được sort và hiển thị trong UI)
     const index = mixedMedia.findIndex((item) => item.id === mediaItem.id)
     setSelectedMediaIndex(index)
@@ -199,14 +181,14 @@ const MediaPanel = () => {
 
   // Hàm xử lý click vào voice message
   const handleVoiceClick = (voiceMessage: any) => {
-    // Chuyển đổi format message để phù hợp với voice player
-    const messageForPlayer = {
+    // Phát audio và hiển thị player
+    playAudio({
       id: voiceMessage.id,
       authorId: voiceMessage.authorId,
       createdAt: voiceMessage.createdAt,
-      mediaUrl: voiceMessage.mediaUrl,
-      type: EMessageTypes.AUDIO,
-      fileName: voiceMessage.fileName || "Audio message",
+      Media: voiceMessage.Media,
+      Sticker: voiceMessage.Sticker,
+      type: EMessageTypes.MEDIA,
       content: "",
       directChatId: directChat?.id || 0,
       status: "SENT" as any,
@@ -214,10 +196,7 @@ const MediaPanel = () => {
       isDeleted: false, // Thêm property thiếu
       Author: voiceMessage.Author || currentUser, // BẮT BUỘC PHẢI CÓ
       ReplyTo: voiceMessage.ReplyTo || null, // Nếu có ReplyTo thì truyền vào, không thì null
-    }
-
-    // Phát audio và hiển thị player
-    playAudio(messageForPlayer)
+    })
     setShowPlayer(true)
   }
 
@@ -296,20 +275,19 @@ const MediaPanel = () => {
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
-                  mediaUrl={item.mediaUrl || item.fileUrl}
-                  fileName={item.fileName}
-                  fileType={item.fileType}
                 />
               </div>
               {item.mediaUrl &&
-                (item.type === EMessageTypes.IMAGE ? (
+                (item.type === EMessageTypes.MEDIA &&
+                item.mediaType === EMessageMediaTypes.IMAGE ? (
                   <img
                     src={item.mediaUrl}
                     alt={item.fileName || "media"}
                     className="object-cover w-full h-full"
                     loading="lazy"
                   />
-                ) : item.type === EMessageTypes.VIDEO ? (
+                ) : item.type === EMessageTypes.MEDIA &&
+                  item.mediaType === EMessageMediaTypes.VIDEO ? (
                   <div className="relative w-full h-full">
                     {item.thumbnailUrl ? (
                       <img
@@ -399,15 +377,12 @@ const MediaPanel = () => {
                   onDownload={() => handleDownload(item)}
                   onShare={() => {}}
                   onMore={() => {}}
-                  showDownload={!!(item.mediaUrl || item.fileUrl)}
+                  showDownload={!!item.mediaUrl}
                   isSender={item.authorId === currentUser?.id}
                   onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
-                  mediaUrl={item.mediaUrl || item.fileUrl}
-                  fileName={item.fileName}
-                  fileType={item.fileType}
                 />
               </div>
             </div>
@@ -456,15 +431,12 @@ const MediaPanel = () => {
                   onDownload={() => handleDownload(item)}
                   onShare={() => {}}
                   onMore={() => {}}
-                  showDownload={!!(item.mediaUrl || item.fileUrl)}
+                  showDownload={!!item.mediaUrl}
                   isSender={item.authorId === currentUser?.id}
                   onViewOriginalMessage={() => {}} // Sẽ hiển thị context tin nhắn gốc
                   onDeleteForMe={() => console.log("Delete for me:", item.id)}
                   onDeleteForEveryone={() => console.log("Delete for everyone:", item.id)}
                   messageId={item.id}
-                  mediaUrl={item.fileUrl}
-                  fileName={item.fileName}
-                  fileType={item.fileType}
                 />
               </div>
             </div>

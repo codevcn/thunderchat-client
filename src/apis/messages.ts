@@ -1,10 +1,10 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
 import type {
-  TDirectMessage,
   TGetDirectMessagesData,
   TGetDirectMsgsParams,
   TGetGroupMessagesData,
   TGetGroupMsgsParams,
+  TMessageFullInfo,
 } from "../utils/types/be-api"
 import { ESortTypes } from "@/utils/enums"
 
@@ -26,7 +26,7 @@ export const getFetchDirectMedia = (
   offset?: number,
   sortType?: ESortTypes
 ) =>
-  clientAxios.get<TDirectMessage[]>("message/direct-message/media/" + directChatId, {
+  clientAxios.get<TMessageFullInfo[]>("message/direct-message/media/" + directChatId, {
     ...requestConfig,
     params: { limit, offset, sortType },
   })

@@ -7,6 +7,7 @@ import type {
   EMessageTypes,
   ESortTypes,
   EChatType,
+  EMessageMediaTypes,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 
@@ -40,29 +41,55 @@ export type TDirectChat = {
   lastSentMessageId?: number
 }
 
-export type TDirectMessage = {
+export type TMessage = {
   id: number
   createdAt: string
   content: string
   authorId: number
-  directChatId: number
+  directChatId?: number
+  groupChatId?: number
   status: EMessageStatus
-  stickerUrl?: string
-  mediaUrl?: string
+  stickerId?: number
+  mediaId?: number
   type: EMessageTypes
-  fileName?: string
-  fileType?: string
-  fileSize?: number
-  thumbnailUrl?: string | null
   isDeleted: boolean
 }
 
-export type TDirectMessageWithAuthor = TDirectMessage & {
+export type TMessageMedia = {
+  id: number
+  type: EMessageMediaTypes
+  createdAt: Date
+  url: string
+  fileSize: number
+  fileName: string
+  thumbnailUrl: string
+}
+
+export type TMsgWithMediaSticker = TMessage & {
+  Media?: TMessageMedia
+  Sticker?: TSticker
+}
+
+export type TMessageWithMedia = TMessage & {
+  Media?: TMessageMedia
+}
+
+export type TMessageWithSticker = TMessage & {
+  Sticker?: TSticker
+}
+
+export type TMessageWithAuthor = TMessage & {
   Author: TUserWithProfile
 }
 
-export type TDirectMessageWithAuthorAndReplyTo = TDirectMessageWithAuthor & {
-  ReplyTo: TDirectMessageWithAuthor | null
+export type TMessageFullInfo = TMessageWithAuthor & {
+  ReplyTo:
+    | (TMsgWithMediaSticker & {
+        Author: TUserWithProfile
+      })
+    | null
+  Media: TMessageMedia | null
+  Sticker: TSticker | null
 }
 
 export type TFriend = {
@@ -208,11 +235,11 @@ export type TGetDirectMsgsParams = {
   isFirstTime: boolean
 }
 
-export type TGetDirectMessagesMessage = TDirectMessageWithAuthorAndReplyTo
+export type TGetMessagesMessage = TMessageFullInfo
 
 export type TGetDirectMessagesData = {
   hasMoreMessages: boolean
-  directMessages: TGetDirectMessagesMessage[]
+  directMessages: TGetMessagesMessage[]
 }
 
 export type TGlobalSearchData = {
@@ -236,7 +263,7 @@ export type TGlobalSearchData = {
 }
 
 export type TFetchDirectChatsData = TDirectChat & {
-  LastSentMessage?: TDirectMessage
+  LastSentMessage?: TMessage
   Recipient: TUserWithProfile
   Creator: TUserWithProfile
   unreadMessageCount?: number
@@ -294,3 +321,12 @@ export type TDeleteDirectMessageRes = {
 export type TMessageSearchOffset = [string, string]
 
 export type TUserSearchOffset = [string, string, string]
+
+export type TUploadFileRes = {
+  id: number
+  url: string
+  fileName: string
+  fileType: string
+  thumbnailUrl?: string
+  fileSize: string
+}

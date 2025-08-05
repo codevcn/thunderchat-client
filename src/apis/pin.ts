@@ -1,4 +1,5 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
+import { TMessageMedia, TSticker } from "@/utils/types/be-api"
 
 // Types for pin API responses
 export type TPinMessageResponse = {
@@ -44,6 +45,8 @@ export type TPinnedMessage = {
   directChatId: number
   pinnedBy: number
   pinnedAt: string
+  Sticker?: TSticker
+  Media?: TMessageMedia
   DirectMessage: {
     id: number
     content: string

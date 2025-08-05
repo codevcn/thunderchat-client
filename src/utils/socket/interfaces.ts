@@ -1,5 +1,5 @@
 import type {
-  TDirectMessageWithAuthorAndReplyTo,
+  TMessageFullInfo,
   TGetFriendRequestsData,
   TUserWithProfile,
 } from "@/utils/types/be-api"
@@ -21,12 +21,12 @@ export interface IListenSocketEvents {
   [ESocketInitEvents.connect]: () => void
   [ESocketInitEvents.connect_error]: (payload: unknown) => void
   [ESocketEvents.error]: (error: TWsErrorResponse) => void
-  [ESocketEvents.send_message_direct]: (newMessage: TDirectMessageWithAuthorAndReplyTo) => void
+  [ESocketEvents.send_message_direct]: (newMessage: TMessageFullInfo) => void
   [ESocketEvents.send_friend_request]: (
     sender: TUserWithProfile,
     requestData: TGetFriendRequestsData
   ) => void
-  [ESocketEvents.recovered_connection]: (messages: TDirectMessageWithAuthorAndReplyTo[]) => void
+  [ESocketEvents.recovered_connection]: (messages: TMessageFullInfo[]) => void
   [ESocketEvents.message_seen_direct]: (payload: TMsgSeenListenPayload) => void
   [ESocketEvents.typing_direct]: (isTyping: boolean, directChatId: number) => void
   [ESocketEvents.friend_request_action]: (payload: TFriendRequestPayload) => void

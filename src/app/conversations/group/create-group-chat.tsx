@@ -93,6 +93,7 @@ const PrepareNewGroup = ({
           id: groupChatId,
           type: EChatType.GROUP,
           createdAt: new Date().toISOString(),
+          unreadMessageCount: 0,
         },
       ])
     )

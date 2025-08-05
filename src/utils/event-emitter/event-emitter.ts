@@ -1,7 +1,7 @@
 import EventEmitter from "eventemitter3"
 import type { EInternalEvents } from "./events"
 import type { TMsgContent } from "./types"
-import type { TGetDirectMessagesMessage, TGetFriendRequestsData } from "../types/be-api"
+import type { TGetMessagesMessage, TGetFriendRequestsData } from "../types/be-api"
 import type { TSendDirectMessageRes } from "../types/socket"
 
 interface IEventEmitter {
@@ -20,7 +20,7 @@ interface IEventEmitter {
   [EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE]: (data: TSendDirectMessageRes) => void
   [EInternalEvents.FETCH_DIRECT_CHAT]: (directChatId: number) => void
   [EInternalEvents.FETCH_GROUP_CHAT]: (groupChatId: number) => void
-  [EInternalEvents.SEND_MESSAGE_DIRECT]: (newMessage: TGetDirectMessagesMessage) => void
+  [EInternalEvents.SEND_MESSAGE_DIRECT]: (newMessage: TGetMessagesMessage) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

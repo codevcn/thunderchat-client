@@ -17,9 +17,9 @@ import type {
   TMessageSearchOffset,
   TUserWithProfile,
   TDirectChatData,
-  TDirectMessage,
+  TMessage,
   TDirectChat,
-  TGetDirectMessagesMessage,
+  TGetMessagesMessage,
 } from "@/utils/types/be-api"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
@@ -506,12 +506,8 @@ const convertSubtitleTypeToText = (subtitleType: EMessageTypes): string => {
   switch (subtitleType) {
     case EMessageTypes.STICKER:
       return "Sticker"
-    case EMessageTypes.IMAGE:
-      return "Image"
-    case EMessageTypes.VIDEO:
-      return "Video"
-    case EMessageTypes.AUDIO:
-      return "Audio"
+    case EMessageTypes.MEDIA:
+      return "Media"
     default:
       return "Unknown"
   }
@@ -734,7 +730,7 @@ const ConversationCards = () => {
     })
   }
 
-  const handleAddNewConversation = (newDirectChat: TDirectChat, newMessage: TDirectMessage) => {
+  const handleAddNewConversation = (newDirectChat: TDirectChat, newMessage: TMessage) => {
     dispatch((_, getState) => {
       const currentConversations = getState().conversations.conversations
       const currentDirectChat = getState().messages.directChat
@@ -781,7 +777,7 @@ const ConversationCards = () => {
     dispatch(updateUnreadMsgCountOnCard({ count: unreadMessageCount, directChatId }))
   }
 
-  const handleUpdateLastSentMessage = (newMessage: TGetDirectMessagesMessage) => {
+  const handleUpdateLastSentMessage = (newMessage: TGetMessagesMessage) => {
     dispatch(
       updateSingleConversation({
         id: newMessage.directChatId,
@@ -792,9 +788,9 @@ const ConversationCards = () => {
     )
   }
 
-  const listenSendMessageDirect = (newMessage: TGetDirectMessagesMessage) => {
+  const listenSendMessageDirect = (newMessage: TGetMessagesMessage) => {
     handleUpdateLastSentMessage(newMessage)
-    const convId = newMessage.directChatId
+    const convId = (newMessage.directChatId || newMessage.groupChatId)!
     dispatch((_, getState) => {
       const convOfMsg = getState().conversations.conversations?.find((c) => c.id === convId)
       if (convOfMsg) {

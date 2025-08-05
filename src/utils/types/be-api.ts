@@ -8,6 +8,7 @@ import type {
   ESortTypes,
   EChatType,
   EAppRole,
+  EReportCategory,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 
@@ -423,9 +424,25 @@ export type TViolationReport = {
   id?: number
   reporterId: number
   reportedUserId: number
-  reason: string
-  description: string
+  reportCategory: EReportCategory
+  reasonText?: string
   status: "PENDING" | "REVIEWED" | "RESOLVED"
   createdAt?: string
   updatedAt?: string
+}
+
+export type TCreateViolationReportData = {
+  reportedUserId: number
+  reportCategory: EReportCategory
+  reasonText?: string
+  reportedMessages?: TReportedMessage[]
+}
+
+export type TCreateViolationReportResponse = {
+  success: boolean
+  reportId?: number
+  message?: string
+  error?: string
+  code?: string
+  details?: any
 }

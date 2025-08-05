@@ -3,8 +3,11 @@ import { X, ChevronRight } from "lucide-react"
 import { IconButton } from "@/components/materials/icon-button"
 import { SelectImageModal } from "./select-image-model"
 import { SelectMessageModal } from "./select-message-model"
+import { useUserReport } from "@/hooks/use-user-report"
+import { EReportCategory } from "@/utils/enums"
 import type { TReportedMessageFE, TReportSession } from "@/utils/types/fe-api"
 import type { TStateDirectMessage } from "@/utils/types/global"
+import { toast } from "sonner"
 
 type TReportReason = "sensitive" | "annoying" | "scam" | "other"
 
@@ -34,6 +37,13 @@ export const ReportModal = ({
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const {
+    createViolationReport,
+    convertToBackendData,
+    isSubmitting,
+    error: submitError,
+    clearError,
+  } = useUserReport()
 
   // State để lưu TReportSession
   const [reportSession, setReportSession] = useState<TReportSession | null>(null)
@@ -113,12 +123,6 @@ export const ReportModal = ({
     (messages: TStateDirectMessage[]) => {
       if (!conversationId) return
 
-      // Nếu messages empty và có session, xóa session (Cancel case)
-      if (messages.length === 0 && reportSession) {
-        setReportSession(null)
-        return
-      }
-
       // Cập nhật hoặc tạo session mới
       const reportedMessages = messages.map(convertMessageToReported)
       const newSession: TReportSession = {
@@ -130,14 +134,7 @@ export const ReportModal = ({
       }
       setReportSession(newSession)
     },
-    [
-      conversationId,
-      conversationType,
-      convertMessageToReported,
-      selectedReason,
-      description,
-      reportSession,
-    ]
+    [conversationId, conversationType, convertMessageToReported, selectedReason, description]
   )
 
   // Kiểm tra message đã được chọn chưa
@@ -156,16 +153,15 @@ export const ReportModal = ({
       setSelectedReason(null)
       setDescription("")
       setShowEvidenceSection(false)
-      // Don't reset selectedMessages and selectedImages if we have session data
-      if (!reportSession) {
-        setSelectedMessages(0)
-        setSelectedImages(0)
-        setSelectedImageFiles([])
-      }
+      clearError()
+      setSelectedMessages(0)
+      setSelectedImages(0)
+      setSelectedImageFiles([])
+      setReportSession(null) // Clear report session when modal closes
       setShowImageModal(false)
       setShowMessageModal(false)
     }
-  }, [isOpen, isClosing, reportSession])
+  }, [isOpen, isClosing, clearError])
 
   // Load session data when modal opens
   useEffect(() => {
@@ -259,18 +255,79 @@ export const ReportModal = ({
     }
   }, [showEvidenceSection])
 
-  const handleSubmit = useCallback(() => {
-    // TODO: Implement report submission
-    handleClose()
-  }, [selectedReason, description, selectedMessages, selectedImages, user])
-
   const handleClose = useCallback(() => {
+    // Clear session immediately when user clicks X
+    setReportSession(null)
+    setSelectedReason(null)
+    setDescription("")
+    setShowEvidenceSection(false)
+    setSelectedMessages(0)
+    setSelectedImages(0)
+    setSelectedImageFiles([])
+    setShowImageModal(false)
+    setShowMessageModal(false)
+    clearError()
+
     setIsClosing(true)
     setTimeout(() => {
       onClose()
       setIsClosing(false)
     }, 300)
-  }, [onClose])
+  }, [onClose, clearError])
+
+  const handleSubmit = useCallback(async () => {
+    if (!selectedReason) {
+      return
+    }
+
+    // Map report reason to backend category
+    const getReportCategory = (reason: TReportReason): EReportCategory => {
+      switch (reason) {
+        case "sensitive":
+          return EReportCategory.SENSITIVE_CONTENT
+        case "annoying":
+          return EReportCategory.BOTHER
+        case "scam":
+          return EReportCategory.FRAUD
+        case "other":
+          return EReportCategory.OTHER
+        default:
+          return EReportCategory.OTHER
+      }
+    }
+
+    // Prepare report data
+    const reportData = {
+      reportedUserId: user.id, // user.id là ID của người đối phương (người bị báo cáo)
+      reportCategory: getReportCategory(selectedReason),
+      reasonText: description.trim() || undefined,
+      reportedMessages: reportSession?.reportedMessages || [],
+    }
+
+    // Convert to backend format
+    const backendData = convertToBackendData(reportData)
+
+    // Submit report
+    const result = await createViolationReport(backendData, selectedImageFiles)
+
+    if (result.success) {
+      // Success - close modal
+      handleClose()
+      // You can add a success toast here if needed
+      toast.success(result.message || "Report submitted successfully")
+    } else {
+      toast.error(result.error || "Report failed")
+    }
+  }, [
+    selectedReason,
+    description,
+    user,
+    reportSession,
+    selectedImageFiles,
+    handleClose,
+    convertToBackendData,
+    createViolationReport,
+  ])
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
@@ -327,7 +384,7 @@ export const ReportModal = ({
     setSelectedMessages(count)
   }, [])
 
-  const isSubmitDisabled = !selectedReason || !description.trim()
+  const isSubmitDisabled = !selectedReason || isSubmitting
 
   if (!isOpen && !isClosing) return null
 
@@ -464,6 +521,15 @@ export const ReportModal = ({
           </div>
         </div>
 
+        {/* Error Display */}
+        {submitError && (
+          <div className="px-4 pb-2">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+              <p className="text-red-400 text-sm">{submitError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Button Report - Fixed */}
         <div className="p-4 border-t border-regular-hover-card-cl flex-shrink-0">
           <button
@@ -475,7 +541,7 @@ export const ReportModal = ({
                 : "bg-gradient-to-b from-regular-violet-cl to-regular-violet-cl text-regular-white-cl hover:from-regular-tooltip-bgcl hover:to-regular-tooltip-bgcl"
             }`}
           >
-            Report
+            {isSubmitting ? "Submitting..." : "Report"}
           </button>
         </div>
 

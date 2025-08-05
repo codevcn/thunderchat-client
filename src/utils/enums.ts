@@ -99,3 +99,10 @@ export enum EAppRole {
   USER = "USER",
   ADMIN = "ADMIN",
 }
+
+export enum EReportCategory {
+  SENSITIVE_CONTENT = "SENSITIVE_CONTENT",
+  BOTHER = "BOTHER",
+  FRAUD = "FRAUD",
+  OTHER = "OTHER",
+}

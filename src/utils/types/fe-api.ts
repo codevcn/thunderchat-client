@@ -4,6 +4,7 @@
 import type { TEmoji } from "@/utils/types/global"
 import type { TUserWithoutPassword, TProfile } from "@/utils/types/be-api"
 import type { TUserSettings } from "./be-api"
+import type { EReportCategory } from "@/utils/enums"
 
 export type TGetEmojisRes = {
   foodDrink: TEmoji[]
@@ -69,4 +70,20 @@ export type TReportSession = {
   reportedMessages: TReportedMessageFE[]
   reason?: string
   description?: string
+}
+
+export type TCreateViolationReportDataFE = {
+  reportedUserId: number
+  reportCategory: EReportCategory
+  reasonText?: string
+  reportedMessages?: TReportedMessageFE[]
+}
+
+export type TCreateViolationReportResponseFE = {
+  success: boolean
+  reportId?: number
+  message?: string
+  error?: string
+  code?: string
+  details?: any
 }

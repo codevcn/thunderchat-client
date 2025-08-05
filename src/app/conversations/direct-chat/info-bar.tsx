@@ -9,7 +9,7 @@ import { setLastSeen } from "@/utils/helpers"
 import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import MediaPanel from "../../../components/conversation-media/media-panel"
-import { ReportModal } from "../../../components/chatbox/report/report-model"
+import { ReportModal } from "../../../components/chatbox/user-report/report-model"
 import { useState } from "react"
 
 type TAvatarProps = {

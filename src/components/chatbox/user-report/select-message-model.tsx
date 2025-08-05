@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { X, ChevronLeft } from "lucide-react"
 import { IconButton } from "@/components/materials/icon-button"
-import { SelectMessageContent } from "@/components/chatbox/report/select-message-content"
+import { SelectMessageContent } from "@/components/chatbox/user-report/select-message-content"
 
 type TSelectMessageModalProps = {
   isOpen: boolean
@@ -120,12 +120,12 @@ export const SelectMessageModal = ({
     (selectedMessages: any[]) => {
       setMessages(selectedMessages)
       onMessagesChange(selectedMessages.length)
-      // Chỉ gọi onMessagesUpdate nếu có messages hoặc đây là lần đầu
-      if (onMessagesUpdate && (selectedMessages.length > 0 || messages.length === 0)) {
+      // Luôn gọi onMessagesUpdate để cập nhật session
+      if (onMessagesUpdate) {
         onMessagesUpdate(selectedMessages)
       }
     },
-    [onMessagesChange, onMessagesUpdate, messages.length]
+    [onMessagesChange, onMessagesUpdate]
   )
 
   const handleCancelSelection = useCallback(() => {

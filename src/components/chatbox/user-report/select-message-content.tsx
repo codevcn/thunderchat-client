@@ -35,7 +35,6 @@ export const SelectMessageContent = ({
 }: TSelectMessageContentProps) => {
   const user = useUser()
   const dispatch = useAppDispatch()
-  const state = useAppSelector((state) => state)
   const messages = useAppSelector((state) => state.reportMessages.messages) as TStateDirectMessage[]
   const isLoading = useAppSelector((state) => state.reportMessages.loading)
   const hasMoreMessages = useAppSelector((state) => state.reportMessages.hasMore)
@@ -108,10 +107,10 @@ export const SelectMessageContent = ({
   // Check if message is selected - use prop if provided, otherwise use local logic
   const checkMessageSelected = useCallback(
     (messageId: number) => {
-      if (isMessageSelected) {
-        return isMessageSelected(messageId)
-      }
-      return selectedMessages.some((msg) => msg.id === messageId)
+      const isSelected = isMessageSelected
+        ? isMessageSelected(messageId)
+        : selectedMessages.some((msg) => msg.id === messageId)
+      return isSelected
     },
     [selectedMessages, isMessageSelected]
   )

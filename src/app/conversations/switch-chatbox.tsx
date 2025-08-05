@@ -76,6 +76,7 @@ export const SwitchChatbox = () => {
   const handleFetchChatData = () => {
     if (!chatInfo) return
     const { chatId, type } = chatInfo
+    console.log(">>> chatInfo:", chatInfo)
     if (chatId !== -1 && prevChatIdRef.current !== chatId) {
       if (type === EChatType.DIRECT) {
         eventEmitter.emit(EInternalEvents.FETCH_DIRECT_CHAT, chatId)

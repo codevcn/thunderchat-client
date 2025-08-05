@@ -51,3 +51,5 @@ D:\D-Documents\Code_VCN\React\VCN-THUNDER-CHAT-APP\client\src\components\materia
 D:\D-Documents\Code_VCN\React\VCN-THUNDER-CHAT-APP\client\src\app\conversations\direct-chat\(conversation-media)\media-panel.tsx
 D:\D-Documents\Code_VCN\React\VCN-THUNDER-CHAT-APP\client\src\contexts\voice-player.context.tsx
 D:\D-Documents\Code_VCN\React\VCN-THUNDER-CHAT-APP\client\src\utils\types\socket.ts
+D:\D-Documents\Code_VCN\React\VCN-THUNDER-CHAT-APP\client\src\services\chatting.service.ts
+D:\D-Documents\Code_VCN\React\VCN-THUNDER-CHAT-APP\client\src\utils\socket\events.ts

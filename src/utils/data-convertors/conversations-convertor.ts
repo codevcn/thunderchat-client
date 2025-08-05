@@ -22,7 +22,10 @@ export const convertToDirectChatsUIData = (
       lastMessageTime: lastMessage?.createdAt,
       pinIndex: 0,
       subtitle: {
-        content: lastMessage?.content || "You created this chat",
+        content:
+          lastMessage?.content || creator.id === user.id
+            ? "You created this chat"
+            : `This chat created by ${recipient.Profile.fullName}`,
         type: lastMessage?.type || EMessageTypes.TEXT,
       },
       title: creator.id === user.id ? recipientProfile.fullName : creatorProfile.fullName,

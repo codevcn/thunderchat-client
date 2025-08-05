@@ -53,7 +53,7 @@ import {
 } from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
-import { setTempChatData, updateDirectChat } from "@/redux/messages/messages.slice"
+import { setDirectChat, setTempChatData, updateDirectChat } from "@/redux/messages/messages.slice"
 import { usePinDirectChats } from "@/hooks/pin-messages"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
@@ -730,26 +730,48 @@ const ConversationCards = () => {
     })
   }
 
-  const handleAddNewConversation = (newDirectChat: TDirectChat, newMessage: TMessage) => {
+  const handleAddNewConversation = (
+    newDirectChat: TDirectChat,
+    newMessage: TMessage,
+    sender: TUserWithProfile
+  ) => {
     dispatch((_, getState) => {
       const currentConversations = getState().conversations.conversations
       const currentDirectChat = getState().messages.directChat
-      if (!currentDirectChat) return
-      const directChatExist = currentConversations?.find((c) => c.id === newDirectChat.id)
-      if (directChatExist) return
-      const newDirectChatData: TDirectChatData = {
-        ...newDirectChat,
-        Recipient: currentDirectChat.Recipient,
-        Creator: currentDirectChat.Creator,
+      if (currentDirectChat) {
+        const directChatExist = currentConversations?.find((c) => c.id === newDirectChat.id)
+        if (directChatExist) return
+        const newDirectChatData: TDirectChatData = {
+          ...newDirectChat,
+          Recipient: currentDirectChat.Recipient,
+          Creator: currentDirectChat.Creator,
+        }
+        if (!newDirectChat.lastSentMessageId) {
+          newDirectChatData.lastSentMessageId = newMessage.id
+        }
+        const conversationCard = convertToDirectChatsUIData(
+          [{ ...newDirectChatData, LastSentMessage: newMessage, unreadMessageCount: 1 }],
+          user
+        )[0]
+        dispatch(addConversations([conversationCard]))
+      } else {
+        dispatch(
+          addConversations([
+            convertToDirectChatsUIData(
+              [
+                {
+                  ...newDirectChat,
+                  Creator: sender,
+                  Recipient: user,
+                  unreadMessageCount: 1,
+                  LastSentMessage: newMessage,
+                },
+              ],
+              user
+            )[0],
+          ])
+        )
       }
-      if (!newDirectChat.lastSentMessageId) {
-        newDirectChatData.lastSentMessageId = newMessage.id
-      }
-      const conversationCard = convertToDirectChatsUIData(
-        [{ ...newDirectChatData, LastSentMessage: newMessage }],
-        user
-      )[0]
-      dispatch(addConversations([conversationCard]))
     })
   }
 
@@ -765,12 +787,27 @@ const ConversationCards = () => {
     )
   }
 
-  const listenSendMessageSuccessResponse = (data: TSendDirectMessageRes) => {
-    const { isNewDirectChat, directChat, newMessage } = data
-    if (isNewDirectChat) {
-      handleAddNewConversation(directChat, newMessage)
+  const listenNewConversation = (
+    directChat: TDirectChat,
+    type: EChatType,
+    newMessage: TMessage,
+    sender: TUserWithProfile
+  ) => {
+    handleAddNewConversation(directChat, newMessage, sender)
+    if (type === EChatType.DIRECT) {
+      const lastDirectChatData = localStorageManager.getLastDirectChatData()
+      if (lastDirectChatData) {
+        localStorageManager.setLastDirectChatData({
+          tempId: directChat.id,
+          chatData: {
+            ...directChat,
+            Recipient: lastDirectChatData.chatData.Recipient,
+            Creator: lastDirectChatData.chatData.Creator,
+          },
+        })
+      }
+      handleUpdateDirectChat(directChat)
     }
-    handleUpdateDirectChat(directChat)
   }
 
   const listenUnreadMessagesCount = (unreadMessageCount: number, directChatId: number) => {
@@ -806,17 +843,10 @@ const ConversationCards = () => {
   }
 
   useEffect(() => {
-    eventEmitter.on(
-      EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
-      listenSendMessageSuccessResponse
-    )
+    clientSocket.socket.on(ESocketEvents.new_conversation, listenNewConversation)
     eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessageDirect)
     return () => {
-      eventEmitter.off(
-        EInternalEvents.SEND_MESSAGE_DIRECT_SUCCESS_RESPONSE,
-        listenSendMessageSuccessResponse
-      )
       eventEmitter.off(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
       eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessageDirect)
     }

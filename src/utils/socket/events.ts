@@ -13,4 +13,5 @@ export enum ESocketEvents {
   pin_message = "pin_message",
   pin_direct_chat = "pin_direct_chat",
   friend_request_action = "friend_request_action",
+  new_conversation = "new_conversation",
 }

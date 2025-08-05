@@ -2,6 +2,8 @@ import type {
   TMessageFullInfo,
   TGetFriendRequestsData,
   TUserWithProfile,
+  TDirectChat,
+  TMessage,
 } from "@/utils/types/be-api"
 import type { TSendDirectMessageErrorRes } from "../types/global"
 import { ESocketEvents, ESocketInitEvents } from "./events"
@@ -16,6 +18,7 @@ import type {
   TPinDirectChatEventData,
   TSendDirectMessageRes,
 } from "../types/socket"
+import { EChatType } from "../enums"
 
 export interface IListenSocketEvents {
   [ESocketInitEvents.connect]: () => void
@@ -32,6 +35,12 @@ export interface IListenSocketEvents {
   [ESocketEvents.friend_request_action]: (payload: TFriendRequestPayload) => void
   [ESocketEvents.pin_message]: (data: TPinMessageEventData) => void
   [ESocketEvents.pin_direct_chat]: (data: TPinDirectChatEventData) => void
+  [ESocketEvents.new_conversation]: (
+    payload: TDirectChat,
+    type: EChatType,
+    newMessage: TMessage,
+    sender: TUserWithProfile
+  ) => void
 }
 
 export interface IEmitSocketEvents {

@@ -5,11 +5,10 @@ import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import LoadingSpinner from "@/components/materials/loading-spinner"
 import Filters from "./filter"
 import { MediaGridContent } from "./media-grid"
-import { useUser } from "@/hooks/user"
-import { useVoicePlayerActions } from "@/contexts/voice-player.context"
 import { EMessageTypes } from "@/utils/enums"
 import { useMediaPagination } from "@/hooks/use-media-pagination"
 import type { TMediaFilters, TMessageFullInfo } from "@/utils/types/be-api"
+import { TUserWithProfileFE } from "@/utils/types/fe-api"
 
 // Header component
 const Header = React.memo(({ onClose }: { onClose: () => void }) => (
@@ -81,27 +80,23 @@ Tabs.displayName = "Tabs"
 const MediaArchivePanel = React.memo(
   ({
     onClose,
-    mediaData,
     creator,
     recipient,
     initialTab = "Images/Video",
     directChatId,
   }: {
     onClose: () => void
-    mediaData: any
-    allMediaItems: any[]
-    creator: any
-    recipient: any
+    creator: TUserWithProfileFE
+    recipient: TUserWithProfileFE
     initialTab?: "Images/Video" | "files" | "voices" | "links"
     directChatId: number
   }) => {
     const [tab, setTab] = useState<"Images/Video" | "files" | "voices" | "links">(initialTab)
-    const [senderFilter, setSenderFilter] = useState("all")
+    const [senderFilter, setSenderFilter] = useState<number | "all">("all")
     const [dateSort, setDateSort] = useState("desc")
     const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false)
     const [selectedMediaIndex, setSelectedMediaIndex] = useState(0)
     const [isDatePopupOpen, setIsDatePopupOpen] = useState(false)
-    const datePopupRef = useRef<HTMLDivElement>(null)
     const [fromDate, setFromDate] = useState("")
     const [toDate, setToDate] = useState("")
     const [dateFilterApplied, setDateFilterApplied] = useState(false)
@@ -113,13 +108,9 @@ const MediaArchivePanel = React.memo(
       error,
       hasMore,
       currentPage,
-      totalPages,
-      totalItems,
       loadMore,
-      refresh,
       setFilters,
       setSortOrder,
-      resetPagination,
     } = useMediaPagination({
       directChatId,
       initialLimit: 20,
@@ -166,7 +157,7 @@ const MediaArchivePanel = React.memo(
 
       // Sender filter
       if (senderFilter !== "all") {
-        filters.senderId = parseInt(senderFilter)
+        filters.senderId = senderFilter
       }
 
       // Date filter
@@ -190,7 +181,7 @@ const MediaArchivePanel = React.memo(
 
     // Lọc dữ liệu theo filter (legacy - will be replaced by pagination)
     const filterItems = useMemo(
-      () => (items: any[]) => {
+      () => (items: TMessageFullInfo[]) => {
         return items.filter((item) => {
           // Lọc theo người gửi
           if (senderFilter !== "all" && item.authorId !== senderFilter) return false
@@ -282,9 +273,7 @@ const MediaArchivePanel = React.memo(
           setFromDate={setFromDate}
           toDate={toDate}
           setToDate={setToDate}
-          creator={creator}
-          recipient={recipient}
-          datePopupRef={datePopupRef as unknown as React.RefObject<HTMLDivElement>}
+          members={[creator, recipient]}
           applyDateFilter={applyDateFilter}
         />
         {/* Content */}

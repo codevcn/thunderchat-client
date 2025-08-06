@@ -157,21 +157,21 @@ export const useMediaPagination = ({
           // Kiểm tra xem message có phù hợp với filters hiện tại không
           const messageMatchesCurrentFilters = () => {
             const { filters } = prev
-            const messageType = updatedMessage.type
+            const messageType = updatedMessage.Media?.type
 
             // Kiểm tra type filter
-            if ((filters as any).types && (filters as any).types.length > 0) {
+            if (filters.types && filters.types.length > 0) {
               // Nếu có types filter, kiểm tra message type có trong danh sách không
-              const allowedTypes = (filters as any).types
+              const allowedTypes = filters.types
                 .map((type: string) => {
                   switch (type) {
-                    case "image":
+                    case EMessageMediaTypes.IMAGE:
                       return EMessageMediaTypes.IMAGE
-                    case "video":
+                    case EMessageMediaTypes.VIDEO:
                       return EMessageMediaTypes.VIDEO
-                    case "file":
+                    case EMessageMediaTypes.DOCUMENT:
                       return EMessageMediaTypes.DOCUMENT
-                    case "voice":
+                    case EMessageMediaTypes.AUDIO:
                       return EMessageMediaTypes.AUDIO
                     default:
                       return null
@@ -179,7 +179,7 @@ export const useMediaPagination = ({
                 })
                 .filter(Boolean)
 
-              if (!allowedTypes.includes(messageType)) {
+              if (!allowedTypes.includes(messageType || null)) {
                 return false
               }
             } else if (filters.type) {

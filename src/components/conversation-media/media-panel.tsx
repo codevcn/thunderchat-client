@@ -182,9 +182,9 @@ const MediaPanel = React.memo(() => {
   )
 
   const handleDownload = useMemo(
-    () => async (item: any) => {
-      if (!item.mediaUrl && !item.fileUrl) return
-      const url = item.mediaUrl || item.fileUrl
+    () => async (item: TMediaData) => {
+      if (!item.mediaUrl) return
+      const url = item.mediaUrl
       try {
         const response = await fetch(url)
         if (!response.ok) throw new Error("Cannot download file")
@@ -196,7 +196,7 @@ const MediaPanel = React.memo(() => {
         const hasExtension = fileNameWithExt.includes(".")
         const finalFileName = hasExtension
           ? fileNameWithExt
-          : `${fileNameWithExt}.${item.fileType || "dat"}`
+          : `${fileNameWithExt}.${item.mediaType || "dat"}`
         link.download = finalFileName
         document.body.appendChild(link)
         link.click()
@@ -210,7 +210,7 @@ const MediaPanel = React.memo(() => {
         const hasExtension = fileNameWithExt.includes(".")
         const finalFileName = hasExtension
           ? fileNameWithExt
-          : `${fileNameWithExt}.${item.fileType || "dat"}`
+          : `${fileNameWithExt}.${item.mediaType || "dat"}`
         link.download = finalFileName
         link.target = "_blank"
         document.body.appendChild(link)
@@ -379,8 +379,6 @@ const MediaPanel = React.memo(() => {
         <div className="absolute right-0 top-0 h-full w-info-bar-mb screen-large-chatting:w-info-bar z-[10] bg-[#181A1B]">
           <MediaArchivePanel
             onClose={() => setShowArchive(false)}
-            mediaData={mediaData}
-            allMediaItems={mixedMedia}
             creator={directChat.Creator}
             recipient={directChat.Recipient}
             initialTab={archiveTab}

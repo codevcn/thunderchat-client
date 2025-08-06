@@ -4,14 +4,14 @@ import { IconButton } from "@/components/materials/icon-button"
 import { SelectImageModal } from "./select-image-model"
 import { SelectMessageModal } from "./select-message-model"
 import { useUserReport } from "@/hooks/use-user-report"
-import { EMessageTypes, EReportCategory } from "@/utils/enums"
+import { EMessageTypes, EMessageMediaTypes, EReportCategory } from "@/utils/enums"
 import type { TReportedMessageFE, TReportSession } from "@/utils/types/fe-api"
 import type { TStateDirectMessage } from "@/utils/types/global"
 import { toast } from "sonner"
 
 type TReportReason = "sensitive" | "annoying" | "scam" | "other"
 
-import type { TUserWithProfile } from "@/utils/types/be-api"
+import type { TProfile, TUserWithProfile } from "@/utils/types/be-api"
 import { EMessageStatus } from "@/utils/socket/enums"
 
 type TReportModalProps = {
@@ -83,23 +83,36 @@ export const ReportModal = ({
         content: reportedMessage.messageType === "TEXT" ? reportedMessage.messageContent : "",
         authorId: 0, // Sẽ được set từ session hoặc API
         directChatId: reportedMessage.conversationId,
+        groupChatId: undefined,
         status: EMessageStatus.SEEN,
-        Sticker: {
-          imageUrl:
-            reportedMessage.messageType === "STICKER" ? reportedMessage.messageContent : undefined,
-        },
-        mediaUrl: ["IMAGE", "VIDEO", "AUDIO", "DOCUMENT"].includes(reportedMessage.messageType)
-          ? reportedMessage.messageContent
-          : undefined,
-        type: reportedMessage.messageType as any,
-        fileName: "",
-        fileType: "",
-        fileSize: 0,
-        thumbnailUrl: null,
+        stickerId: undefined,
+        mediaId: undefined,
+        type: reportedMessage.messageType as EMessageTypes,
         isDeleted: false,
         createdAt: new Date().toISOString(),
-        Author: {} as any,
+        Author: {} as TUserWithProfile,
         ReplyTo: null,
+        Media: ["IMAGE", "VIDEO", "AUDIO", "DOCUMENT"].includes(reportedMessage.messageType)
+          ? {
+              id: 0,
+              type: reportedMessage.messageType as EMessageMediaTypes,
+              url: reportedMessage.messageContent,
+              fileSize: 0,
+              fileName: "",
+              thumbnailUrl: "",
+              createdAt: new Date(),
+            }
+          : null,
+        Sticker:
+          reportedMessage.messageType === "STICKER"
+            ? {
+                id: 0,
+                stickerName: "",
+                imageUrl: reportedMessage.messageContent,
+                categoryId: 0,
+                createdAt: new Date().toISOString(),
+              }
+            : null,
       }
     },
     []
@@ -366,7 +379,7 @@ export const ReportModal = ({
   }, [])
 
   const handleMessagesUpdate = useCallback(
-    (messages: any[]) => {
+    (messages: TStateDirectMessage[]) => {
       setSelectedMessages(messages.length)
       // Cập nhật report session
       updateReportSession(messages)

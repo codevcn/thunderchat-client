@@ -8,6 +8,8 @@ import { useVoicePlayerActions } from "@/contexts/voice-player.context"
 import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
 import { TMediaData } from "@/utils/types/global"
 import { TMessageFullInfo } from "@/utils/types/be-api"
+import { TUserWithProfileFE } from "@/utils/types/fe-api"
+import { EMessageStatus } from "@/utils/socket/enums"
 
 // Helper function to get file icon based on file extension
 const getFileIcon = (fileName: string) => {
@@ -65,9 +67,9 @@ const formatFileSize = (bytes: number) => {
 }
 
 // Thêm hàm handleDownload ở đầu file hoặc đầu component MediaGrid
-const handleDownload = async (item: any) => {
-  if (!item.mediaUrl && !item.fileUrl) return
-  const url = item.mediaUrl || item.fileUrl
+const handleDownload = async (item: TMessageFullInfo) => {
+  if (!item.Media?.url) return
+  const url = item.Media?.url
   try {
     const response = await fetch(url)
     if (!response.ok) throw new Error("Không thể tải file")
@@ -75,11 +77,11 @@ const handleDownload = async (item: any) => {
     const blobUrl = window.URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = blobUrl
-    const fileNameWithExt = item.fileName || "media"
+    const fileNameWithExt = item.Media?.fileName || "media"
     const hasExtension = fileNameWithExt.includes(".")
     const finalFileName = hasExtension
       ? fileNameWithExt
-      : `${fileNameWithExt}.${item.fileType || "dat"}`
+      : `${fileNameWithExt}.${item.Media?.type || "dat"}`
     link.download = finalFileName
     document.body.appendChild(link)
     link.click()
@@ -89,11 +91,11 @@ const handleDownload = async (item: any) => {
     // Fallback: tải trực tiếp từ URL
     const link = document.createElement("a")
     link.href = url
-    const fileNameWithExt = item.fileName || "media"
+    const fileNameWithExt = item.Media?.fileName || "media"
     const hasExtension = fileNameWithExt.includes(".")
     const finalFileName = hasExtension
       ? fileNameWithExt
-      : `${fileNameWithExt}.${item.fileType || "dat"}`
+      : `${fileNameWithExt}.${item.Media?.type || "dat"}`
     link.download = finalFileName
     link.target = "_blank"
     document.body.appendChild(link)
@@ -111,7 +113,7 @@ export const MediaGrid = React.memo(
     setIsMediaViewerOpen,
   }: {
     items: TMessageFullInfo[]
-    mixedMedia: any[]
+    mixedMedia: TMessageFullInfo[]
     setSelectedMediaIndex: (idx: number) => void
     setIsMediaViewerOpen: (open: boolean) => void
   }) => {
@@ -131,14 +133,14 @@ export const MediaGrid = React.memo(
         setIsMediaViewerOpen,
         currentUser,
       }: {
-        item: any
-        mixedMedia: any[]
+        item: TMessageFullInfo
+        mixedMedia: TMessageFullInfo[]
         setSelectedMediaIndex: (idx: number) => void
         setIsMediaViewerOpen: (open: boolean) => void
-        currentUser: any
+        currentUser: TUserWithProfileFE | null
       }) => {
         const openMediaViewer = React.useCallback(
-          (mediaItem: any) => {
+          (mediaItem: TMessageFullInfo) => {
             const index = mixedMedia.findIndex((item) => item.id === mediaItem.id)
             setSelectedMediaIndex(index >= 0 ? index : 0)
             setIsMediaViewerOpen(true)
@@ -157,7 +159,7 @@ export const MediaGrid = React.memo(
                 onDownload={() => handleDownload(item)}
                 onShare={() => {}}
                 onMore={() => {}}
-                showDownload={item.mediaUrl ? true : false}
+                showDownload={item.Media?.url ? true : false}
                 isSender={item.authorId === currentUser?.id}
                 onViewOriginalMessage={() => {}}
                 onDeleteForMe={() => console.log("Delete for me:", item.id)}
@@ -167,18 +169,19 @@ export const MediaGrid = React.memo(
             </div>
 
             {/* Media content */}
-            {item.type === EMessageTypes.MEDIA && item.fileType === EMessageMediaTypes.IMAGE ? (
+            {item.type === EMessageTypes.MEDIA && item.Media?.type === EMessageMediaTypes.IMAGE ? (
               <img
-                src={item.mediaUrl}
-                alt={item.fileName || "Image"}
+                src={item.Media?.url}
+                alt={item.Media?.fileName || "Image"}
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
-            ) : item.type === EMessageTypes.MEDIA && item.fileType === EMessageMediaTypes.VIDEO ? (
+            ) : item.type === EMessageTypes.MEDIA &&
+              item.Media?.type === EMessageMediaTypes.VIDEO ? (
               <div className="relative w-full h-full">
                 <img
-                  src={item.thumbnailUrl || item.mediaUrl}
-                  alt={item.fileName || "Video"}
+                  src={item.Media?.thumbnailUrl || item.Media?.url}
+                  alt={item.Media?.fileName || "Video"}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
@@ -191,7 +194,7 @@ export const MediaGrid = React.memo(
                 <div className="w-8 h-8 mx-auto mb-2 bg-gray-600 rounded flex items-center justify-center">
                   <span className="text-xs">F</span>
                 </div>
-                <span className="text-xs">{item.fileName}</span>
+                <span className="text-xs">{item.Media?.fileName}</span>
               </div>
             )}
           </div>
@@ -231,21 +234,23 @@ export const MediaGrid = React.memo(
 MediaGrid.displayName = "MediaGrid"
 
 // Tối ưu FilesList với React.memo
-export const FilesList = React.memo(({ items }: { items: any[] }) => {
+export const FilesList = React.memo(({ items }: { items: TMessageFullInfo[] }) => {
   const currentUser = useUser()
 
   return (
     <div className="space-y-2">
-      {items.map((item: any) => (
+      {items.map((item: TMessageFullInfo) => (
         <div
           key={item.id}
           className="flex items-center justify-between p-3 bg-gray-800 rounded-lg group"
         >
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            {getFileIcon(item.fileName || "file")}
+            {getFileIcon(item.Media?.fileName || "file")}
             <div className="flex-1 min-w-0">
-              <div className="text-white text-sm font-medium truncate">{item.fileName}</div>
-              <div className="text-gray-400 text-xs">{formatFileSize(item.fileSize || 0)}</div>
+              <div className="text-white text-sm font-medium truncate">{item.Media?.fileName}</div>
+              <div className="text-gray-400 text-xs">
+                {formatFileSize(item.Media?.fileSize || 0)}
+              </div>
             </div>
           </div>
           {/* Action icons on hover */}
@@ -290,7 +295,7 @@ export const AudioList = React.memo(({ items }: { items: TMessageFullInfo[] }) =
         type: EMessageTypes.MEDIA,
         content: "",
         directChatId: voiceMessage.directChatId || 0,
-        status: "SENT" as any,
+        status: EMessageStatus.SENT,
         isNewMsg: false,
         isDeleted: false,
         Author: voiceMessage.Author || currentUser,
@@ -359,7 +364,7 @@ export const AudioList = React.memo(({ items }: { items: TMessageFullInfo[] }) =
 AudioList.displayName = "AudioList"
 
 // Tối ưu LinksList với React.memo
-export const LinksList = React.memo(({ items }: { items: any[] }) => {
+export const LinksList = React.memo(({ items }: { items: TMessageFullInfo[] }) => {
   const currentUser = useUser()
 
   // Memoized formatUrl function
@@ -374,7 +379,7 @@ export const LinksList = React.memo(({ items }: { items: any[] }) => {
 
   return (
     <div className="space-y-2">
-      {items.map((item: any) => (
+      {items.map((item: TMessageFullInfo) => (
         <div
           key={item.id}
           className="flex items-center justify-between p-3 bg-gray-800 rounded-lg group"
@@ -397,10 +402,10 @@ export const LinksList = React.memo(({ items }: { items: any[] }) => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-white text-sm font-medium truncate">
-                {formatUrl(item.content || "")}
+                {formatUrl(item.Media?.url || "")}
               </div>
               <div className="text-gray-400 text-xs">
-                {dayjs(item.createdAt).format("MMM DD, YYYY")}
+                {dayjs(item.Media?.createdAt).format("MMM DD, YYYY")}
               </div>
             </div>
           </div>
@@ -432,7 +437,7 @@ LinksList.displayName = "LinksList"
 type TMediaGridContentProps = {
   grouped: [string, TMessageFullInfo[]][]
   tab: "Images/Video" | "files" | "voices" | "links"
-  mixedMedia: any[]
+  mixedMedia: TMessageFullInfo[]
   setSelectedMediaIndex: (idx: number) => void
   setIsMediaViewerOpen: (open: boolean) => void
   onLoadMore?: () => Promise<void>

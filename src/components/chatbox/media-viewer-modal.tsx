@@ -14,12 +14,11 @@ import {
   ZoomOut,
   MessageSquare,
 } from "lucide-react"
-import Image from "next/image"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import type { TUserWithProfile } from "@/utils/types/be-api"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
+import { TUserWithProfileFE } from "@/utils/types/fe-api"
 
 type MediaItem = {
   id: number
@@ -36,8 +35,8 @@ type MediaViewerModalProps = {
   onClose: () => void
   mediaItems: MediaItem[]
   initialIndex: number
-  creator: TUserWithProfile
-  recipient: TUserWithProfile
+  creator: TUserWithProfileFE
+  recipient: TUserWithProfileFE
   // New props to control button visibility
   showUserInfo?: boolean
   showActionButtons?: boolean

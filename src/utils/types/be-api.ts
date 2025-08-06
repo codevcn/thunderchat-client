@@ -14,6 +14,7 @@ import type {
   EBanType,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
+import { TReportedMessageFE } from "./fe-api"
 
 // ================================= DB entities =================================
 export type TUser = {
@@ -409,7 +410,6 @@ export type TGetMediaMessagesResponse = {
   }
   message?: string
   errorCode?: string | null
-  errors?: any
 }
 
 export type TMediaFilters = {
@@ -445,7 +445,6 @@ export type TGetMediaStatisticsResponse = {
   data: TMediaStatisticsData
   message?: string
   errorCode?: string | null
-  errors?: any
 }
 
 // ================================= Report Types =================================
@@ -477,13 +476,20 @@ export type TCreateViolationReportData = {
   reportedMessages?: TReportedMessage[]
 }
 
+export type TViolationReportErrorDetails =
+  | { reportedUserId: number }
+  | { existingReportId: number; createdAt: Date }
+  | { currentCount: number; maxAllowed: number }
+  | { error: string }
+  | { originalError: string }
+
 export type TCreateViolationReportResponse = {
   success: boolean
   reportId?: number
   message?: string
   error?: string
   code?: string
-  details?: any
+  details?: TViolationReportErrorDetails
 }
 
 // ================================= Admin Violation Reports Types =================================
@@ -530,13 +536,7 @@ export type TAdminViolationReportDetail = {
     imageUrl: string
     createdAt: string
   }>
-  reportedMessages: Array<{
-    id: number
-    messageId: number
-    messageType: string
-    messageContent: string
-    createdAt: string
-  }>
+  reportedMessages: TReportedMessageFE[]
   createdAt: string
   updatedAt: string
 }

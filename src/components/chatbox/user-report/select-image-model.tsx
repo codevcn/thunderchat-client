@@ -4,6 +4,8 @@ import { X, ChevronLeft, Plus, Trash2 } from "lucide-react"
 import { IconButton } from "@/components/materials/icon-button"
 import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import { createPortal } from "react-dom"
+import { TUserWithProfile } from "@/utils/types/be-api"
+import { EAppRole } from "@/utils/enums"
 
 type TSelectImageModalProps = {
   isOpen: boolean
@@ -272,13 +274,16 @@ export const SelectImageModal = ({
         id: 1,
         email: "dummy@example.com",
         password: "",
-        createdAt: new Date(),
-        role: "USER",
+        createdAt: new Date().toISOString(),
+        role: EAppRole.USER,
         Profile: {
+          id: 1,
+          createdAt: new Date().toISOString(),
           fullName: "User",
-          avatar: null,
+          birthday: undefined,
+          avatar: undefined,
         },
-      }) as any,
+      }) as TUserWithProfile,
     []
   )
 

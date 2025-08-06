@@ -2,7 +2,13 @@
  * This file contains the types for the FE API server (frontend api server)
  */
 import type { TEmoji } from "@/utils/types/global"
-import type { TUserWithoutPassword, TProfile } from "@/utils/types/be-api"
+import type {
+  TUserWithoutPassword,
+  TProfile,
+  TMediaFilters,
+  TMessageFullInfo,
+  TViolationReportErrorDetails,
+} from "@/utils/types/be-api"
 import type { TUserSettings } from "./be-api"
 import type { EReportCategory } from "@/utils/enums"
 
@@ -31,25 +37,20 @@ export type TCheckCanSendDirectMessageRes = {
 // ================================= Media Pagination Frontend Types =================================
 
 export type TMediaPaginationState = {
-  items: any[]
+  items: TMessageFullInfo[]
   currentPage: number
   totalPages: number
   totalItems: number
   hasMore: boolean
   loading: boolean
   error: string | null
-  filters: {
-    type?: "image" | "video" | "file" | "voice"
-    senderId?: number
-    fromDate?: string
-    toDate?: string
-  }
+  filters: TMediaFilters
   sortOrder: "asc" | "desc"
 }
 
 export type TMediaCacheState = {
-  cachedPages: Map<number, any[]>
-  lastUpdated: Map<number, Date>
+  cachedPages: Map<string, { data: TMessageFullInfo[]; timestamp: number }>
+  lastUpdated: Map<string, Date>
   memoryUsage: number
   maxCacheSize: number
 }
@@ -85,7 +86,7 @@ export type TCreateViolationReportResponseFE = {
   message?: string
   error?: string
   code?: string
-  details?: any
+  details?: TViolationReportErrorDetails
 }
 
 // ================================= Admin Violation Reports Frontend Types =================================

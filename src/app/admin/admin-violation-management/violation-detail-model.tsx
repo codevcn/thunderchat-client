@@ -22,14 +22,22 @@ import type {
   TAdminViolationReport,
   TViolationReportStatus,
   TViolationReportCategory,
+  TMessage,
 } from "@/utils/types/be-api"
-import { EViolationReportStatus, EBanType } from "@/utils/enums"
+import {
+  EViolationReportStatus,
+  EBanType,
+  EAppRole,
+  EMessageTypes,
+  EMessageMediaTypes,
+} from "@/utils/enums"
 import { useViolationReportDetail } from "@/hooks/use-admin-violation-reports"
 import { toast } from "sonner"
 import { UserReportHistoryModal } from "./user-history-violation-model"
 import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import { santizeMsgContent } from "@/utils/helpers"
+import { TReportedMessageFE } from "@/utils/types/fe-api"
 
 // Status Badge Component
 const StatusBadge = ({ status }: { status: TViolationReportStatus }) => {
@@ -536,7 +544,7 @@ export const ViolationDetailModal = ({
     email: violation.reporterEmail,
     password: "", // Not used in MediaViewerModal
     createdAt: violation.createdAt,
-    role: "USER" as any, // Default role
+    role: EAppRole.USER, // Default role
     Profile: {
       id: 0, // Not used in MediaViewerModal
       createdAt: violation.createdAt,
@@ -550,7 +558,7 @@ export const ViolationDetailModal = ({
     email: violation.reportedUserEmail,
     password: "", // Not used in MediaViewerModal
     createdAt: violation.createdAt,
-    role: "USER" as any, // Default role
+    role: EAppRole.USER, // Default role
     Profile: {
       id: 0, // Not used in MediaViewerModal
       createdAt: violation.createdAt,
@@ -620,9 +628,9 @@ export const ViolationDetailModal = ({
     setSelectedUser(null)
   }
 
-  const renderMessageContent = (message: any) => {
+  const renderMessageContent = (message: TReportedMessageFE) => {
     switch (message.messageType) {
-      case "TEXT":
+      case EMessageTypes.TEXT:
         return (
           <div className="bg-regular-hover-card-cl p-3 rounded-lg">
             <div
@@ -631,7 +639,7 @@ export const ViolationDetailModal = ({
             />
           </div>
         )
-      case "IMAGE":
+      case EMessageMediaTypes.IMAGE:
         return (
           <div className="bg-regular-hover-card-cl p-3 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
@@ -648,7 +656,7 @@ export const ViolationDetailModal = ({
             />
           </div>
         )
-      case "VIDEO":
+      case EMessageMediaTypes.VIDEO:
         return (
           <div className="bg-regular-hover-card-cl p-3 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
@@ -661,7 +669,7 @@ export const ViolationDetailModal = ({
             />
           </div>
         )
-      case "AUDIO":
+      case EMessageMediaTypes.AUDIO:
         return (
           <div className="bg-regular-hover-card-cl p-3 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
@@ -670,7 +678,7 @@ export const ViolationDetailModal = ({
             <audio src={message.messageContent} controls className="w-full" />
           </div>
         )
-      case "DOCUMENT":
+      case EMessageMediaTypes.DOCUMENT:
         return (
           <div className="bg-regular-hover-card-cl p-3 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
@@ -845,7 +853,10 @@ export const ViolationDetailModal = ({
                           detailedReport.reportedMessages.length > 0 ? (
                           <div className="space-y-3 max-h-64 overflow-y-auto STYLE-styled-modal-scrollbar">
                             {detailedReport.reportedMessages.map((message, index) => (
-                              <div key={message.id} className="bg-regular-black-cl p-3 rounded-lg">
+                              <div
+                                key={message.messageId}
+                                className="bg-regular-black-cl p-3 rounded-lg"
+                              >
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <span className="text-regular-text-secondary-cl text-xs">
@@ -853,9 +864,9 @@ export const ViolationDetailModal = ({
                                     </span>
                                     <MessageTypeBadge type={message.messageType} />
                                   </div>
-                                  <span className="text-regular-text-secondary-cl text-xs">
+                                  {/* <span className="text-regular-text-secondary-cl text-xs">
                                     {new Date(message.createdAt).toLocaleTimeString()}
-                                  </span>
+                                  </span> */}
                                 </div>
                                 {renderMessageContent(message)}
                               </div>

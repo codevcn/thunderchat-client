@@ -14,6 +14,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  type LucideIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 import { ViolationDetailModal } from "./violation-detail-model"
@@ -34,7 +35,7 @@ const StatCard = ({
 }: {
   title: string
   value: number
-  icon: any
+  icon: LucideIcon
   color: string
 }) => (
   <div className="bg-regular-hover-card-cl p-6 rounded-lg border border-regular-hover-card-cl">

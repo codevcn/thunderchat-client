@@ -3,6 +3,99 @@ import dayjs from "dayjs"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
 import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
 import ReactDOM from "react-dom"
+import { TUserWithProfileFE } from "@/utils/types/fe-api"
+
+// Type cho user trong filter
+type FilterUser = {
+  id: number
+  name: string
+  avatar?: string | null
+}
+
+// Function tách riêng để filter users theo tên
+const filterUsersByName = (users: FilterUser[], searchTerm: string): FilterUser[] => {
+  return users.filter((user) => {
+    const search = searchTerm.toLowerCase().trim()
+    const userName = user.name.toLowerCase()
+
+    // Nếu không có search term, hiển thị tất cả
+    if (!search) return true
+
+    // Tìm kiếm chính xác
+    if (userName.includes(search)) return true
+
+    // Tìm kiếm theo từng từ
+    const searchWords = search.split(" ").filter((word) => word.length > 0)
+    const userNameWords = userName.split(" ")
+
+    // Kiểm tra xem tất cả từ tìm kiếm có xuất hiện trong tên không
+    return searchWords.every((searchWord) =>
+      userNameWords.some((nameWord: string) => nameWord.includes(searchWord))
+    )
+  })
+}
+
+// Component tách riêng để render danh sách users
+const UserList = ({
+  users,
+  senderSearch,
+  senderFilter,
+  setSenderFilter,
+  setIsSenderPopupOpen,
+}: {
+  users: TUserWithProfileFE[]
+  senderSearch: string
+  senderFilter: number | "all"
+  setSenderFilter: (senderFilter: number | "all") => void
+  setIsSenderPopupOpen: (isOpen: boolean) => void
+}) => {
+  const allUsers = users.map((user) => ({
+    id: user.id,
+    name: user.Profile.fullName,
+    avatar: user.Profile.avatar,
+  }))
+
+  const filteredUsers = filterUsersByName(allUsers, senderSearch)
+
+  return (
+    <>
+      {filteredUsers.map((user) => (
+        <button
+          key={user.id}
+          className={`w-full text-left px-3 py-2 rounded hover:bg-[#232526] text-white text-sm flex items-center gap-3 ${senderFilter === user.id ? "bg-[#232526]" : ""}`}
+          onClick={() => {
+            setSenderFilter(senderFilter === user.id ? "all" : user.id)
+            setIsSenderPopupOpen(false)
+          }}
+        >
+          <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center overflow-hidden">
+            {user.avatar ? (
+              <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white text-xs font-semibold">{user.name[0]}</span>
+            )}
+          </div>
+          <span>{user.name}</span>
+        </button>
+      ))}
+    </>
+  )
+}
+
+type TFilterUser = {
+  senderFilter: number | "all"
+  setSenderFilter: (senderFilter: number | "all") => void
+  dateSort: string
+  setDateSort: (dateSort: string) => void
+  isDatePopupOpen: boolean
+  setIsDatePopupOpen: (v: boolean) => void
+  fromDate: string
+  setFromDate: (v: string) => void
+  toDate: string
+  setToDate: (v: string) => void
+  members: TUserWithProfileFE[]
+  applyDateFilter: () => void
+}
 
 const Filters = ({
   senderFilter,
@@ -13,33 +106,14 @@ const Filters = ({
   setFromDate,
   toDate,
   setToDate,
-  creator,
-  recipient,
-  datePopupRef,
+  members,
   applyDateFilter,
-}: {
-  senderFilter: string
-  setSenderFilter: (senderFilter: string) => void
-  dateSort: string
-  setDateSort: (dateSort: string) => void
-  isDatePopupOpen: boolean
-  setIsDatePopupOpen: (v: boolean) => void
-  fromDate: string
-  setFromDate: (v: string) => void
-  toDate: string
-  setToDate: (v: string) => void
-  creator: any
-  recipient: any
-  datePopupRef: React.RefObject<HTMLDivElement>
-  applyDateFilter: () => void
-}) => {
+}: TFilterUser) => {
   const [isSuggestionOpen, setIsSuggestionOpen] = useState(false)
   const [isSenderPopupOpen, setIsSenderPopupOpen] = useState(false)
   const [senderSearch, setSenderSearch] = useState("")
   const [dateFilterApplied, setDateFilterApplied] = useState(false)
   const suggestionRef = useRef<HTMLDivElement>(null)
-  const dateButtonRef = useRef<HTMLButtonElement>(null)
-  const senderPopupRef = useRef<HTMLDivElement>(null)
 
   // Floating UI cho sender popup
   const {
@@ -170,11 +244,7 @@ const Filters = ({
   // Hàm lấy tên người dùng theo ID
   const getSelectedUserName = () => {
     if (senderFilter === "all") return null
-    const allUsers = [
-      { id: creator.id, name: creator.Profile.fullName },
-      { id: recipient.id, name: recipient.Profile.fullName },
-    ]
-    return allUsers.find((user) => user.id === senderFilter)?.name
+    return members.find((user) => user.id === senderFilter)?.Profile.fullName
   }
 
   // Hàm xóa filter người gửi
@@ -228,64 +298,13 @@ const Filters = ({
             </div>
             <div className="border-t border-[#333] my-2"></div>
             <div className="px-2 py-2 max-h-[200px] overflow-y-auto">
-              {(() => {
-                const allUsers = [
-                  {
-                    id: creator.id,
-                    name: creator.Profile.fullName,
-                    avatar: creator.Profile.avatar,
-                  },
-                  {
-                    id: recipient.id,
-                    name: recipient.Profile.fullName,
-                    avatar: recipient.Profile.avatar,
-                  },
-                ]
-
-                const filteredUsers = allUsers.filter((user) => {
-                  const searchTerm = senderSearch.toLowerCase().trim()
-                  const userName = user.name.toLowerCase()
-
-                  // Nếu không có search term, hiển thị tất cả
-                  if (!searchTerm) return true
-
-                  // Tìm kiếm chính xác
-                  if (userName.includes(searchTerm)) return true
-
-                  // Tìm kiếm theo từng từ
-                  const searchWords = searchTerm.split(" ").filter((word) => word.length > 0)
-                  const userNameWords = userName.split(" ")
-
-                  // Kiểm tra xem tất cả từ tìm kiếm có xuất hiện trong tên không
-                  return searchWords.every((searchWord) =>
-                    userNameWords.some((nameWord: string) => nameWord.includes(searchWord))
-                  )
-                })
-
-                return filteredUsers.map((user) => (
-                  <button
-                    key={user.id}
-                    className={`w-full text-left px-3 py-2 rounded hover:bg-[#232526] text-white text-sm flex items-center gap-3 ${senderFilter === user.id ? "bg-[#232526]" : ""}`}
-                    onClick={() => {
-                      setSenderFilter(senderFilter === user.id ? "all" : user.id)
-                      setIsSenderPopupOpen(false)
-                    }}
-                  >
-                    <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center overflow-hidden">
-                      {user.avatar ? (
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-white text-xs font-semibold">{user.name[0]}</span>
-                      )}
-                    </div>
-                    <span>{user.name}</span>
-                  </button>
-                ))
-              })()}
+              <UserList
+                users={members}
+                senderSearch={senderSearch}
+                senderFilter={senderFilter}
+                setSenderFilter={setSenderFilter}
+                setIsSenderPopupOpen={setIsSenderPopupOpen}
+              />
             </div>
           </div>
         )}

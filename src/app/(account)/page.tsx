@@ -1,38 +1,12 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { CustomAvatar, DefaultAvatar, Spinner, toast } from "@/components/materials"
+import { useState } from "react"
+import { CustomAvatar, Spinner, toast } from "@/components/materials"
 import { useUserProfile } from "@/hooks/user-profile"
 import EditProfileModal from "./EditProfileModal"
-import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { updateProfileThunk, fetchProfile } from "@/redux/user/profile.slice"
-import { uploadFile } from "@/apis/upload"
-import {
-  ArrowLeft,
-  Bell,
-  Database,
-  Lock,
-  Settings,
-  Folder,
-  Smile,
-  Monitor,
-  Languages,
-  User as UserIcon,
-  Info,
-  Phone,
-  AtSign,
-  Calendar,
-  Pencil,
-  MoreVertical,
-} from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/materials/dropdown-menu"
+import { useAppDispatch } from "@/hooks/redux"
+import { updateProfileThunk } from "@/redux/user/profile.slice"
+import { ArrowLeft, Info, AtSign, Calendar, Pencil } from "lucide-react"
 import { LogOut, Lock as LockIcon } from "lucide-react"
 import { resetAuthStatus } from "@/redux/auth/auth.slice"
 import { resetUser } from "@/redux/user/user.slice"
@@ -41,13 +15,6 @@ import { userService } from "@/services/user.service"
 import { authService } from "@/services/auth.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { pureNavigator } from "@/utils/helpers"
-import { FileService } from "@/services/file.service"
-
-function toDateInputValue(dateString: string) {
-  if (!dateString) return ""
-  // Nếu là ISO string, cắt lấy phần yyyy-MM-dd
-  return dateString.slice(0, 10)
-}
 
 const AccountPage = ({
   showBackButton = false,
@@ -56,147 +23,12 @@ const AccountPage = ({
   showBackButton?: boolean
   onBack?: () => void
 }) => {
-  const router = useRouter()
-  const [refreshKey, setRefreshKey] = useState(0)
-  const userProfile = useUserProfile(refreshKey)
+  const { userProfile, loading: profileLoading, error, refetch } = useUserProfile()
   const dispatch = useAppDispatch()
   // State cho form
-  const [avatar, setAvatar] = useState<string | null>(null)
-  const [fullname, setFullname] = useState("")
-  const [birthday, setBirthday] = useState("")
-  const [about, setAbout] = useState("")
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [showCropper, setShowCropper] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [fullnameError, setFullnameError] = useState("")
-  const [birthdayError, setBirthdayError] = useState("")
   const [showEditModal, setShowEditModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const [logoutLoading, setLogoutLoading] = useState(false)
-
-  // Khi userProfile thay đổi, set lại state form
-  useEffect(() => {
-    if (userProfile) {
-      setAvatar(userProfile.Profile.avatar || null)
-      setFullname(userProfile.Profile.fullName || "")
-      setBirthday(userProfile.Profile.birthday || "")
-      setAbout(userProfile.Profile.about || "")
-    }
-  }, [userProfile])
-
-  // Xử lý chọn avatar
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        setSelectedImage(ev.target?.result as string)
-        setShowCropper(true)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const handleCropConfirm = async (croppedDataUrl: string) => {
-    setUploadingAvatar(true)
-    try {
-      // Convert data URL to File object
-      const response = await fetch(croppedDataUrl)
-      const blob = await response.blob()
-
-      // Create file with proper name and type
-      const file = new File([blob], `avatar-${Date.now()}.png`, {
-        type: "image/png",
-      })
-
-      // Check file size (limit to 5MB for avatar)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Avatar image cannot exceed 5MB!")
-        return
-      }
-
-      // Upload to AWS S3
-      const { url, fileName, fileType } = await FileService.uploadFile(file)
-
-      // Set avatar URL from AWS
-      setAvatar(url)
-      setShowCropper(false)
-      setSelectedImage(null)
-
-      toast.success("Avatar updated successfully!")
-    } catch (error) {
-      console.error("Upload avatar error:", error)
-      toast.error("Error uploading avatar!")
-    } finally {
-      setUploadingAvatar(false)
-    }
-  }
-
-  const handleCropCancel = () => {
-    setShowCropper(false)
-    setSelectedImage(null)
-  }
-
-  const validate = () => {
-    let valid = true
-    setFullnameError("")
-    setBirthdayError("")
-    if (!fullname.trim()) {
-      setFullnameError("Full name cannot be empty")
-      valid = false
-    }
-    if (birthday) {
-      const birthDate = new Date(birthday)
-      const now = new Date()
-      const age =
-        now.getFullYear() -
-        birthDate.getFullYear() -
-        (now < new Date(birthDate.setFullYear(now.getFullYear())) ? 1 : 0)
-      if (age < 18) {
-        setBirthdayError("You must be over 18 years old")
-        valid = false
-      }
-    } else {
-      setBirthdayError("Please select your date of birth")
-      valid = false
-    }
-    return valid
-  }
-
-  // Handler lưu dữ liệu
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validate()) return
-    setLoading(true)
-    try {
-      // Chỉ gửi avatar URL nếu nó là URL từ AWS (không phải data URL)
-      const avatarToSend = avatar && avatar.startsWith("http") ? avatar : undefined
-
-      await dispatch(
-        updateProfileThunk({
-          fullName: fullname,
-          birthday: birthday ? birthday : undefined,
-          about,
-          avatar: avatarToSend,
-        })
-      ).unwrap()
-      await dispatch(fetchProfile())
-
-      // Update refreshKey to force hook refetch new data
-      setRefreshKey((prev) => prev + 1)
-
-      setIsEditing(false)
-      toast.success("Updated successfully!")
-    } catch (err) {
-      console.log(err)
-      toast.error(axiosErrorHandler.handleHttpError(err).message)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Profile update function (can reuse handleSave or write new)
   const handleEditProfileSave = async ({
@@ -210,7 +42,6 @@ const AccountPage = ({
     birthday: string
     about: string
   }) => {
-    setLoading(true)
     try {
       const avatarToSend = avatar && avatar.startsWith("http") ? avatar : undefined
       await dispatch(
@@ -221,11 +52,8 @@ const AccountPage = ({
           avatar: avatarToSend,
         })
       ).unwrap()
-      await dispatch(fetchProfile())
-
-      // Update refreshKey to force hook refetch new data
-      setRefreshKey((prev) => prev + 1)
-
+      // Refetch profile data để cập nhật UI
+      await refetch()
       // Close modal after successful save
       setShowEditModal(false)
 
@@ -233,8 +61,6 @@ const AccountPage = ({
     } catch (err) {
       console.log(err)
       toast.error(axiosErrorHandler.handleHttpError(err).message)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -257,8 +83,14 @@ const AccountPage = ({
     setShowChangePasswordModal(true)
   }
 
-  if (!userProfile)
+  if (profileLoading)
     return <div className="text-white flex items-center justify-center h-full">Loading...</div>
+
+  if (error)
+    return <div className="text-white flex items-center justify-center h-full">Error: {error}</div>
+
+  if (!userProfile)
+    return <div className="text-white flex items-center justify-center h-full">No profile data</div>
 
   return (
     <div className="w-full h-full bg-[#232526] flex flex-col">
@@ -392,16 +224,6 @@ const AccountPage = ({
           </div>
         </div>
       </div>
-
-      {/* Avatar crop modal */}
-      {showCropper && selectedImage && (
-        <EditProfileModal
-          open={showCropper}
-          onClose={() => setShowCropper(false)}
-          userProfile={userProfile}
-          onSave={handleEditProfileSave}
-        />
-      )}
 
       {/* Edit modal */}
       <EditProfileModal

@@ -13,6 +13,9 @@ import {
   ChevronUp,
   AlertTriangle,
   Info,
+  Clock,
+  CheckCircle2,
+  X,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import type {
@@ -26,31 +29,33 @@ import { toast } from "sonner"
 import { UserReportHistoryModal } from "./user-history-violation-model"
 import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import type { TUserWithProfile } from "@/utils/types/be-api"
+import { santizeMsgContent } from "@/utils/helpers"
 
 // Status Badge Component
 const StatusBadge = ({ status }: { status: TViolationReportStatus }) => {
   const statusConfig = {
     [EViolationReportStatus.PENDING]: {
       color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-      icon: "⏰",
+      icon: Clock,
     },
     [EViolationReportStatus.RESOLVED]: {
       color: "bg-green-500/20 text-green-400 border-green-500/30",
-      icon: "✅",
+      icon: CheckCircle2,
     },
     [EViolationReportStatus.DISMISSED]: {
       color: "bg-red-500/20 text-red-400 border-red-500/30",
-      icon: "❌",
+      icon: X,
     },
   }
 
   const config = statusConfig[status]
+  const IconComponent = config.icon
 
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${config.color}`}
     >
-      <span>{config.icon}</span>
+      <IconComponent size={14} />
       {status}
     </span>
   )
@@ -620,7 +625,10 @@ export const ViolationDetailModal = ({
       case "TEXT":
         return (
           <div className="bg-regular-hover-card-cl p-3 rounded-lg">
-            <p className="text-regular-white-cl">{message.messageContent}</p>
+            <div
+              className="text-regular-white-cl text-xs whitespace-pre-wrap break-words [&_.STYLE-emoji-img]:w-3 [&_.STYLE-emoji-img]:h-3 [&_.STYLE-emoji-img]:inline-block [&_.STYLE-emoji-img]:align-text-bottom"
+              dangerouslySetInnerHTML={{ __html: santizeMsgContent(message.messageContent) }}
+            />
           </div>
         )
       case "IMAGE":

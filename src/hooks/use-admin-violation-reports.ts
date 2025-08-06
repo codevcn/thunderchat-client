@@ -127,6 +127,12 @@ export const useViolationReportDetail = (reportId: number | null) => {
       setError(null)
 
       const response = await adminService.getViolationReportDetail(reportId)
+
+      // Sort reported messages by messageId (ascending) to ensure chronological order
+      if (response.reportedMessages) {
+        response.reportedMessages.sort((a, b) => a.messageId - b.messageId)
+      }
+
       setReport(response)
     } catch (err: any) {
       console.error("Error fetching report detail:", err)

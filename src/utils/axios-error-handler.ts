@@ -4,7 +4,7 @@ import { EInvalidHttpErrMsgs, EServerErrMsgs } from "./enums"
 import { HttpStatusCode } from "axios"
 
 class AxiosErrorHandler {
-  private readonly MAX_LEN_OF_ERROR_MESSAGE: number = 100
+  private readonly MAX_LEN_OF_ERROR_MESSAGE: number = 200
 
   handleHttpError(
     originalError: unknown | Error | AxiosError<THttpErrorResBody>

@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 import { profileService } from "@/services/profile.service"
 
-import type { PayloadAction } from "@reduxjs/toolkit"
-
 export const fetchProfile = createAsyncThunk("profile/fetch", async () => {
   return await profileService.getProfile()
 })

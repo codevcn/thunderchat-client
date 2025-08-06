@@ -45,11 +45,14 @@ export class UserReportService {
     reasonText?: string
     reportedMessages?: TReportedMessageFE[]
   }): TCreateViolationReportData {
+    // Sort reported messages by messageId (ascending) to ensure chronological order
+    const sortedMessages = feData.reportedMessages?.sort((a, b) => a.messageId - b.messageId) || []
+
     return {
       reportedUserId: feData.reportedUserId,
       reportCategory: feData.reportCategory,
       reasonText: feData.reasonText,
-      reportedMessages: feData.reportedMessages?.map((msg) => this.convertToBackendMessage(msg)),
+      reportedMessages: sortedMessages.map((msg) => this.convertToBackendMessage(msg)),
     }
   }
 

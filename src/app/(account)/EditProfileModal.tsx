@@ -3,6 +3,8 @@ import { CustomAvatar, toast } from "@/components/materials"
 import AvatarCropperModal from "@/components/materials/avatar-cropper-modal"
 import { Pencil } from "lucide-react"
 import { FileService } from "@/services/file.service"
+import { TProfile } from "@/utils/types/be-api"
+import { TUserWithProfileFE } from "@/utils/types/fe-api"
 
 function toDateInputValue(dateString: string) {
   if (!dateString) return ""
@@ -12,7 +14,7 @@ function toDateInputValue(dateString: string) {
 interface EditProfileModalProps {
   open: boolean
   onClose: () => void
-  userProfile: any
+  userProfile: TUserWithProfileFE
   onSave: (data: {
     avatar: string | null
     fullname: string
@@ -22,10 +24,10 @@ interface EditProfileModalProps {
 }
 
 const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileModalProps) => {
-  const [avatar, setAvatar] = useState<string | null>(userProfile?.Profile.avatar || null)
-  const [fullname, setFullname] = useState<string>(userProfile?.Profile.fullName || "")
-  const [birthday, setBirthday] = useState<string>(userProfile?.Profile.birthday || "")
-  const [about, setAbout] = useState<string>(userProfile?.Profile.about || "")
+  const [avatar, setAvatar] = useState<string | null>(userProfile.Profile.avatar || null)
+  const [fullname, setFullname] = useState<string>(userProfile.Profile.fullName || "")
+  const [birthday, setBirthday] = useState<string>(userProfile.Profile.birthday || "")
+  const [about, setAbout] = useState<string>(userProfile.Profile.about || "")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showCropper, setShowCropper] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)

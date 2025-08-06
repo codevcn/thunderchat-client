@@ -9,12 +9,11 @@ import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
 import { createPortal } from "react-dom"
 import { useUser } from "@/hooks/user"
 import {
-  pushNewMessages,
   updateMessages,
   mergeMessages,
   setLastSentMessage,
   resetDirectMessages,
-  addDirectMessages,
+  setFetchedMsgs,
 } from "@/redux/messages/messages.slice"
 import { displayMessageStickyTime } from "@/utils/date-time"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -66,7 +65,7 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
         EMessageTypes.STICKER,
         {
           receiverId: user.id === recipientId ? creatorId : recipientId,
-          content: greetingSticker.imageUrl,
+          content: `${greetingSticker.id}`,
           token: chattingService.getMessageToken(),
           timestamp: new Date(),
         },
@@ -162,6 +161,7 @@ export const Messages = memo(
     const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadMsgEle: null }) // Biến để lưu thông tin về tin nhắn chưa đọc
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
     const isRenderingMessages = useRef<boolean>(false)
+    const readyNewMessage = useRef<TGetMessagesMessage | null>(null)
 
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
@@ -254,7 +254,8 @@ export const Messages = memo(
         })
         .then((result) => {
           hasMoreMessages.current = result.hasMoreMessages
-          dispatch(addDirectMessages(result.directMessages))
+          dispatch(mergeMessages(result.directMessages))
+          dispatch(setFetchedMsgs(true))
         })
         .catch((error) => {
           toast.error(axiosErrorHandler.handleHttpError(error).message)
@@ -308,11 +309,23 @@ export const Messages = memo(
       }
     }
 
+    const handleReadyNewMessage = () => {
+      if (readyNewMessage.current && directChatId !== -1) {
+        const newMessage = readyNewMessage.current
+        readyNewMessage.current = null
+        dispatch(mergeMessages([newMessage]))
+      }
+    }
+
     // Xử lý sự kiện gửi tin nhắn từ đối phương
-    const listenSendDirectMessage = (newMessage: TGetMessagesMessage) => {
+    const listenSendMessage = (newMessage: TGetMessagesMessage) => {
       const { id } = newMessage
+      if (directChatId === -1) {
+        readyNewMessage.current = newMessage
+        return
+      }
       if (newMessage.directChatId !== directChatId) return
-      dispatch(pushNewMessages([newMessage]))
+      dispatch(mergeMessages([newMessage]))
       dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.DIRECT }))
       clientSocket.setMessageOffset(id, directChatId)
     }
@@ -320,7 +333,7 @@ export const Messages = memo(
     // Xử lý sự kiện kết nối lại từ server
     const handleRecoverdConnection = (newMessages: TGetMessagesMessage[]) => {
       if (newMessages && newMessages.length > 0) {
-        dispatch(pushNewMessages(newMessages))
+        dispatch(mergeMessages(newMessages))
         const { id } = newMessages[newMessages.length - 1]
         clientSocket.setMessageOffset(id, directChatId)
       }
@@ -528,16 +541,10 @@ export const Messages = memo(
       let offset = fromId - 1
       let done = false
       while (!done) {
-        console.log(`[DEBUG] Gọi fetchMissingMessages với offset: ${offset}, target đến: ${toId}`)
         const newerMsgs = await directChatService.getNewerMessages(directChatId, offset, 20)
         if (!newerMsgs || newerMsgs.length === 0) {
-          console.log("[DEBUG] Không lấy được thêm tin nhắn nào, dừng lại.")
           break
         }
-        console.log(
-          "[DEBUG] Các id fetchMissingMessages trả về:",
-          newerMsgs.map((m: TStateDirectMessage) => m.id)
-        )
         dispatch(mergeMessages(newerMsgs))
         // Lấy id lớn nhất vừa nhận được
         const maxId = Math.max(...newerMsgs.map((m: TStateDirectMessage) => m.id))
@@ -558,7 +565,6 @@ export const Messages = memo(
       if (!messages || messages.length === 0) return
       // Nếu đang ở context, lấy offset là contextEndId, ngược lại lấy id cuối cùng của mảng
       const offset = contextEndId ?? messages[messages.length - 1].id
-      //console.log("[DEBUG] Gọi getNewerMessages với offset:", offset)
       try {
         const newerMsgs = await directChatService.getNewerMessages(directChatId, offset, 20)
         if (newerMsgs && newerMsgs.length > 0) {
@@ -614,17 +620,18 @@ export const Messages = memo(
 
     useEffect(() => {
       startFetchingMessages()
+      handleReadyNewMessage()
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-      eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendDirectMessage)
+      eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
       clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
       return () => {
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-        eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendDirectMessage)
+        eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
         clientSocket.socket.removeListener(
           ESocketEvents.recovered_connection,
           handleRecoverdConnection

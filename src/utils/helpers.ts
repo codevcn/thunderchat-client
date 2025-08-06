@@ -214,3 +214,23 @@ export function extractEmojisFromMessage(message: string): TEmoji[] {
 export const getCurrentPathOnBrowserURL = (): string => {
   return window.location.pathname
 }
+
+/**
+ * Check if the current chat is a new conversation
+ * @param currentChatId - The id of the current chat, maybe -1 if it is temp chat
+ * @param myUserId - The id of the current user
+ * @param memberIdsOfNewConversation - The ids of the members of the new conversation
+ * @param newConversationId - The id of the new conversation
+ * @returns True if the current chat is a new conversation, false otherwise
+ */
+export const checkNewConversationIsCurrentChat = (
+  currentChatId: number,
+  myUserId: number,
+  memberIdsOfNewConversation: number[],
+  newConversationId: number
+) => {
+  return (
+    newConversationId === currentChatId ||
+    (currentChatId === -1 && memberIdsOfNewConversation.includes(myUserId))
+  )
+}

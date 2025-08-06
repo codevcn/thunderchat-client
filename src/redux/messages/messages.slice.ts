@@ -8,7 +8,6 @@ import type {
 import { PayloadAction, createSlice } from "@reduxjs/toolkit"
 import type {
   TDirectChatData,
-  TGetDirectMessagesData,
   TGroupChatData,
   TGroupChatMemberWithUser,
 } from "@/utils/types/be-api"
@@ -40,16 +39,6 @@ export const messagesSlice = createSlice({
   initialState,
   name: "messages",
   reducers: {
-    pushNewMessages: (state, action: PayloadAction<TStateDirectMessage[]>) => {
-      const currentMessages = state.directMessages || []
-      const newMessages = action.payload
-      const ids = new Set(newMessages.map((m) => m.id))
-      // Replace message cũ nếu trùng id, thêm mới nếu chưa có
-      state.directMessages = [
-        ...currentMessages.filter((m) => !ids.has(m.id)),
-        ...newMessages,
-      ].sort((a, b) => a.id - b.id)
-    },
     updateMessages: (state, action: PayloadAction<TMessageStateUpdates[]>) => {
       const currentMessages = state.directMessages
       const updatesList = action.payload
@@ -65,6 +54,9 @@ export const messagesSlice = createSlice({
           return msg
         })
       }
+    },
+    setFetchedMsgs: (state, action: PayloadAction<boolean>) => {
+      state.fetchedMsgs = action.payload
     },
     mergeMessages: (state, action: PayloadAction<TStateDirectMessage[]>) => {
       const currentMessages = state.directMessages || []
@@ -132,15 +124,6 @@ export const messagesSlice = createSlice({
     resetDirectMessages: (state) => {
       state.directMessages = null
     },
-    addDirectMessages: (state, action: PayloadAction<TGetDirectMessagesData["directMessages"]>) => {
-      const currentMessages = state.directMessages
-      const newMessages = action.payload || []
-      state.directMessages =
-        currentMessages && currentMessages.length > 0
-          ? [...newMessages, ...currentMessages]
-          : newMessages
-      state.fetchedMsgs = true
-    },
     setGroupChat: (state, action: PayloadAction<TGroupChatData>) => {
       state.groupChat = action.payload
     },
@@ -151,18 +134,17 @@ export const messagesSlice = createSlice({
 })
 
 export const {
-  pushNewMessages,
   updateMessages,
   updateGroupChat,
   removeGroupChatMember,
   setDirectChat,
   setTempChatData,
   resetAllChatData,
+  setFetchedMsgs,
   mergeMessages,
   updateDirectChat,
   setLastSentMessage,
   resetDirectMessages,
-  addDirectMessages,
   setGroupChat,
   setGroupChatMembers,
 } = messagesSlice.actions

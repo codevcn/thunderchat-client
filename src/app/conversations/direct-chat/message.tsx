@@ -85,8 +85,6 @@ const ImageModal = ({
       document.body.removeChild(link)
       window.URL.revokeObjectURL(blobUrl)
     } catch (error) {
-      console.error("Lỗi khi tải ảnh:", error)
-      // Fallback: cách cũ
       const link = document.createElement("a")
       link.href = imageUrl
       link.download = "image.jpg"
@@ -157,7 +155,7 @@ const FileIcon = ({ fileTypeText, onDownload, fileIconRef }: TFileIconProps) => 
 }
 
 const Content = ({ content, stickerUrl, type, Media, message, user }: TContentProps) => {
-  const { url: mediaUrl, fileName, type: fileType, fileSize } = Media || {}
+  const { url: mediaUrl, fileName, type: mediaType, fileSize } = Media || {}
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const fileIconRef = useRef<HTMLDivElement>(null)
 
@@ -171,7 +169,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   }
 
   // Hiển thị ảnh
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.IMAGE && mediaUrl) {
     return (
       <>
         <div className="max-w-xs relative group">
@@ -199,7 +197,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   }
 
   // Hiển thị video
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.VIDEO && mediaUrl) {
     return (
       <div className="max-w-[320px] h-[180px]">
         <video
@@ -212,7 +210,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
     )
   }
   // Hiển thị document
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT && mediaUrl) {
     const downloadFile = async (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
@@ -253,7 +251,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
       <div className="max-w-xs">
         <div className="flex items-center gap-1.5 p-1 pb-0 rounded-lg">
           <FileIcon
-            fileTypeText={fileType || fileName?.split(".").pop()?.toUpperCase() || "Unknown"}
+            fileTypeText={mediaType || fileName?.split(".").pop()?.toUpperCase() || "Unknown"}
             onDownload={downloadFile}
             fileIconRef={fileIconRef}
           />
@@ -272,7 +270,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   //   return <VoiceMessage audioUrl={mediaUrl} message={message} />
   if (
     type === EMessageTypes.MEDIA &&
-    fileType === EMessageMediaTypes.AUDIO &&
+    mediaType === EMessageMediaTypes.AUDIO &&
     mediaUrl &&
     message
   ) {
@@ -561,7 +559,6 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     title="Reply to this message"
                     onClick={() => {
                       if (message && message.type !== "PIN_NOTICE") {
-                        console.log("[DEBUG] Reply button clicked", message)
                         onReply(message)
                       }
                     }}
@@ -691,7 +688,6 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     title="Reply to this message"
                     onClick={() => {
                       if (message && message.type !== "PIN_NOTICE") {
-                        console.log("[DEBUG] Reply button clicked", message)
                         onReply(message)
                       }
                     }}
@@ -731,7 +727,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {
                         toast.error(
-                          "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                          "You have reached the limit of 5 pinned messages. Please unpin another message before pinning a new one."
                         )
                         return
                       }
@@ -777,6 +773,11 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   Media={Media}
                   user={user}
                 />
+                <div className="flex justify-start items-center gap-x-1 mt-1.5 w-full">
+                  <span className="text-xs text-regular-creator-msg-time-cl leading-none">
+                    {msgTime}
+                  </span>
+                </div>
               </div>
             </div>
           )}

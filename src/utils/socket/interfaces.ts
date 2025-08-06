@@ -4,6 +4,7 @@ import type {
   TUserWithProfile,
   TDirectChat,
   TMessage,
+  TGroupChat,
 } from "@/utils/types/be-api"
 import type { TSendDirectMessageErrorRes } from "../types/global"
 import { ESocketEvents, ESocketInitEvents } from "./events"
@@ -36,7 +37,8 @@ export interface IListenSocketEvents {
   [ESocketEvents.pin_message]: (data: TPinMessageEventData) => void
   [ESocketEvents.pin_direct_chat]: (data: TPinDirectChatEventData) => void
   [ESocketEvents.new_conversation]: (
-    payload: TDirectChat,
+    directChat: TDirectChat | null,
+    groupChat: TGroupChat | null,
     type: EChatType,
     newMessage: TMessage,
     sender: TUserWithProfile

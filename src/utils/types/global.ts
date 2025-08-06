@@ -125,7 +125,7 @@ export type TLastDirectChatData = {
 
 export type TUpdateUnreadMsgCountState = {
   count: number
-  directChatId: number
+  conversationId: number
 }
 
 export type TMediaData = {

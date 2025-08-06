@@ -1,6 +1,6 @@
 import type { HttpStatusCode } from "axios"
 import type { EMessageStatus } from "../socket/enums"
-import type { EFriendRequestStatus, EMessageTypes } from "@/utils/enums"
+import type { EFriendRequestStatus, EMessageTypeAllTypes } from "@/utils/enums"
 import type { TSuccess } from "./global"
 import type { TMessage } from "./be-api"
 
@@ -11,7 +11,7 @@ export type TWsErrorResponse = {
 }
 
 export type TChattingPayload = {
-  type: EMessageTypes
+  type: EMessageTypeAllTypes
   msgPayload: {
     receiverId: number
     content: string

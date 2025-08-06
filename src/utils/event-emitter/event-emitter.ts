@@ -19,6 +19,8 @@ interface IEventEmitter {
   [EInternalEvents.FETCH_DIRECT_CHAT]: (directChatId: number) => void
   [EInternalEvents.FETCH_GROUP_CHAT]: (groupChatId: number) => void
   [EInternalEvents.SEND_MESSAGE_DIRECT]: (newMessage: TGetMessagesMessage) => void
+  [EInternalEvents.SCROLL_TO_QUERIED_MESSAGE]: (messageId: number) => void
+  [EInternalEvents.RESET_FIRST_SCROLL_TO_BOTTOM]: () => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

@@ -11,7 +11,6 @@ import type {
   EAppRole,
   EReportCategory,
   EViolationReportStatus,
-  EBanType,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 import { TReportedMessageFE } from "./fe-api"
@@ -137,17 +136,6 @@ export type TGroupChat = {
   creatorId: number
   createdAt: string
   lastSentMessageId?: number
-}
-
-export type TGroupMessage = {
-  id: number
-  createdAt: string
-  groupChatId: number
-  content: string
-  authorId: number
-  type: EMessageTypes
-  status: EMessageStatus
-  stickerUrl?: string
 }
 
 export type TGroupChatMember = {
@@ -289,13 +277,15 @@ export type TGetGroupMsgsParams = {
 
 export type TGetGroupMessagesData = {
   hasMoreMessages: boolean
-  groupMessages: TGroupMessage[]
+  groupMessages: TMessage[]
 }
 
-export type TGroupChatData = TGroupChat
+export type TGroupChatData = TGroupChat & {
+  Creator: TUserWithProfile
+}
 
 export type TFetchGroupChatsData = TGroupChat & {
-  LastSentMessage?: TGroupMessage
+  LastSentMessage?: TMessage
   Creator: TUserWithProfile
   unreadMessageCount?: number
 }

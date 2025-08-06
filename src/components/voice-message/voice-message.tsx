@@ -2,7 +2,7 @@ import { Play, Pause } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import WaveformData from "waveform-data"
 import { useVoicePlayerState, useVoicePlayerActions } from "@/contexts/voice-player.context"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 
 export async function getWaveformFromAudio(url: string, columns = 36): Promise<number[]> {
   const res = await fetch(url)
@@ -96,7 +96,7 @@ const preloadAudioMetadata = (url: string): Promise<number> => {
 }
 
 type VoiceMessageProps = {
-  message: TStateDirectMessage
+  message: TStateMessage
   audioUrl: string
   isSender?: boolean // Thêm prop để phân biệt người gửi/nhận
 }

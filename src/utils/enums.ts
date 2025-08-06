@@ -125,3 +125,18 @@ export enum EBanType {
   TEMPORARY_BAN = "TEMPORARY_BAN",
   PERMANENT_BAN = "PERMANENT_BAN",
 }
+
+export enum EMessageTypeAllTypes {
+  TEXT = "TEXT",
+  STICKER = "STICKER",
+  IMAGE = "IMAGE",
+  VIDEO = "VIDEO",
+  AUDIO = "AUDIO",
+  DOCUMENT = "DOCUMENT",
+  PIN_NOTICE = "PIN_NOTICE",
+}
+
+export enum EGroupChatErrMsgs {
+  CONV_NOT_FOUND = "Group Chat not found",
+  CONVS_NOT_FOUND = "Group Chats not found",
+}

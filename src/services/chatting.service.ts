@@ -1,5 +1,5 @@
 import { ObjectQueue } from "@/utils/algorithms/queue"
-import { EMessageTypes } from "@/utils/enums"
+import { EMessageTypeAllTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TChattingPayload } from "@/utils/types/socket"
@@ -20,7 +20,7 @@ class ChattingService {
   }
 
   async sendMessage(
-    type: EMessageTypes,
+    type: EMessageTypeAllTypes,
     message: TChattingPayload["msgPayload"],
     callback: TSendMessageCallback
   ): Promise<void> {

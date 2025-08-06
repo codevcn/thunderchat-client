@@ -114,7 +114,7 @@ const CustomDialog = ({
   return (
     <Dialog open={open} onOpenChange={onHideShow}>
       <DialogTrigger asChild={!!trigger}>{trigger}</DialogTrigger>
-      <DialogContent className="xs:max-w-[350px] sm:max-w-[400px] md:max-w-[600px] lg:max-w-[900px] bg-regular-modal-board-bgcl rounded-lg border-none outline-none">
+      <DialogContent className="max-w-[95vw] bg-regular-modal-board-bgcl rounded-lg border-none outline-none">
         <DialogHeader hidden={!dialogHeader}>
           <DialogTitle className={cn("text-regular-white-cl", dialogHeader?.classNames?.title)}>
             {dialogHeader?.title || ""}

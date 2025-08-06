@@ -2,6 +2,7 @@ import dayjs from "dayjs"
 import type { TEmoji, TFormData, THighlightOffsets } from "./types/global"
 import DOMPurify from "dompurify"
 import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
+import { EMessageMediaTypes, EMessageTypeAllTypes, EMessageTypes } from "./enums"
 
 export const setLastSeen = (date: string) => {
   return dayjs(date).format("MM/DD/YYYY, h:mm A")
@@ -213,4 +214,46 @@ export function extractEmojisFromMessage(message: string): TEmoji[] {
  */
 export const getCurrentPathOnBrowserURL = (): string => {
   return window.location.pathname
+}
+
+/**
+ * Check if the current chat is a new conversation
+ * @param currentChatId - The id of the current chat, maybe -1 if it is temp chat
+ * @param myUserId - The id of the current user
+ * @param memberIdsOfNewConversation - The ids of the members of the new conversation
+ * @param newConversationId - The id of the new conversation
+ * @returns True if the current chat is a new conversation, false otherwise
+ */
+export const checkNewConversationIsCurrentChat = (
+  currentChatId: number,
+  myUserId: number,
+  memberIdsOfNewConversation: number[],
+  newConversationId: number
+) => {
+  return (
+    newConversationId === currentChatId ||
+    (currentChatId === -1 && memberIdsOfNewConversation.includes(myUserId))
+  )
+}
+
+export const converToMessageTypeAllTypes = (
+  type: EMessageTypes,
+  mediaType?: EMessageMediaTypes
+): EMessageTypeAllTypes => {
+  if (type === EMessageTypes.STICKER) {
+    return EMessageTypeAllTypes.STICKER
+  } else if (type === EMessageTypes.MEDIA) {
+    if (mediaType === EMessageMediaTypes.IMAGE) {
+      return EMessageTypeAllTypes.IMAGE
+    } else if (mediaType === EMessageMediaTypes.VIDEO) {
+      return EMessageTypeAllTypes.VIDEO
+    } else if (mediaType === EMessageMediaTypes.AUDIO) {
+      return EMessageTypeAllTypes.AUDIO
+    }
+    return EMessageTypeAllTypes.DOCUMENT
+  } else if (type === EMessageTypes.PIN_NOTICE) {
+    return EMessageTypeAllTypes.PIN_NOTICE
+  } else {
+    return EMessageTypeAllTypes.TEXT
+  }
 }

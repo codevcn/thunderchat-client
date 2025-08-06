@@ -8,7 +8,7 @@ import {
   toast,
   PinButton,
 } from "@/components/materials"
-import { Search as SearchIcon, ArrowLeft, X, Pin, Menu, Users } from "lucide-react"
+import { Search as SearchIcon, ArrowLeft, X, Menu, Users } from "lucide-react"
 import dayjs from "dayjs"
 import { useDebounce } from "@/hooks/debounce"
 import type {
@@ -20,6 +20,7 @@ import type {
   TMessage,
   TDirectChat,
   TGetMessagesMessage,
+  TGroupChat,
 } from "@/utils/types/be-api"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
@@ -28,12 +29,16 @@ import { IconButton } from "@/components/materials/icon-button"
 import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.selectors"
 import { searchService } from "@/services/search.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { extractHighlightOffsets, randomInRange, santizeMsgContent } from "@/utils/helpers"
+import {
+  checkNewConversationIsCurrentChat,
+  extractHighlightOffsets,
+  randomInRange,
+  santizeMsgContent,
+} from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
 import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
 import {
   addConversations,
-  clearConversations,
   setConversations,
   updateSingleConversation,
   updateUnreadMsgCountOnCard,
@@ -53,17 +58,14 @@ import {
 } from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
-import { setDirectChat, setTempChatData, updateDirectChat } from "@/redux/messages/messages.slice"
+import { updateDirectChat } from "@/redux/messages/messages.slice"
 import { usePinDirectChats } from "@/hooks/pin-messages"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TPinDirectChatEventData } from "@/utils/types/socket"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import type { TSendDirectMessageRes } from "@/utils/types/socket"
-import { convertToDirectChatsUIData } from "@/utils/data-convertors/conversations-convertor"
 import { localStorageManager } from "@/utils/local-storage"
-import { useSearchParams } from "next/navigation"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 const SEARCH_LIMIT: number = 10
@@ -163,10 +165,17 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
     type: "users" | "messages",
     chatType: EChatType,
     chatId?: number,
-    otherUser?: TUserWithProfile
+    otherUser?: TUserWithProfile,
+    messageId?: number
   ) => {
-    if (type === "messages" && chatId) {
-      navToConversation(chatId, chatType)
+    if (type === "messages" && chatId && messageId) {
+      dispatch((_, getState) => {
+        if (getState().messages.directChat?.id === chatId) {
+          eventEmitter.emit(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, messageId)
+        } else {
+          navToConversation(chatId, chatType, false, messageId)
+        }
+      })
     } else if (type === "users" && otherUser) {
       const otherUserId = otherUser.id
       directChatService
@@ -336,7 +345,9 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                     avatarUrl={user.Profile.avatar}
                     convName={user.Profile.fullName || ""}
                     subtitle=""
-                    onStartChat={() => startChatHandler("users", EChatType.DIRECT, undefined, user)}
+                    onStartChat={() =>
+                      startChatHandler("users", EChatType.DIRECT, undefined, user, undefined)
+                    }
                     email={user.email}
                   />
                 ))}
@@ -360,7 +371,13 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                     subtitle={message.messageContent}
                     highlights={message.highlights}
                     onStartChat={() =>
-                      startChatHandler("messages", message.chatType, message.chatId)
+                      startChatHandler(
+                        "messages",
+                        message.chatType,
+                        message.chatId,
+                        undefined,
+                        message.id
+                      )
                     }
                   />
                 ))}
@@ -596,37 +613,17 @@ const ConversationCard = ({
               </span>
             )}
             <div className="flex items-center gap-1">
-              {!!pinIndex && pinIndex !== -1 && pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
-                <CustomTooltip title="This directChat was pinned" placement="bottom">
-                  <Pin color="currentColor" size={21} />
-                </CustomTooltip>
-              )}
-              {type === EChatType.DIRECT && (
-                <div
-                  className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                >
-                  <PinButton
-                    isPinned={isPinned}
-                    onToggle={() => onTogglePin(id)}
-                    loading={pinLoading}
-                    size={16}
-                  />
-                </div>
-              )}
-            </div>
-            {type === EChatType.DIRECT && (
               <div
                 className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
               >
                 <PinButton
                   isPinned={isPinned}
-                  onToggle={() => onPinToggle(id)}
+                  onToggle={() => onTogglePin(id)}
                   loading={pinLoading}
                   size={16}
-                  tooltipText={isPinned ? "Bỏ ghim cuộc trò chuyện" : "Ghim cuộc trò chuyện"}
                 />
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -758,70 +755,84 @@ const ConversationCards = () => {
   }
 
   const handleAddNewConversation = (
-    newDirectChat: TDirectChat,
+    newDirectChat: TDirectChat | null,
+    newGroupChat: TGroupChat | null,
     newMessage: TMessage,
     sender: TUserWithProfile
   ) => {
-    dispatch((_, getState) => {
-      const currentConversations = getState().conversations.conversations
-      const currentDirectChat = getState().messages.directChat
-      if (currentDirectChat) {
-        const directChatExist = currentConversations?.find((c) => c.id === newDirectChat.id)
-        if (directChatExist) return
-        const newDirectChatData: TDirectChatData = {
-          ...newDirectChat,
-          Recipient: currentDirectChat.Recipient,
-          Creator: currentDirectChat.Creator,
+    const lastDirectChat = localStorageManager.getLastDirectChatData()!
+    let conversationCard: TConversationCard
+    if (newDirectChat) {
+      conversationCard = {
+        id: newDirectChat.id,
+        type: EChatType.DIRECT,
+        lastMessageTime: newMessage.createdAt,
+        subtitle: {
+          content: newMessage.content,
+          type: newMessage.type,
+        },
+        unreadMessageCount: 1,
+        createdAt: newDirectChat.createdAt,
+        pinIndex: -1,
+        avatar: {
+          fallback: "",
+        },
+        title: "",
+      }
+      if (user.id === newDirectChat.creatorId) {
+        const recipientFullName = lastDirectChat.chatData.Recipient.Profile.fullName
+        conversationCard.avatar = {
+          fallback: recipientFullName[0],
         }
-        if (!newDirectChat.lastSentMessageId) {
-          newDirectChatData.lastSentMessageId = newMessage.id
-        }
-        const conversationCard = convertToDirectChatsUIData(
-          [{ ...newDirectChatData, LastSentMessage: newMessage, unreadMessageCount: 1 }],
-          user
-        )[0]
-        dispatch(addConversations([conversationCard]))
+        conversationCard.title = recipientFullName
       } else {
+        const senderFullName = sender.Profile.fullName
+        conversationCard.avatar = {
+          fallback: senderFullName[0],
+        }
+        conversationCard.title = senderFullName
+      }
+    }
+    dispatch(addConversations([conversationCard!]))
+  }
+
+  const handleUpdateCurrentChat = (
+    newDirectChat: TDirectChat | null,
+    newGroupChat: TGroupChat | null
+  ) => {
+    dispatch((dispatch, getState) => {
+      const currentDirectChat = getState().messages.directChat
+      if (
+        newDirectChat &&
+        currentDirectChat &&
+        checkNewConversationIsCurrentChat(
+          currentDirectChat.id,
+          user.id,
+          [newDirectChat.recipientId, newDirectChat.creatorId],
+          newDirectChat.id
+        )
+      ) {
         dispatch(
-          addConversations([
-            convertToDirectChatsUIData(
-              [
-                {
-                  ...newDirectChat,
-                  Creator: sender,
-                  Recipient: user,
-                  unreadMessageCount: 1,
-                  LastSentMessage: newMessage,
-                },
-              ],
-              user
-            )[0],
-          ])
+          updateDirectChat({
+            id: newDirectChat.id,
+            lastSentMessageId: newDirectChat.lastSentMessageId,
+            createdAt: newDirectChat.createdAt,
+            creatorId: newDirectChat.creatorId,
+            recipientId: newDirectChat.recipientId,
+          })
         )
       }
     })
   }
 
-  const handleUpdateDirectChat = (newDirectChat: TDirectChat) => {
-    dispatch(
-      updateDirectChat({
-        id: newDirectChat.id,
-        lastSentMessageId: newDirectChat.lastSentMessageId,
-        createdAt: newDirectChat.createdAt,
-        creatorId: newDirectChat.creatorId,
-        recipientId: newDirectChat.recipientId,
-      })
-    )
-  }
-
   const listenNewConversation = (
-    directChat: TDirectChat,
+    directChat: TDirectChat | null,
+    groupChat: TGroupChat | null,
     type: EChatType,
     newMessage: TMessage,
     sender: TUserWithProfile
   ) => {
-    handleAddNewConversation(directChat, newMessage, sender)
-    if (type === EChatType.DIRECT) {
+    if (type === EChatType.DIRECT && directChat) {
       const lastDirectChatData = localStorageManager.getLastDirectChatData()
       if (lastDirectChatData) {
         localStorageManager.setLastDirectChatData({
@@ -833,12 +844,13 @@ const ConversationCards = () => {
           },
         })
       }
-      handleUpdateDirectChat(directChat)
+      handleAddNewConversation(directChat, null, newMessage, sender)
     }
+    handleUpdateCurrentChat(directChat, groupChat)
   }
 
-  const listenUnreadMessagesCount = (unreadMessageCount: number, directChatId: number) => {
-    dispatch(updateUnreadMsgCountOnCard({ count: unreadMessageCount, directChatId }))
+  const listenUnreadMessagesCount = (unreadMessageCount: number, conversationId: number) => {
+    dispatch(updateUnreadMsgCountOnCard({ count: unreadMessageCount, conversationId }))
   }
 
   const handleUpdateLastSentMessage = (newMessage: TGetMessagesMessage) => {
@@ -852,7 +864,7 @@ const ConversationCards = () => {
     )
   }
 
-  const listenSendMessageDirect = (newMessage: TGetMessagesMessage) => {
+  const listenSendMessage = (newMessage: TGetMessagesMessage) => {
     handleUpdateLastSentMessage(newMessage)
     const convId = (newMessage.directChatId || newMessage.groupChatId)!
     dispatch((_, getState) => {
@@ -862,7 +874,7 @@ const ConversationCards = () => {
         dispatch(
           updateUnreadMsgCountOnCard({
             count: currentUnreadCount > 0 ? currentUnreadCount + 1 : 1,
-            directChatId: convId,
+            conversationId: convId,
           })
         )
       }
@@ -872,10 +884,11 @@ const ConversationCards = () => {
   useEffect(() => {
     clientSocket.socket.on(ESocketEvents.new_conversation, listenNewConversation)
     eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
-    eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessageDirect)
+    eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
     return () => {
+      clientSocket.socket.off(ESocketEvents.new_conversation, listenNewConversation)
       eventEmitter.off(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
-      eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessageDirect)
+      eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
     }
   }, [])
 

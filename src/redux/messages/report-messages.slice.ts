@@ -1,11 +1,11 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit"
 import { EMessageTypes, ESortTypes, EPaginations } from "@/utils/enums"
 import { messageService } from "@/services/message.service"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 
 // Types
 export interface TReportMessagesState {
-  messages: TStateDirectMessage[]
+  messages: TStateMessage[]
   loading: boolean
   hasMore: boolean
   error: string | null
@@ -80,7 +80,7 @@ const reportMessagesSlice = createSlice({
 
         // Filter out unwanted message types from new messages first
         const filteredNewMessages = newMessages.filter(
-          (msg: TStateDirectMessage) =>
+          (msg: TStateMessage) =>
             !msg.isDeleted &&
             msg.type !== EMessageTypes.STICKER &&
             msg.type !== EMessageTypes.PIN_NOTICE
@@ -88,7 +88,7 @@ const reportMessagesSlice = createSlice({
 
         // Merge và remove duplicates
         const allMessages = [...filteredNewMessages, ...currentMessages]
-        const uniqueMessages = allMessages.reduce((acc: TStateDirectMessage[], current) => {
+        const uniqueMessages = allMessages.reduce((acc: TStateMessage[], current) => {
           const exists = acc.find((msg) => msg.id === current.id)
           if (!exists) {
             acc.push(current)

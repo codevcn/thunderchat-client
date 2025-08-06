@@ -1,20 +1,10 @@
 import type { AxiosError, HttpStatusCode } from "axios"
-import type {
-  TMessage,
-  TDirectChat,
-  TGroupMessage,
-  TMessageFullInfo,
-  TDirectChatData,
-} from "@/utils/types/be-api"
+import type { TMessage, TDirectChat, TMessageFullInfo, TDirectChatData } from "@/utils/types/be-api"
 import type { EChatType, EMessageMediaTypes, EMessageTypes } from "../enums"
 
-export type TStateDirectMessage = TMessageFullInfo & {
+export type TStateMessage = TMessageFullInfo & {
   isNewMsg?: boolean
   originMsgId?: number // id tin nhắn gốc nếu là PIN_NOTICE
-}
-
-export type TStateGroupMessage = TGroupMessage & {
-  isNewMsg?: boolean
 }
 
 export type TDirectChatWithMessages = TDirectChat & { messages: TMessage[] }
@@ -97,7 +87,7 @@ export type TCheckboxValue = "on" | undefined
 
 export type TMessageStateUpdates = {
   msgId: number
-  msgUpdates: Partial<TStateDirectMessage>
+  msgUpdates: Partial<TStateMessage>
 }
 
 export type TPlacement = "top" | "right" | "bottom" | "left"
@@ -125,7 +115,7 @@ export type TLastDirectChatData = {
 
 export type TUpdateUnreadMsgCountState = {
   count: number
-  directChatId: number
+  conversationId: number
 }
 
 export type TMediaData = {

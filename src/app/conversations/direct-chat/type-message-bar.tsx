@@ -29,10 +29,15 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TDirectChat, TSticker } from "@/utils/types/be-api"
-import type { TEmoji, TStateDirectMessage } from "@/utils/types/global"
-import { EMessageTypes } from "@/utils/enums"
+import type { TEmoji, TStateMessage } from "@/utils/types/global"
+import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
 import { toast } from "sonner"
-import { santizeMsgContent, extractEmojisFromMessage, unescapeHtml } from "@/utils/helpers"
+import {
+  santizeMsgContent,
+  extractEmojisFromMessage,
+  unescapeHtml,
+  converToMessageTypeAllTypes,
+} from "@/utils/helpers"
 import { TChattingPayload } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
 
@@ -78,9 +83,9 @@ const ExpressionPicker = ({
 
   const handleSelectSticker = (sticker: TSticker) => {
     chattingService.sendMessage(
-      EMessageTypes.STICKER,
+      EMessageTypeAllTypes.STICKER,
       {
-        content: sticker.imageUrl,
+        content: `${sticker.id}`,
         receiverId: user.id === recipientId ? creatorId : recipientId,
         token: chattingService.getMessageToken(),
         timestamp: new Date(),
@@ -348,7 +353,7 @@ const MessageTextField = ({
       payload.replyToId = replyMessage.id
     }
 
-    chattingService.sendMessage(EMessageTypes.TEXT, payload, (data) => {
+    chattingService.sendMessage(EMessageTypeAllTypes.TEXT, payload, (data) => {
       if ("success" in data && data.success) {
         chattingService.setAcknowledgmentFlag(true)
         chattingService.recursiveSendingQueueMessages()
@@ -457,7 +462,7 @@ function FileTypeMenu({
 
 type TTypeMessageBarProps = {
   directChat: TDirectChat
-  replyMessage: TStateDirectMessage | null
+  replyMessage: TStateMessage | null
   setReplyMessage: (msg: any | null) => void
   canSend?: boolean | null
 }
@@ -586,9 +591,17 @@ export const TypeMessageBar = memo(
             setUploadProgress(progress)
           })
           let messageType = EMessageTypes.MEDIA
-          if (file.type.startsWith("image/")) messageType = EMessageTypes.MEDIA
-          else if (file.type.startsWith("video/")) messageType = EMessageTypes.MEDIA
-          else messageType = EMessageTypes.MEDIA
+          let mediaType: EMessageMediaTypes
+          if (file.type.startsWith("image/")) {
+            messageType = EMessageTypes.MEDIA
+            mediaType = EMessageMediaTypes.IMAGE
+          } else if (file.type.startsWith("video/")) {
+            messageType = EMessageTypes.MEDIA
+            mediaType = EMessageMediaTypes.VIDEO
+          } else {
+            messageType = EMessageTypes.MEDIA
+            mediaType = EMessageMediaTypes.DOCUMENT
+          }
 
           const msgPayload: TChattingPayload["msgPayload"] = {
             content: `${id}`, // hoặc caption nếu có
@@ -596,18 +609,20 @@ export const TypeMessageBar = memo(
             token: chattingService.getMessageToken(),
             timestamp: new Date(),
           }
-          chattingService.sendMessage(messageType, msgPayload, (data) => {
-            if ("success" in data && data.success) {
-              chattingService.setAcknowledgmentFlag(true)
-              chattingService.recursiveSendingQueueMessages()
-            } else if ("isError" in data && data.isError) {
-              toast.error(`Lỗi khi gửi file ${file.name}`)
+          chattingService.sendMessage(
+            converToMessageTypeAllTypes(messageType, mediaType),
+            msgPayload,
+            (data) => {
+              if ("success" in data && data.success) {
+                chattingService.setAcknowledgmentFlag(true)
+                chattingService.recursiveSendingQueueMessages()
+              } else if ("isError" in data && data.isError) {
+                toast.error(`Lỗi khi gửi file ${file.name}`)
+              }
             }
-          })
+          )
         }
-        toast.success(`Đã gửi ${validFiles.length} file thành công`)
       } catch (error) {
-        console.error("Upload file error:", error)
         toast.error("Lỗi khi upload file")
       } finally {
         setIsUploading(false)
@@ -637,7 +652,7 @@ export const TypeMessageBar = memo(
       )
     }
 
-    function renderReplyPreview(msg: TStateDirectMessage) {
+    function renderReplyPreview(msg: TStateMessage) {
       // Nếu tin nhắn đã bị thu hồi, hiển thị thông báo thu hồi
       if (msg.isDeleted) {
         return <span className="text-sm text-gray-400 italic">This message has been deleted</span>
@@ -645,8 +660,23 @@ export const TypeMessageBar = memo(
 
       const type = msg.type.toUpperCase()
       const { Media, Sticker } = msg
-      switch (type) {
-        case EMessageTypes.MEDIA:
+      if (type === EMessageTypes.TEXT) {
+        return (
+          <span
+            className="w-full truncate text-sm"
+            dangerouslySetInnerHTML={{
+              __html: santizeMsgContent(msg.content) || "[Không có nội dung]",
+            }}
+          />
+        )
+      } else if (type === EMessageTypes.STICKER) {
+        return (
+          <span className="inline-block mt-1">
+            <img src={Sticker?.imageUrl} alt="sticker" className="h-8" />
+          </span>
+        )
+      } else if (type === EMessageTypes.MEDIA) {
+        if (Media?.type === EMessageMediaTypes.IMAGE) {
           if (Media?.url) {
             return (
               <span className="inline-block mt-1">
@@ -655,52 +685,34 @@ export const TypeMessageBar = memo(
             )
           }
           return "Unknown content"
-        case EMessageTypes.MEDIA:
+        } else if (Media?.type === EMessageMediaTypes.VIDEO) {
           return (
             <span className="flex items-center gap-2 mt-1 text-sm">
               <FileVideo size={16} />
               <span>{Media?.fileName || "File unnamed"}</span>
             </span>
           )
-        case EMessageTypes.MEDIA:
+        } else if (Media?.type === EMessageMediaTypes.AUDIO) {
+          return <span className="text-sm">Voice message</span>
+        } else if (Media?.type === EMessageMediaTypes.DOCUMENT) {
           return (
             <span className="flex items-center gap-2 mt-1 text-sm">
               <Paperclip size={16} />
               <span>{Media?.fileName || "File unnamed"}</span>
             </span>
           )
-        case EMessageTypes.STICKER:
-          const stickerUrl = Sticker?.imageUrl
-          if (stickerUrl) {
-            return (
-              <span className="inline-block mt-1">
-                <img src={stickerUrl} alt="sticker" className="h-8" />
-              </span>
-            )
-          }
-          return "Unknown content"
-        case EMessageTypes.TEXT:
-          return (
-            <span
-              className="w-full truncate text-sm"
-              dangerouslySetInnerHTML={{
-                __html: santizeMsgContent(msg.content) || "[Không có nội dung]",
-              }}
-            />
-          )
-        case EMessageTypes.MEDIA:
-          return <span className="text-sm">Voice message</span>
-        default:
-          const msgContent = msg.content
-          if (
-            msgContent &&
-            typeof msgContent === "string" &&
-            (msgContent.includes("<img") || msgContent.includes("<svg"))
-          ) {
-            const cleanContent = keepOnlyImgAndSvgTags(msgContent)
-            return <span className="" dangerouslySetInnerHTML={{ __html: cleanContent }} />
-          }
-          return "[Không có nội dung]"
+        }
+      } else {
+        const msgContent = msg.content
+        if (
+          msgContent &&
+          typeof msgContent === "string" &&
+          (msgContent.includes("<img") || msgContent.includes("<svg"))
+        ) {
+          const cleanContent = keepOnlyImgAndSvgTags(msgContent)
+          return <span className="" dangerouslySetInnerHTML={{ __html: cleanContent }} />
+        }
+        return "[Không có nội dung]"
       }
     }
 
@@ -777,7 +789,7 @@ export const TypeMessageBar = memo(
           timestamp: new Date(),
         }
 
-        chattingService.sendMessage(EMessageTypes.MEDIA, msgPayload, (data) => {
+        chattingService.sendMessage(EMessageTypeAllTypes.AUDIO, msgPayload, (data) => {
           if ("success" in data && data.success) {
             chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()
@@ -788,7 +800,6 @@ export const TypeMessageBar = memo(
           }
         })
       } catch (error) {
-        console.error("Upload voice error:", error)
         toast.error("Lỗi khi gửi file ghi âm")
       } finally {
         setIsUploading(false)
@@ -842,7 +853,7 @@ export const TypeMessageBar = memo(
       return (
         <div className="flex-1 flex items-center justify-center w-full py-10">
           <div className="system-message text-center text-gray-500 py-4 w-full">
-            Người này chỉ nhận tin nhắn từ bạn bè. Bạn không thể gửi tin nhắn.
+            This person only accepts messages from friends. You cannot send a message.
           </div>
         </div>
       )

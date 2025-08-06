@@ -19,8 +19,8 @@ import { VoiceMessagePlayer } from "../../../components/voice-message/voice-mess
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
 import { useAudioMessages } from "@/hooks/voice-messages"
 import { useUser } from "@/hooks/user"
-import type { TStateDirectMessage } from "@/utils/types/global"
-import { setDirectChat } from "@/redux/messages/messages.slice"
+import type { TStateMessage } from "@/utils/types/global"
+import { resetAllChatData, setDirectChat } from "@/redux/messages/messages.slice"
 import type { TPinMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
@@ -160,14 +160,18 @@ const Main = ({ directChat, canSend }: TMainProps) => {
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
   const { showPlayer } = useVoicePlayer()
-  const [replyMessage, setReplyMessage] = useState<TStateDirectMessage | null>(null)
+  const [replyMessage, setReplyMessage] = useState<TStateMessage | null>(null)
   // Thêm state quản lý pinned
   const [showPinnedModal, setShowPinnedModal] = useState(false)
-  const [pinnedMessages, setPinnedMessages] = useState<TStateDirectMessage[]>([])
+  const [pinnedMessages, setPinnedMessages] = useState<TStateMessage[]>([])
 
   // Ref để luôn lấy directChat.id mới nhất trong handler
   const directChatIdRef = useRef<number | undefined>(directChat?.id)
   const fetchPinnedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const resetAllChatDataHandler = () => {
+    dispatch(resetAllChatData())
+  }
 
   useEffect(() => {
     directChatIdRef.current = directChat?.id
@@ -202,6 +206,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
     }
     clientSocket.socket.on(ESocketEvents.pin_message, handlePinMessage)
     return () => {
+      resetAllChatDataHandler()
       clientSocket.socket.off(ESocketEvents.pin_message, handlePinMessage)
       // Cleanup timeout
       if (fetchPinnedTimeoutRef.current) {
@@ -222,30 +227,8 @@ const Main = ({ directChat, canSend }: TMainProps) => {
     }
   }, [directChat?.id])
 
-  // Đảm bảo client join room mỗi khi vào hoặc chuyển phòng chat, và join lại khi reconnect
-  useEffect(() => {
-    if (!directChat?.id) return
-    const room = `direct_chat_${directChat.id}`
-    const joinRoom = () => {
-      clientSocket.socket.emit("join_room" as any, { room })
-    }
-    joinRoom()
-    // Join lại khi socket reconnect
-    clientSocket.socket.on("connect", joinRoom)
-    const handleJoinedRoom = (joinedRoom: string) => {
-      // Room joined successfully
-    }
-    clientSocket.socket.on("joined_room" as any, handleJoinedRoom)
-    return () => {
-      clientSocket.socket.off("connect", joinRoom)
-      clientSocket.socket.off("joined_room" as any, handleJoinedRoom)
-      // Rời room khi chuyển phòng chat
-      clientSocket.socket.emit("leave_room" as any, { room })
-    }
-  }, [directChat?.id])
-
   // Add logging for setReplyMessage
-  const handleSetReplyMessage = (msg: TStateDirectMessage | null) => {
+  const handleSetReplyMessage = (msg: TStateMessage | null) => {
     setReplyMessage(msg)
   }
 

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
 import { santizeMsgContent } from "@/utils/helpers"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 import type { TUserWithoutPassword } from "@/utils/types/be-api"
 import dayjs from "dayjs"
 import { FileText, File, FileSpreadsheet, Presentation, FileCode, Mic, Play } from "lucide-react"
@@ -16,7 +16,7 @@ type TSelectMessageItemProps = {
   fileName?: string
   fileType?: string
   fileSize?: number
-  message?: TStateDirectMessage
+  message?: TStateMessage
   user: TUserWithoutPassword
   isSelected: boolean
   onSelect: (isSelected: boolean) => void
@@ -31,7 +31,7 @@ type TContentProps = {
   fileName?: string
   fileType?: string
   fileSize?: number
-  message: TStateDirectMessage
+  message: TStateMessage
   user: TUserWithoutPassword
   isSender?: boolean
 }
@@ -266,7 +266,7 @@ export const SelectMessageItem = ({
             fileName={message?.Media?.fileName || ""}
             fileType={message?.Media?.type || ""}
             fileSize={message?.Media?.fileSize || 0}
-            message={message || ({} as TStateDirectMessage)}
+            message={message || ({} as TStateMessage)}
             user={user}
             isSender={message?.Author?.id === user.id}
           />

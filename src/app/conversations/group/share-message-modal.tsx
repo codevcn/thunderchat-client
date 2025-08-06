@@ -3,7 +3,6 @@ import { CustomAvatar, DefaultAvatar } from "@/components/materials"
 import { useAppSelector } from "@/hooks/redux"
 import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.selectors"
 import { useUser } from "@/hooks/user"
-import { EChatType } from "@/utils/enums"
 import { searchConversations } from "@/services/search.service"
 import { directChatService } from "@/services/direct-chat.service"
 import { chattingService } from "@/services/chatting.service"
@@ -125,14 +124,7 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
           <>
             {/* Hiển thị search results */}
             {searchResultsFiltered.map((conversation) => {
-              const {
-                id,
-                avatar = null,
-                title = "",
-                subtitle = null,
-                type = "DIRECT",
-                email,
-              } = conversation
+              const { id, avatar = null, title = "", type = "DIRECT", email } = conversation
               return (
                 <button
                   key={`search-${type}-${id}`}
@@ -255,14 +247,7 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
 
             {/* Hiển thị conversations từ Redux */}
             {conversationsFromRedux.map((conversation) => {
-              const {
-                id,
-                avatar = null,
-                title = "",
-                subtitle = null,
-                type = "DIRECT",
-                email,
-              } = conversation
+              const { id, avatar = null, title = "", type = "DIRECT", email } = conversation
               return (
                 <button
                   key={`redux-${type}-${id}`}

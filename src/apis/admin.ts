@@ -12,6 +12,9 @@ import type {
   TUpdateAdminViolationReportStatusResponse,
   TAdminBanUserResponse,
   TUserReportHistoryData,
+  TAdminOverviewData,
+  TAdminUserMessageStatsData,
+  TAdminUserMessageStatsParams,
 } from "@/utils/types/be-api"
 import { EViolationReportStatus, EBanType } from "@/utils/enums"
 
@@ -89,3 +92,34 @@ export const getUserReportHistory = async (
   )
   return response.data
 }
+
+// Get admin overview statistics
+export const getAdminOverview = (params?: {
+  timeRange?: "day" | "week" | "month" | "year"
+  startDate?: string
+  endDate?: string
+}) => {
+  // Xử lý tham số để đảm bảo API nhận đúng format
+  const apiParams: any = {}
+
+  if (params?.startDate && params?.endDate) {
+    // Ưu tiên startDate/endDate nếu có
+    apiParams.startDate = params.startDate
+    apiParams.endDate = params.endDate
+  } else if (params?.timeRange) {
+    // Sử dụng timeRange nếu không có startDate/endDate
+    apiParams.timeRange = params.timeRange
+  }
+
+  return clientAxios.get<TAdminOverviewData>("/admin/overview", {
+    ...requestConfig,
+    params: apiParams,
+  })
+}
+
+// Get admin user message statistics
+export const getAdminUserMessageStats = (params: TAdminUserMessageStatsParams) =>
+  clientAxios.get<TAdminUserMessageStatsData>("/admin/users/message-stats", {
+    ...requestConfig,
+    params,
+  })

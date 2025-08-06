@@ -1,7 +1,19 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Search, ChevronDown, Edit, X, Check } from "lucide-react"
+import {
+  Search,
+  ChevronDown,
+  Edit,
+  X,
+  Check,
+  Users,
+  Filter,
+  Calendar,
+  UserCheck,
+  UserX,
+  AlertTriangle,
+} from "lucide-react"
 import { toast } from "sonner"
 import { adminService } from "@/services/admin.service"
 import type { TAdminUser } from "@/utils/types/be-api"
@@ -288,6 +300,16 @@ export const AdminUserManagement = () => {
     })
   }
 
+  const getStatusStats = () => {
+    const stats = {
+      normal: users.filter((u) => u.status === "NORMAL").length,
+      warning: users.filter((u) => u.status === "WARNING").length,
+      temporaryBan: users.filter((u) => u.status === "TEMPORARY_BAN").length,
+      permanentBan: users.filter((u) => u.status === "PERMANENT_BAN").length,
+    }
+    return stats
+  }
+
   if (error) {
     return (
       <div className="p-8 text-center">
@@ -301,6 +323,8 @@ export const AdminUserManagement = () => {
       </div>
     )
   }
+
+  const statusStats = getStatusStats()
 
   return (
     <div className="p-8">

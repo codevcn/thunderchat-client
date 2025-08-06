@@ -9,6 +9,9 @@ import type {
   TAdminViolationReportDetail,
   TUpdateAdminViolationReportStatusResponse,
   TAdminBanUserResponse,
+  TAdminOverviewData,
+  TAdminUserMessageStatsData,
+  TAdminUserMessageStatsParams,
 } from "@/utils/types/be-api"
 import {
   getAdminUsers,
@@ -20,6 +23,8 @@ import {
   getViolationReportDetail,
   updateViolationReportStatus,
   banReportedUser,
+  getAdminOverview,
+  getAdminUserMessageStats,
 } from "@/apis/admin"
 import type { TSuccess } from "@/utils/types/global"
 import { EViolationReportStatus, EBanType } from "@/utils/enums"
@@ -79,6 +84,28 @@ class AdminService {
     banDuration?: number
   ): Promise<TAdminBanUserResponse> {
     const { data } = await banReportedUser(reportId, banType, reason, banDuration)
+    return data
+  }
+
+  async getOverview(params?: {
+    timeRange?: "day" | "week" | "month" | "year"
+    startDate?: string
+    endDate?: string
+  }): Promise<TAdminOverviewData> {
+    // Nếu có startDate và endDate, ưu tiên sử dụng chúng thay vì timeRange
+    const apiParams =
+      params?.startDate && params?.endDate
+        ? { startDate: params.startDate, endDate: params.endDate }
+        : params
+
+    const { data } = await getAdminOverview(apiParams)
+    return data
+  }
+
+  async getUserMessageStats(
+    params: TAdminUserMessageStatsParams
+  ): Promise<TAdminUserMessageStatsData> {
+    const { data } = await getAdminUserMessageStats(params)
     return data
   }
 }

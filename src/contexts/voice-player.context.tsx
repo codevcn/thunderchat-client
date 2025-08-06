@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 
 // Logic preloadAudioMetadata từ VoiceMessage component
 const preloadAudioMetadata = (url: string): Promise<number> => {
@@ -69,16 +69,16 @@ type VoicePlayerStateContextType = {
   currentTime: number
   duration: number
   currentAudioUrl: string | null
-  currentMessage: TStateDirectMessage | null
+  currentMessage: TStateMessage | null
   showPlayer: boolean
   playbackRate: number
-  audioMessages: TStateDirectMessage[]
+  audioMessages: TStateMessage[]
   currentAudioIndex: number
   volume: number
 }
 
 type VoicePlayerActionsContextType = {
-  playAudio: (message: TStateDirectMessage) => Promise<void>
+  playAudio: (message: TStateMessage) => Promise<void>
   pauseAudio: () => void
   seekAudio: (time: number) => void
   stopAudio: () => void
@@ -86,7 +86,7 @@ type VoicePlayerActionsContextType = {
   setVolume: (volume: number) => void
   playNext: () => void
   playPrevious: () => void
-  setAudioMessages: (messages: TStateDirectMessage[]) => void
+  setAudioMessages: (messages: TStateMessage[]) => void
   setShowPlayer: (show: boolean) => void
 }
 
@@ -98,10 +98,10 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null)
-  const [currentMessage, setCurrentMessage] = useState<TStateDirectMessage | null>(null)
+  const [currentMessage, setCurrentMessage] = useState<TStateMessage | null>(null)
   const [showPlayer, setShowPlayer] = useState(false)
   const [playbackRate, setPlaybackRate] = useState(1)
-  const [audioMessages, setAudioMessages] = useState<TStateDirectMessage[]>([])
+  const [audioMessages, setAudioMessages] = useState<TStateMessage[]>([])
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0)
   const [volume, setVolume] = useState(1)
 
@@ -112,7 +112,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Actions - đặt ở top level
   const playAudio = useCallback(
-    async (message: TStateDirectMessage) => {
+    async (message: TStateMessage) => {
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current.currentTime = 0
@@ -293,7 +293,7 @@ export const VoicePlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [currentAudioIndex, audioMessages, playAudio])
 
-  const handleSetAudioMessages = useCallback((messages: TStateDirectMessage[]) => {
+  const handleSetAudioMessages = useCallback((messages: TStateMessage[]) => {
     setAudioMessages(messages)
   }, [])
 

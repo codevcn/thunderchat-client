@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react"
 import { useAppSelector } from "./redux"
 import { useVoicePlayer } from "@/contexts/voice-player.context"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
 
 export const useAudioMessages = () => {
@@ -14,7 +14,7 @@ export const useAudioMessages = () => {
 
     return directMessages
       .filter(
-        (message: TStateDirectMessage) =>
+        (message: TStateMessage) =>
           message.type === EMessageTypes.MEDIA && message.Media?.type === EMessageMediaTypes.AUDIO
       )
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) // ASC: cũ nhất trước

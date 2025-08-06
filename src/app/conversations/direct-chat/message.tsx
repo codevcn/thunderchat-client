@@ -1,23 +1,12 @@
 import { EMessageMediaTypes, EMessageTypes, ETimeFormats } from "@/utils/enums"
 import { santizeMsgContent } from "@/utils/helpers"
 import { EMessageStatus } from "@/utils/socket/enums"
-import type {
-  TMessageWithAuthor,
-  TUserWithoutPassword,
-  TGetFriendsData,
-  TMessageFullInfo,
-  TMessageMedia,
-} from "@/utils/types/be-api"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TUserWithoutPassword, TMessageFullInfo, TMessageMedia } from "@/utils/types/be-api"
+import type { TStateMessage } from "@/utils/types/global"
 import dayjs from "dayjs"
 import {
   Check,
   CheckCheck,
-  FileText,
-  File,
-  FileSpreadsheet,
-  Presentation,
-  FileCode,
   Quote,
   FileVideo,
   Paperclip,
@@ -27,24 +16,19 @@ import {
   Download as DownloadIcon,
   RotateCw,
   MoreHorizontal,
-  X as CloseIcon,
   Download,
 } from "lucide-react"
 import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
 import VoiceMessage from "../../../components/voice-message/voice-message"
-import React, { useState, forwardRef, useEffect, useRef } from "react"
+import React, { useState, forwardRef, useEffect } from "react"
 import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
 import { DropdownMessage } from "@/components/materials/dropdown-message"
 import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
 import { createPortal } from "react-dom"
-import ActionIcons from "@/components/materials/action-icons"
 import { ShareMessageModal } from "./ShareMessageModal"
-import { directChatService } from "@/services/direct-chat.service"
-import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
-import { clientSocket } from "@/utils/socket/client-socket"
 import { FileService } from "@/services/file.service"
 
 type TContentProps = {
@@ -52,7 +36,7 @@ type TContentProps = {
   stickerUrl: string | null
   type: string
   Media: TMessageMedia | null
-  message?: TStateDirectMessage
+  message?: TStateMessage
   user: TUserWithoutPassword
 }
 
@@ -385,10 +369,10 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
 }
 
 type TMessageProps = {
-  message: TStateDirectMessage
+  message: TStateMessage
   user: TUserWithoutPassword
   stickyTime: string | null
-  onReply: (msg: TStateDirectMessage) => void
+  onReply: (msg: TStateMessage) => void
   isPinned: boolean
   onPinChange: (newState: boolean) => void
   pinnedCount: number
@@ -414,7 +398,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       try {
         const response = await pinService.togglePinMessage(
           message.id,
-          (message.directChatId || message.groupChatId)!,
+          message.directChatId!,
           !isPinned
         )
 

@@ -1,11 +1,25 @@
 "use client"
 
-import { CustomTooltip, IconButton } from "@/components/materials"
-import { Mic, Paperclip, Send, Smile, Sticker } from "lucide-react"
+import { CustomTooltip, IconButton, Spinner, CircularProgress } from "@/components/materials"
+import {
+  Download,
+  FileVideo,
+  Mic,
+  Paperclip,
+  Reply,
+  Send,
+  Smile,
+  Sticker,
+  Trash,
+  X,
+  Image as ImageIcon,
+  FileText,
+  BarChart2,
+  MapPin,
+} from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
 import { AutoResizeTextField } from "@/components/materials"
-import { useAppSelector } from "@/hooks/redux"
 import { memo, useEffect, useRef, useState, Suspense, lazy } from "react"
 import { useRootLayoutContext } from "@/hooks/layout"
 import { createPortal } from "react-dom"
@@ -14,10 +28,18 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TGroupChatData, TSticker } from "@/utils/types/be-api"
-import type { TEmoji } from "@/utils/types/global"
-import { EMessageTypes } from "@/utils/enums"
+import type { TDirectChat, TSticker } from "@/utils/types/be-api"
+import type { TEmoji, TStateMessage } from "@/utils/types/global"
+import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
 import { toast } from "sonner"
+import {
+  santizeMsgContent,
+  extractEmojisFromMessage,
+  unescapeHtml,
+  converToMessageTypeAllTypes,
+} from "@/utils/helpers"
+import { TChattingPayload } from "@/utils/types/socket"
+import { FileService } from "@/services/file.service"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -35,22 +57,20 @@ type TExpressionCategory = "emoji" | "sticker"
 type TExpressionPickerProps = {
   textFieldRef: React.RefObject<HTMLDivElement | null>
   expressionPopoverRef: React.RefObject<HTMLDivElement | null>
-  groupChat: TGroupChatData
+  directChat: TDirectChat
 }
 
 const ExpressionPicker = ({
   textFieldRef,
   expressionPopoverRef,
-  groupChat,
+  directChat,
 }: TExpressionPickerProps) => {
   const [showPicker, setShowPicker] = useState<boolean>(false)
   const [category, setCategory] = useState<TExpressionCategory>("emoji")
   const addEmojiBtnRef = useRef<HTMLButtonElement>(null)
   const appRootEle = useRootLayoutContext().appRootRef!.current!
   const user = useUser()!
-  const { creatorId, id } = groupChat
-  console.log(">>> creatorId:", creatorId)
-  console.log(">>> id:", id)
+  const { recipientId, creatorId } = directChat
   const handleSelectEmoji = (emojiObject: TEmoji) => {
     const textField = textFieldRef.current
     if (textField) {
@@ -61,7 +81,25 @@ const ExpressionPicker = ({
     }
   }
 
-  const handleSelectSticker = (sticker: TSticker) => {}
+  const handleSelectSticker = (sticker: TSticker) => {
+    chattingService.sendMessage(
+      EMessageTypeAllTypes.STICKER,
+      {
+        content: `${sticker.id}`,
+        receiverId: user.id === recipientId ? creatorId : recipientId,
+        token: chattingService.getMessageToken(),
+        timestamp: new Date(),
+      },
+      (data) => {
+        if ("success" in data && data.success) {
+          chattingService.setAcknowledgmentFlag(true)
+          chattingService.recursiveSendingQueueMessages()
+        } else if ("isError" in data && data.isError) {
+          toast.error(data?.message || "Error when sending message")
+        }
+      }
+    )
+  }
 
   const toggleEmojiPicker = () => {
     setShowPicker((prev) => !prev)
@@ -174,41 +212,157 @@ const useCustomDebounce = (typingFlagRef: React.RefObject<TTypingFlags | undefin
 }
 
 type TMessageTextFieldProps = {
-  groupChat: TGroupChatData
+  directChat: TDirectChat
   setHasContent: (hasContent: boolean) => void
   hasContent: boolean
   textFieldRef: React.RefObject<HTMLDivElement | null>
   textFieldContainerRef: React.RefObject<HTMLDivElement | null>
   expressionPopoverRef: React.RefObject<HTMLDivElement | null>
+  replyMessage: any | null
+  setReplyMessage: (msg: any | null) => void
 }
 
 const MessageTextField = ({
-  groupChat,
+  directChat,
   setHasContent,
   hasContent,
   textFieldRef,
   textFieldContainerRef,
   expressionPopoverRef,
+  replyMessage,
+  setReplyMessage,
 }: TMessageTextFieldProps) => {
-  const { creatorId, id } = groupChat
-  console.log(">>> creatorId:", creatorId)
-  console.log(">>> id:", id)
+  const { recipientId, creatorId } = directChat
   const user = useUser()!
   const typingFlagRef = useRef<TTypingFlags | undefined>(undefined)
   const debounce = useCustomDebounce(typingFlagRef)
 
-  const indicateUserIsTyping = debounce((type: TTypingFlags) => {}, INDICATE_TYPING_DELAY)
+  const indicateUserIsTyping = debounce((type: TTypingFlags) => {
+    clientSocket.socket.emit(ESocketEvents.typing_direct, {
+      receiverId: recipientId === user.id ? creatorId : recipientId,
+      isTyping: type === "typing",
+      directChatId: directChat.id,
+    })
+  }, INDICATE_TYPING_DELAY)
 
   const handleTyping = (msg: string) => {
+    // Clean up message: loại bỏ link tags và decode HTML
+    const cleanedMsg = cleanMessageContent(msg)
+    // Kiểm tra emoji trong message đã clean
+    const emojis = extractEmojisFromMessage(cleanedMsg)
     if (msg.trim() && msg.length > 0) {
       setHasContent(true)
     } else {
       setHasContent(false)
     }
+
     indicateUserIsTyping("typing")
   }
 
-  const sendMessage = (msgToSend: string) => {}
+  // Hàm clean up nội dung message
+  const cleanMessageContent = (message: string): string => {
+    // Decode HTML entities
+    let cleaned = unescapeHtml(message)
+
+    // Loại bỏ link tags
+    cleaned = cleaned.replace(/<link[^>]*>/g, "")
+
+    // Loại bỏ whitespace thừa
+    cleaned = cleaned.trim()
+
+    return cleaned
+  }
+
+  // Xử lý paste event để đảm bảo emoji hiển thị đúng
+  const handlePaste = (e: ClipboardEvent) => {
+    const textField = textFieldRef.current
+    if (!textField) return
+
+    // Đợi một chút để DOM được cập nhật
+    setTimeout(() => {
+      const content = textField.innerHTML
+
+      // Clean up content trước khi xử lý
+      const cleanedContent = cleanMessageContent(content)
+
+      // Kiểm tra xem có emoji img tags không
+      const emojis = extractEmojisFromMessage(cleanedContent)
+
+      if (emojis.length > 0) {
+        // Thay thế nội dung encoded bằng nội dung đã clean để hiển thị emoji
+        if (content !== cleanedContent) {
+          textField.innerHTML = cleanedContent
+          // Điều chỉnh kích thước sau khi thay thế nội dung
+          setTimeout(() => {
+            if (textField) {
+              // Reset kích thước để tính toán lại
+              textField.style.height = "auto"
+              textField.style.width = "auto"
+
+              // Tính toán kích thước mới
+              const newHeight = Math.min(
+                Math.max(textField.scrollHeight, 21), // min height
+                300 // max height
+              )
+
+              // Tính toán chiều rộng mới (giới hạn tối đa 100% container)
+              const containerWidth = textField.parentElement?.clientWidth || 1000
+              const newWidth = Math.min(textField.scrollWidth, containerWidth)
+
+              // Áp dụng kích thước mới
+              textField.style.height = `${newHeight}px`
+              textField.style.width = `${newWidth}px`
+
+              // Thêm overflow nếu cần
+              textField.style.overflowY = textField.scrollHeight > 300 ? "auto" : "hidden"
+              textField.style.overflowX = textField.scrollWidth > newWidth ? "auto" : "hidden"
+
+              // Di chuyển con trỏ đến cuối text
+              const range = document.createRange()
+              const selection = window.getSelection()
+              range.selectNodeContents(textField)
+              range.collapse(false) // false để đặt con trỏ ở cuối, true để đặt ở đầu
+              if (selection) {
+                selection.removeAllRanges()
+                selection.addRange(range)
+              }
+
+              // Focus vào textfield
+              textField.focus()
+            }
+          }, 0)
+        }
+      }
+    }, 10)
+  }
+
+  const sendMessage = (msgToSend: string) => {
+    if (!msgToSend || !msgToSend.trim() || msgToSend.includes("QUERY-empty-placeholder")) {
+      toast.error("Message cannot be empty")
+      return
+    }
+
+    const payload: TChattingPayload["msgPayload"] = {
+      content: msgToSend,
+      receiverId: user.id === recipientId ? creatorId : recipientId,
+      token: chattingService.getMessageToken(),
+      timestamp: new Date(),
+    }
+
+    if (replyMessage && replyMessage.id) {
+      payload.replyToId = replyMessage.id
+    }
+
+    chattingService.sendMessage(EMessageTypeAllTypes.TEXT, payload, (data) => {
+      if ("success" in data && data.success) {
+        chattingService.setAcknowledgmentFlag(true)
+        chattingService.recursiveSendingQueueMessages()
+      } else if ("isError" in data && data.isError) {
+        toast.error(data?.message || "Error when sending message")
+      }
+    })
+    setReplyMessage(null)
+  }
 
   const handleCatchEnter = (msg: string) => {
     sendMessage(msg)
@@ -233,8 +387,18 @@ const MessageTextField = ({
 
   useEffect(() => {
     eventEmitter.on(EInternalEvents.CLICK_ON_LAYOUT, handleClickOnLayout)
+
+    // Thêm paste event listener
+    const textField = textFieldRef.current
+    if (textField) {
+      textField.addEventListener("paste", handlePaste)
+    }
+
     return () => {
       eventEmitter.off(EInternalEvents.CLICK_ON_LAYOUT, handleClickOnLayout)
+      if (textField) {
+        textField.removeEventListener("paste", handlePaste)
+      }
     }
   }, [])
 
@@ -261,74 +425,603 @@ const MessageTextField = ({
   )
 }
 
-type TTypeMessageBarProps = {
-  groupChat: TGroupChatData
+const fileOptions = [
+  { icon: <ImageIcon size={20} />, label: "Photo or video", value: "photo" },
+  { icon: <FileText size={20} />, label: "Document", value: "document" },
+  { icon: <BarChart2 size={20} />, label: "Create poll", value: "poll" },
+  { icon: <MapPin size={20} />, label: "Location", value: "location" },
+]
+
+function FileTypeMenu({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (type: string) => void
+  onClose: () => void
+}) {
+  return (
+    <div className="absolute bottom-12 left-0 z-50 bg-regular-dark-gray-cl shadow-lg rounded-lg p-2 w-56 border border-gray-700">
+      {fileOptions.map((opt) => (
+        <button
+          key={opt.value}
+          className="flex items-center w-full px-3 py-2 hover:bg-regular-violet-cl/20 rounded transition text-white hover:text-regular-violet-cl focus:outline-none focus:ring-2 focus:ring-regular-violet-cl"
+          onClick={() => {
+            onSelect(opt.value)
+            onClose()
+          }}
+        >
+          <span className="text-xl mr-3 flex items-center justify-center w-7 h-7 bg-regular-dark-gray-cl rounded-full border border-gray-700">
+            {opt.icon}
+          </span>
+          <span>{opt.label}</span>
+        </button>
+      ))}
+    </div>
+  )
 }
 
-export const TypeMessageBar = memo(({ groupChat }: TTypeMessageBarProps) => {
-  const { fetchedMsgs } = useAppSelector(({ messages }) => messages)
-  const textFieldRef = useRef<HTMLDivElement | null>(null)
-  const [hasContent, setHasContent] = useState<boolean>(false)
-  const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
-  const expressionPopoverRef = useRef<HTMLDivElement>(null)
+type TTypeMessageBarProps = {
+  directChat: TDirectChat
+  replyMessage: TStateMessage | null
+  setReplyMessage: (msg: any | null) => void
+  canSend?: boolean | null
+}
 
-  const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
-    const textField = textFieldRef.current
-    textFieldContainerRef.current?.classList.add("outline-regular-violet-cl")
-    if (textField) {
-      if (e.target === textField) return
-      textField.focus()
-      // Đặt con trỏ ở cuối nội dung
-      const range = document.createRange()
-      const selection = window.getSelection()
-      range.selectNodeContents(textField)
-      range.collapse(false) // false để đặt con trỏ ở cuối, true để đặt ở đầu
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
+export const TypeMessageBar = memo(
+  ({ directChat, replyMessage, setReplyMessage, canSend }: TTypeMessageBarProps) => {
+    const user = useUser()
+    const textFieldRef = useRef<HTMLDivElement | null>(null)
+    const [hasContent, setHasContent] = useState<boolean>(false)
+    const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
+    const expressionPopoverRef = useRef<HTMLDivElement>(null)
+    const [showFileMenu, setShowFileMenu] = useState<boolean>(false)
+    const menuRef = useRef<HTMLDivElement | null>(null)
+    const [isUploading, setIsUploading] = useState<boolean>(false)
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
+    const [fileAccept, setFileAccept] = useState<string>("")
+    const [fileMode, setFileMode] = useState<string>("")
+    const [fileInputKey, setFileInputKey] = useState<number>(0)
+    const [uploadProgress, setUploadProgress] = useState<number>(0)
+
+    const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
+      const textField = textFieldRef.current
+      textFieldContainerRef.current?.classList.add("outline-regular-violet-cl")
+      if (textField) {
+        if (e.target === textField) return
+        textField.focus()
+        // Đặt con trỏ ở cuối nội dung
+        const range = document.createRange()
+        const selection = window.getSelection()
+        range.selectNodeContents(textField)
+        range.collapse(false) // false để đặt con trỏ ở cuối, true để đặt ở đầu
+        if (selection) {
+          selection.removeAllRanges()
+          selection.addRange(range)
+        }
       }
     }
-  }
 
-  return (
-    fetchedMsgs && (
-      <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border w-type-message-bar">
-        <div
-          onClick={handleClickOnTextFieldContainer}
-          ref={textFieldContainerRef}
-          className="flex cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
-        >
-          <ExpressionPicker
-            textFieldRef={textFieldRef}
-            expressionPopoverRef={expressionPopoverRef}
-            groupChat={groupChat}
+    const handleFileMenuSelect = (type: string) => {
+      if (type === "photo") {
+        setFileAccept("image/*,video/*")
+        setFileMode("media")
+        setFileInputKey((prev) => prev + 1)
+        setTimeout(() => {
+          fileInputRef.current?.click()
+        }, 0)
+      } else if (type === "document") {
+        setFileAccept(
+          ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+        )
+        setFileMode("document")
+        setFileInputKey((prev) => prev + 1)
+        setTimeout(() => {
+          fileInputRef.current?.click()
+        }, 0)
+      }
+      // ... các case khác
+    }
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!user) return
+      const { recipientId, creatorId } = directChat
+      const files = Array.from(e.target.files || [])
+      if (files.length === 0) return
+
+      // Kiểm tra loại file hợp lệ theo mode
+      const validFiles = files.filter((file) => {
+        if (fileMode === "media") {
+          return file.type.startsWith("image/") || file.type.startsWith("video/")
+        }
+        if (fileMode === "document") {
+          return (
+            file.type === "application/pdf" ||
+            file.type === "application/msword" ||
+            file.type ===
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+            file.type === "application/vnd.ms-excel" ||
+            file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+            file.type === "application/vnd.ms-powerpoint" ||
+            file.type ===
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+            file.type === "text/plain" ||
+            [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
+              file.name.endsWith(ext)
+            )
+          )
+        }
+        // fallback: cho phép cả hai
+        return (
+          file.type.startsWith("image/") ||
+          file.type.startsWith("video/") ||
+          file.type === "application/pdf" ||
+          file.type === "application/msword" ||
+          file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+          file.type === "application/vnd.ms-excel" ||
+          file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+          file.type === "application/vnd.ms-powerpoint" ||
+          file.type ===
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+          file.type === "text/plain" ||
+          [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
+            file.name.endsWith(ext)
+          )
+        )
+      })
+
+      if (validFiles.length === 0) {
+        toast.error("Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT)")
+        return
+      }
+
+      if (validFiles.length !== files.length) {
+        toast.error(`${files.length - validFiles.length} file không được hỗ trợ`)
+      }
+
+      setIsUploading(true)
+      try {
+        for (const file of validFiles) {
+          if (file.size > 50 * 1024 * 1024) {
+            toast.error(`File ${file.name} vượt quá 50MB!`)
+            continue
+          }
+          // Upload file lên server
+          const { id } = await FileService.uploadFile(file, (loaded, total) => {
+            const progress = total ? Math.round((loaded / total) * 100) : 0
+            setUploadProgress(progress)
+          })
+          let messageType = EMessageTypes.MEDIA
+          let mediaType: EMessageMediaTypes
+          if (file.type.startsWith("image/")) {
+            messageType = EMessageTypes.MEDIA
+            mediaType = EMessageMediaTypes.IMAGE
+          } else if (file.type.startsWith("video/")) {
+            messageType = EMessageTypes.MEDIA
+            mediaType = EMessageMediaTypes.VIDEO
+          } else {
+            messageType = EMessageTypes.MEDIA
+            mediaType = EMessageMediaTypes.DOCUMENT
+          }
+
+          const msgPayload: TChattingPayload["msgPayload"] = {
+            content: `${id}`, // hoặc caption nếu có
+            receiverId: user.id === recipientId ? creatorId : recipientId,
+            token: chattingService.getMessageToken(),
+            timestamp: new Date(),
+          }
+          chattingService.sendMessage(
+            converToMessageTypeAllTypes(messageType, mediaType),
+            msgPayload,
+            (data) => {
+              if ("success" in data && data.success) {
+                chattingService.setAcknowledgmentFlag(true)
+                chattingService.recursiveSendingQueueMessages()
+              } else if ("isError" in data && data.isError) {
+                toast.error(`Lỗi khi gửi file ${file.name}`)
+              }
+            }
+          )
+        }
+      } catch (error) {
+        toast.error("Lỗi khi upload file")
+      } finally {
+        setIsUploading(false)
+      }
+      e.target.value = ""
+    }
+
+    // Thêm useEffect để đóng menu khi click outside
+    useEffect(() => {
+      if (!showFileMenu) return
+      const handleClickOutside = (event: MouseEvent) => {
+        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+          setShowFileMenu(false)
+        }
+      }
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside)
+      }
+    }, [showFileMenu])
+
+    function keepOnlyImgAndSvgTags(html: string) {
+      // Loại bỏ mọi thẻ không phải <img>, <svg> và các thẻ SVG con
+      return html.replace(
+        /<(?!img\b|svg\b|path\b|rect\b|circle\b|g\b|line\b|ellipse\b|polygon\b|polyline\b|defs\b|linearGradient\b|stop\b|title\b|desc\b)[^>]*>/gi,
+        ""
+      )
+    }
+
+    function renderReplyPreview(msg: TStateMessage) {
+      // Nếu tin nhắn đã bị thu hồi, hiển thị thông báo thu hồi
+      if (msg.isDeleted) {
+        return <span className="text-sm text-gray-400 italic">This message has been deleted</span>
+      }
+
+      const type = msg.type.toUpperCase()
+      const { Media, Sticker } = msg
+      if (type === EMessageTypes.TEXT) {
+        return (
+          <span
+            className="w-full truncate text-sm"
+            dangerouslySetInnerHTML={{
+              __html: santizeMsgContent(msg.content) || "[Không có nội dung]",
+            }}
           />
-          <MessageTextField
-            hasContent={hasContent}
-            groupChat={groupChat}
-            setHasContent={setHasContent}
-            textFieldRef={textFieldRef}
-            textFieldContainerRef={textFieldContainerRef}
-            expressionPopoverRef={expressionPopoverRef}
-          />
-          <button className="text-gray-500 hover:text-regular-violet-cl cursor-pointer relative bottom-0 right-0">
-            <Paperclip />
-          </button>
+        )
+      } else if (type === EMessageTypes.STICKER) {
+        return (
+          <span className="inline-block mt-1">
+            <img src={Sticker?.imageUrl} alt="sticker" className="h-8" />
+          </span>
+        )
+      } else if (type === EMessageTypes.MEDIA) {
+        if (Media?.type === EMessageMediaTypes.IMAGE) {
+          if (Media?.url) {
+            return (
+              <span className="inline-block mt-1">
+                <img src={Media.url} alt="sticker" className="h-10" />
+              </span>
+            )
+          }
+          return "Unknown content"
+        } else if (Media?.type === EMessageMediaTypes.VIDEO) {
+          return (
+            <span className="flex items-center gap-2 mt-1 text-sm">
+              <FileVideo size={16} />
+              <span>{Media?.fileName || "File unnamed"}</span>
+            </span>
+          )
+        } else if (Media?.type === EMessageMediaTypes.AUDIO) {
+          return <span className="text-sm">Voice message</span>
+        } else if (Media?.type === EMessageMediaTypes.DOCUMENT) {
+          return (
+            <span className="flex items-center gap-2 mt-1 text-sm">
+              <Paperclip size={16} />
+              <span>{Media?.fileName || "File unnamed"}</span>
+            </span>
+          )
+        }
+      } else {
+        const msgContent = msg.content
+        if (
+          msgContent &&
+          typeof msgContent === "string" &&
+          (msgContent.includes("<img") || msgContent.includes("<svg"))
+        ) {
+          const cleanContent = keepOnlyImgAndSvgTags(msgContent)
+          return <span className="" dangerouslySetInnerHTML={{ __html: cleanContent }} />
+        }
+        return "[Không có nội dung]"
+      }
+    }
+
+    // voice message
+    const [isRecording, setIsRecording] = useState(false)
+    const [recordTime, setRecordTime] = useState(0)
+    const timerRef = useRef<NodeJS.Timeout | null>(null)
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+    const audioChunksRef = useRef<Blob[]>([])
+    const [audioUrl, setAudioUrl] = useState<string | null>(null)
+    const isCancelledRef = useRef(false)
+    const startRecording = async () => {
+      setIsRecording(true)
+      setRecordTime(0)
+      setAudioUrl(null)
+      isCancelledRef.current = false
+      audioChunksRef.current = []
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const recorder = new MediaRecorder(stream)
+        mediaRecorderRef.current = recorder
+
+        recorder.ondataavailable = (e) => {
+          audioChunksRef.current.push(e.data)
+        }
+
+        recorder.onstop = () => {
+          if (isCancelledRef.current) return
+          const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+          setAudioUrl(URL.createObjectURL(blob))
+          stream.getTracks().forEach((track) => track.stop())
+        }
+
+        recorder.start()
+      } catch (err) {
+        setIsRecording(false)
+        if (timerRef.current) clearInterval(timerRef.current)
+        alert("Không thể truy cập microphone!")
+      }
+    }
+
+    const stopRecording = () => {
+      setIsRecording(false)
+      setRecordTime(0)
+      if (timerRef.current) clearInterval(timerRef.current)
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop()
+      }
+    }
+    const sendVoice = async () => {
+      if (!audioUrl) {
+        toast.error("Chưa có dữ liệu ghi âm")
+        return
+      }
+      setIsUploading(true)
+      try {
+        // Lấy Blob webm từ audioUrl
+        const webmBlob = await fetch(audioUrl).then((r) => r.blob())
+
+        // Tạo file object webm
+        const webmFile = new File([webmBlob], `voice-userId${user?.id}-${Date.now()}.webm`, {
+          type: "audio/webm",
+        })
+
+        // Upload lên AWS S3, lấy url về (dùng hàm uploadFile của bạn)
+        const { id } = await FileService.uploadFile(webmFile)
+
+        // Gửi message (BE sẽ nhận type là AUDIO, mediaUrl là link S3 .webm)
+        const { recipientId, creatorId } = directChat
+        const msgPayload = {
+          content: `${id}`, // hoặc chú thích
+          receiverId: user!.id === recipientId ? creatorId : recipientId,
+          token: chattingService.getMessageToken(),
+          timestamp: new Date(),
+        }
+
+        chattingService.sendMessage(EMessageTypeAllTypes.AUDIO, msgPayload, (data) => {
+          if ("success" in data && data.success) {
+            chattingService.setAcknowledgmentFlag(true)
+            chattingService.recursiveSendingQueueMessages()
+            setAudioUrl(null) // reset state
+            toast.success("Đã gửi file ghi âm thành công")
+          } else if ("isError" in data && data.isError) {
+            toast.error(`Lỗi khi gửi file ghi âm`)
+          }
+        })
+      } catch (error) {
+        toast.error("Lỗi khi gửi file ghi âm")
+      } finally {
+        setIsUploading(false)
+        setIsRecording(false)
+        setRecordTime(0)
+      }
+    }
+
+    const cancelRecording = () => {
+      isCancelledRef.current = true
+      setAudioUrl(null) // clear audioUrl nếu hủy
+      stopRecording()
+    }
+
+    // Format mm:ss,ms
+    const formatTime = (ms: number) => {
+      const minutes = Math.floor(ms / 60000)
+      const seconds = Math.floor((ms % 60000) / 1000)
+      const msPart = Math.floor((ms % 1000) / 10) // lấy 2 số
+      return `${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")},${msPart.toString().padStart(2, "0")}`
+    }
+
+    useEffect(() => {
+      if (isRecording) {
+        timerRef.current = setInterval(() => {
+          setRecordTime((prev) => prev + 10)
+        }, 10)
+      } else {
+        setRecordTime(0) // reset time khi stop
+        if (timerRef.current) clearInterval(timerRef.current)
+      }
+      // Cleanup khi component unmount hoặc isRecording false
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current)
+      }
+    }, [isRecording])
+    useEffect(() => {
+      if (audioUrl && !isRecording) {
+        // Không chạy khi đang ghi, chỉ chạy khi vừa dừng ghi và có file
+        sendVoice()
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [audioUrl, isRecording])
+
+    {
+      /* Hiển thị thông báo khi không thể gửi tin nhắn */
+    }
+    if (canSend === false) {
+      return (
+        <div className="flex-1 flex items-center justify-center w-full py-10">
+          <div className="system-message text-center text-gray-500 py-4 w-full">
+            This person only accepts messages from friends. You cannot send a message.
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border relative">
+        <div className="flex flex-col grow">
+          {/* Reply Preview */}
+          {replyMessage && !replyMessage.isDeleted && (
+            <div
+              id="STYLE-message-reply-preview"
+              className="flex items-center w-type-message-bar gap-2 bg-regular-dark-gray-cl border-l-2 border-red-600 rounded-lg px-2 py-2 mb-1 text-xs"
+            >
+              <div className="w-6 h-6">
+                <Reply size={24} className="text-red-600" />
+              </div>
+              <div className="rounded grow overflow-hidden pl-2 pr-2 text-xs">
+                <div className="text-sm text-red-600">
+                  <span>Reply to </span>
+                  <span className="font-bold">{replyMessage.Author.Profile.fullName}</span>
+                </div>
+                <div className="mt-0.5 text-regular-icon-cl">
+                  {renderReplyPreview(replyMessage)}
+                </div>
+              </div>
+              <button
+                className="ml-2 text-regular-icon-cl hover:text-red-600 transition-colors"
+                title="Hủy trả lời"
+                onClick={() => setReplyMessage(null)}
+              >
+                <X size={24} />
+              </button>
+            </div>
+          )}
+          <div
+            onClick={handleClickOnTextFieldContainer}
+            ref={textFieldContainerRef}
+            className="flex w-type-message-bar cursor-text grow items-center gap-2 relative z-10 rounded-2xl bg-regular-dark-gray-cl px-3 outline-2 outline outline-regular-dark-gray-cl hover:outline-regular-violet-cl transition-[outline] duration-200"
+          >
+            <ExpressionPicker
+              textFieldRef={textFieldRef}
+              expressionPopoverRef={expressionPopoverRef}
+              directChat={directChat}
+            />
+            <MessageTextField
+              hasContent={hasContent}
+              directChat={directChat}
+              setHasContent={setHasContent}
+              textFieldRef={textFieldRef}
+              textFieldContainerRef={textFieldContainerRef}
+              expressionPopoverRef={expressionPopoverRef}
+              replyMessage={replyMessage}
+              setReplyMessage={setReplyMessage}
+            />
+            {!isRecording ? (
+              <span
+                className={`${isUploading ? "text-gray-400 cursor-not-allowed" : "text-gray-500 hover:text-regular-violet-cl cursor-pointer"} relative bottom-0 right-0`}
+                onClick={() => {
+                  if (!isUploading) setShowFileMenu((v) => !v)
+                }}
+                role="button"
+                tabIndex={0}
+                style={{ outline: "none" }}
+              >
+                {isUploading ? (
+                  <CircularProgress
+                    progress={uploadProgress}
+                    size={35}
+                    strokeWidth={8}
+                    progressColor="#ef4444"
+                  />
+                ) : (
+                  <Paperclip />
+                )}
+                {showFileMenu && (
+                  <div ref={menuRef}>
+                    <FileTypeMenu
+                      onSelect={handleFileMenuSelect}
+                      onClose={() => setShowFileMenu(false)}
+                    />
+                  </div>
+                )}
+              </span>
+            ) : (
+              <div className="flex items-center justify-center min-w-[68px] relative bottom-0 right-0">
+                <span className="text-lg text-white font-semibold select-none">
+                  {formatTime(recordTime)}
+                  <span className="ml-2 w-3 h-3 rounded-full bg-red-500 inline-block animate-pulse"></span>
+                </span>
+              </div>
+            )}
+            <input
+              key={fileInputKey}
+              type="file"
+              accept={fileAccept}
+              multiple
+              style={{ display: "none" }}
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+            />
+          </div>
         </div>
 
-        <CustomTooltip title={hasContent ? "Send message" : "Record voice message"} placement="top">
-          <div
-            className={`${hasContent ? "text-regular-violet-cl" : "text-gray-500"} bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
+        {/* Nút gửi/ghi âm: merge từ cả 2 */}
+        <div className="relative flex items-center">
+          {/* Nút huỷ ghi âm - KHÔNG nằm trong Tooltip */}
+          {isRecording && (
+            <button
+              onClick={cancelRecording}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-full p-3 mr-2"
+              type="button"
+            >
+              <Trash />
+            </button>
+          )}
+
+          <CustomTooltip
+            title={
+              hasContent ? "Send message" : isRecording ? "Send voice" : "Record voice message"
+            }
+            placement="top"
           >
-            <div className={`${hasContent ? "animate-hide-icon" : "animate-grow-icon"} absolute`}>
-              <Mic />
+            <div
+              onClick={async () => {
+                if (hasContent) {
+                  // sendMessage
+                } else if (isRecording) {
+                  stopRecording() // Dừng ghi âm TRƯỚC
+                } else {
+                  startRecording()
+                }
+              }}
+              className={`${
+                hasContent || isRecording ? "text-regular-violet-cl" : "text-gray-500"
+              } bg-regular-dark-gray-cl rounded-full p-[27px] relative hover:text-white flex justify-center items-center cursor-pointer hover:bg-regular-violet-cl`}
+              tabIndex={0}
+              role="button"
+              aria-label={
+                hasContent ? "Send message" : isRecording ? "Send voice" : "Record voice message"
+              }
+              onKeyDown={async (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  if (hasContent) {
+                    // sendMessage
+                  } else if (isRecording) {
+                    stopRecording() // Dừng ghi âm TRƯỚC
+                  } else {
+                    startRecording()
+                  }
+                }
+              }}
+            >
+              <div
+                className={`${hasContent || isRecording ? "animate-hide-icon" : "animate-grow-icon"} absolute`}
+              >
+                <Mic />
+              </div>
+              <div
+                className={`${hasContent || isRecording ? "animate-grow-icon" : "animate-hide-icon"} absolute`}
+              >
+                <Send />
+              </div>
             </div>
-            <div className={`${hasContent ? "animate-grow-icon" : "animate-hide-icon"} absolute`}>
-              <Send />
-            </div>
-          </div>
-        </CustomTooltip>
+          </CustomTooltip>
+        </div>
       </div>
     )
-  )
-})
+  }
+)

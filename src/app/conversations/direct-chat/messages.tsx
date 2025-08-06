@@ -30,7 +30,7 @@ import { ESocketEvents } from "@/utils/socket/events"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import type { TDirectChatData } from "@/utils/types/be-api"
 import type { TMsgSeenListenPayload } from "@/utils/types/socket"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 import { Message } from "./message"
 import { toast } from "sonner"
 import { expressionService } from "@/services/expression.service"
@@ -117,9 +117,9 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
 
 type TMessagesProps = {
   directChat: TDirectChatData
-  onReply: (msg: TStateDirectMessage) => void
-  pinnedMessages: TStateDirectMessage[]
-  setPinnedMessages: React.Dispatch<React.SetStateAction<TStateDirectMessage[]>>
+  onReply: (msg: TStateMessage) => void
+  pinnedMessages: TStateMessage[]
+  setPinnedMessages: React.Dispatch<React.SetStateAction<TStateMessage[]>>
   showPinnedModal: boolean
   setShowPinnedModal: React.Dispatch<React.SetStateAction<boolean>>
   canSend: boolean | null
@@ -514,13 +514,13 @@ export const Messages = memo(
       try {
         const contextMsgs = await directChatService.getMessageContext(messageId)
         // Đánh dấu context
-        const contextWithFlag = contextMsgs.map((msg: TStateDirectMessage) => ({
+        const contextWithFlag = contextMsgs.map((msg: TStateMessage) => ({
           ...msg,
           isContextMessage: true,
         }))
         dispatch(mergeMessages(contextWithFlag))
         // Lưu id lớn nhất của context
-        setContextEndId(Math.max(...contextWithFlag.map((m: TStateDirectMessage) => m.id)))
+        setContextEndId(Math.max(...contextWithFlag.map((m: TStateMessage) => m.id)))
         setTimeout(() => {
           scrollToMessage(messageId)
         }, 200)
@@ -531,7 +531,7 @@ export const Messages = memo(
 
     // Sử dụng showMessageContext cho pinned, nút Xem/reply preview
     const handleSelectPinnedMessage = showMessageContext
-    const handleReply = (msg: TStateDirectMessage) => {
+    const handleReply = (msg: TStateMessage) => {
       onReplyFromProps(msg) // Mở khung trả lời như cũ, không show context
     }
     const handleReplyPreviewClick = (replyToId: number) => {
@@ -554,7 +554,7 @@ export const Messages = memo(
         }
         dispatch(mergeMessages(newerMsgs))
         // Lấy id lớn nhất vừa nhận được
-        const maxId = Math.max(...newerMsgs.map((m: TStateDirectMessage) => m.id))
+        const maxId = Math.max(...newerMsgs.map((m: TStateMessage) => m.id))
         // Nếu đã vượt qua toId thì dừng
         if (maxId >= toId) {
           done = true
@@ -578,7 +578,7 @@ export const Messages = memo(
           dispatch(mergeMessages(newerMsgs))
           // Nếu đang ở context, cập nhật contextEndId = id lớn nhất vừa merge (hoặc set null nếu đã hết context)
           if (contextEndId) {
-            const maxId = Math.max(...newerMsgs.map((m: TStateDirectMessage) => m.id))
+            const maxId = Math.max(...newerMsgs.map((m: TStateMessage) => m.id))
             setContextEndId(maxId)
           }
         } else {
@@ -623,7 +623,7 @@ export const Messages = memo(
     // Xử lý thay đổi danh sách tin nhắn
     useEffect(() => {
       handleMessagesChange()
-    }, [messages, directChatId])
+    }, [messages])
 
     // IntersectionObserver cho message cuối cùng
     useEffect(() => {
@@ -638,7 +638,7 @@ export const Messages = memo(
       )
       observer.observe(lastMsgRef.current)
       return () => observer.disconnect()
-    }, [messages, directChatId])
+    }, [messages])
 
     useEffect(() => {
       startFetchingMessages()
@@ -662,11 +662,11 @@ export const Messages = memo(
         )
         clientSocket.socket.removeListener(ESocketEvents.message_seen_direct, handleMessageSeen)
       }
-    }, [directChatId])
+    }, [])
 
     useEffect(() => {
       if (pendingFillContextId && messages) {
-        const allIds = messages.map((m: TStateDirectMessage) => m.id)
+        const allIds = messages.map((m: TStateMessage) => m.id)
         const missingRanges = findMissingRanges(allIds)
         //onsole.log("[DEBUG] (useEffect) Các đoạn id bị thiếu:", missingRanges)
         missingRanges.forEach(([from, to]) => {
@@ -674,7 +674,7 @@ export const Messages = memo(
         })
         setPendingFillContextId(null) // Reset sau khi fill
       }
-    }, [messages, pendingFillContextId, directChatId])
+    }, [messages, pendingFillContextId])
 
     // Hàm bỏ ghim tin nhắn (unpin)
     const handleUnpinMessage = async (msgId: number) => {
@@ -693,8 +693,8 @@ export const Messages = memo(
 
     // mappedMessages: ưu tiên contextMessages nếu có
     const mappedMessages = [...(messages || [])]
-      .sort((a: TStateDirectMessage, b: TStateDirectMessage) => a.id - b.id)
-      .map((message: TStateDirectMessage, index, arr) => {
+      .sort((a: TStateMessage, b: TStateMessage) => a.id - b.id)
+      .map((message: TStateMessage, index, arr) => {
         const stickyTime = displayMessageStickyTime(message.createdAt, arr[index - 1]?.createdAt)
         const isLast = contextEndId ? message.id === contextEndId : index === arr.length - 1
         return (
@@ -708,12 +708,12 @@ export const Messages = memo(
               user={user}
               stickyTime={stickyTime}
               onReply={handleReply}
-              isPinned={!!pinnedMessages.find((m: TStateDirectMessage) => m.id === message.id)}
+              isPinned={!!pinnedMessages.find((m: TStateMessage) => m.id === message.id)}
               onPinChange={(newState) => {
                 if (newState) setPinnedMessages([...pinnedMessages, message])
                 else
                   setPinnedMessages(
-                    pinnedMessages.filter((m: TStateDirectMessage) => m.id !== message.id)
+                    pinnedMessages.filter((m: TStateMessage) => m.id !== message.id)
                   )
               }}
               pinnedCount={pinnedMessages.length}

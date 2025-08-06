@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react"
 import { pinService } from "@/services/pin.service"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 import type { TPinnedDirectChat } from "@/apis/pin"
 import { toast } from "sonner"
 
 export const usePinMessages = (directChatId: number) => {
-  const [pinnedMessages, setPinnedMessages] = useState<TStateDirectMessage[]>([])
+  const [pinnedMessages, setPinnedMessages] = useState<TStateMessage[]>([])
   const [loading, setLoading] = useState(false)
 
   // Fetch pinned messages
@@ -26,7 +26,7 @@ export const usePinMessages = (directChatId: number) => {
 
   // Toggle pin message
   const togglePinMessage = useCallback(
-    async (messageId: number, isPinned: boolean, message?: TStateDirectMessage) => {
+    async (messageId: number, isPinned: boolean, message?: TStateMessage) => {
       try {
         const response = await pinService.togglePinMessage(messageId, directChatId, isPinned)
 

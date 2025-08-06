@@ -7,7 +7,7 @@ import {
   clearReportMessages,
   setReportConversationId,
 } from "@/redux/messages/report-messages.slice"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 import { Spinner } from "@/components/materials/spinner"
 import { useUser } from "@/hooks/user"
 import { SelectMessageItem } from "./select-message-item"
@@ -17,8 +17,8 @@ import dayjs from "dayjs"
 type TSelectMessageContentProps = {
   conversationId?: number
   conversationType: "direct" | "group"
-  selectedMessages: TStateDirectMessage[]
-  onSelectedMessagesChange: (messages: TStateDirectMessage[]) => void
+  selectedMessages: TStateMessage[]
+  onSelectedMessagesChange: (messages: TStateMessage[]) => void
   maxMessages: number
   isMessageSelected?: (messageId: number) => boolean
 }
@@ -35,7 +35,7 @@ export const SelectMessageContent = ({
 }: TSelectMessageContentProps) => {
   const user = useUser()
   const dispatch = useAppDispatch()
-  const messages = useAppSelector((state) => state.reportMessages.messages) as TStateDirectMessage[]
+  const messages = useAppSelector((state) => state.reportMessages.messages) as TStateMessage[]
   const isLoading = useAppSelector((state) => state.reportMessages.loading)
   const hasMoreMessages = useAppSelector((state) => state.reportMessages.hasMore)
   const currentConversationId = useAppSelector((state) => state.reportMessages.conversationId)
@@ -47,7 +47,7 @@ export const SelectMessageContent = ({
 
   // Filter messages for report selection
   const filteredMessages = useMemo(() => {
-    const filtered = messages.filter((message: TStateDirectMessage) => {
+    const filtered = messages.filter((message: TStateMessage) => {
       const isNotDeleted = !message.isDeleted
       const isNotSticker = message.type !== "STICKER"
       const isNotPinNotice = message.type !== "PIN_NOTICE"
@@ -63,7 +63,7 @@ export const SelectMessageContent = ({
 
   // Group messages by date for date separators
   const messagesWithDateSeparators = useMemo(() => {
-    const result: Array<TStateDirectMessage | { type: "date-separator"; date: string }> = []
+    const result: Array<TStateMessage | { type: "date-separator"; date: string }> = []
     let currentDate = ""
 
     allMessages.forEach((message) => {
@@ -83,7 +83,7 @@ export const SelectMessageContent = ({
 
   // Handle message selection - only allow selecting other people's messages
   const handleMessageSelect = useCallback(
-    (message: TStateDirectMessage, isSelected: boolean) => {
+    (message: TStateMessage, isSelected: boolean) => {
       // Only allow selection of other people's messages
       if (message.authorId === user?.id) {
         return
@@ -332,7 +332,7 @@ export const SelectMessageContent = ({
               )
             }
 
-            const message = item as TStateDirectMessage
+            const message = item as TStateMessage
             return (
               <SelectMessageItem
                 key={`${message.id}-${index}`}

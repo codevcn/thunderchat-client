@@ -29,7 +29,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TDirectChat, TSticker } from "@/utils/types/be-api"
-import type { TEmoji, TStateDirectMessage } from "@/utils/types/global"
+import type { TEmoji, TStateMessage } from "@/utils/types/global"
 import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
 import { toast } from "sonner"
 import {
@@ -462,7 +462,7 @@ function FileTypeMenu({
 
 type TTypeMessageBarProps = {
   directChat: TDirectChat
-  replyMessage: TStateDirectMessage | null
+  replyMessage: TStateMessage | null
   setReplyMessage: (msg: any | null) => void
   canSend?: boolean | null
 }
@@ -652,7 +652,7 @@ export const TypeMessageBar = memo(
       )
     }
 
-    function renderReplyPreview(msg: TStateDirectMessage) {
+    function renderReplyPreview(msg: TStateMessage) {
       // Nếu tin nhắn đã bị thu hồi, hiển thị thông báo thu hồi
       if (msg.isDeleted) {
         return <span className="text-sm text-gray-400 italic">This message has been deleted</span>

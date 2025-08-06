@@ -17,7 +17,7 @@ import {
   type TPinnedDirectChat,
 } from "@/apis/pin"
 import { EAppRole } from "@/utils/enums"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 
 class PinService {
   // Ghim hoặc bỏ ghim tin nhắn
@@ -31,7 +31,7 @@ class PinService {
   }
 
   // Lấy danh sách tin nhắn đã ghim
-  async getPinnedMessages(directChatId: number): Promise<TStateDirectMessage[]> {
+  async getPinnedMessages(directChatId: number): Promise<TStateMessage[]> {
     const response = await getPinnedMessages(directChatId)
     return response.data.map(this.convertPinnedMessageToStateMessage)
   }
@@ -77,8 +77,8 @@ class PinService {
     return response.data
   }
 
-  // Helper function để chuyển đổi TPinnedMessage sang TStateDirectMessage
-  private convertPinnedMessageToStateMessage(pinnedMessage: TPinnedMessage): TStateDirectMessage {
+  // Helper function để chuyển đổi TPinnedMessage sang TStateMessage
+  private convertPinnedMessageToStateMessage(pinnedMessage: TPinnedMessage): TStateMessage {
     const directMessage = pinnedMessage.Message
     const { Media, Sticker } = pinnedMessage
     const { ReplyTo } = directMessage
@@ -129,7 +129,7 @@ class PinService {
         categoryId: Sticker?.categoryId,
         createdAt: Sticker?.createdAt,
       },
-    } as TStateDirectMessage
+    } as TStateMessage
   }
 }
 

@@ -2,8 +2,7 @@ import type {
   TLastSentMessageState,
   TMessageStateUpdates,
   TRemoveGroupChatMemberState,
-  TStateDirectMessage,
-  TStateGroupMessage,
+  TStateMessage,
 } from "@/utils/types/global"
 import { PayloadAction, createSlice } from "@reduxjs/toolkit"
 import type {
@@ -19,8 +18,8 @@ type TMessagesState = {
   directChat: TDirectChatData | null
   groupChat: TGroupChatData | null
   groupChatMembers: TGroupChatMemberWithUser[] | null
-  directMessages: TStateDirectMessage[] | null
-  groupMessages: TStateGroupMessage[] | null
+  directMessages: TStateMessage[] | null
+  groupMessages: TStateMessage[] | null
   fetchedMsgs: boolean
 }
 
@@ -56,7 +55,7 @@ export const messagesSlice = createSlice({
     setFetchedMsgs: (state, action: PayloadAction<boolean>) => {
       state.fetchedMsgs = action.payload
     },
-    mergeMessages: (state, action: PayloadAction<TStateDirectMessage[]>) => {
+    mergeMessages: (state, action: PayloadAction<TStateMessage[]>) => {
       const currentMessages = state.directMessages || []
       const newMessages = action.payload
       const ids = new Set(currentMessages.map((m) => m.id))
@@ -122,6 +121,9 @@ export const messagesSlice = createSlice({
     resetDirectMessages: (state) => {
       state.directMessages = null
     },
+    resetGroupMessages: (state) => {
+      state.groupMessages = null
+    },
     setGroupChat: (state, action: PayloadAction<TGroupChatData>) => {
       state.groupChat = action.payload
     },
@@ -143,6 +145,7 @@ export const {
   updateDirectChat,
   setLastSentMessage,
   resetDirectMessages,
+  resetGroupMessages,
   setGroupChat,
   setGroupChatMembers,
 } = messagesSlice.actions

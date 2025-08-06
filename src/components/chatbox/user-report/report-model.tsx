@@ -6,7 +6,7 @@ import { SelectMessageModal } from "./select-message-model"
 import { useUserReport } from "@/hooks/use-user-report"
 import { EMessageTypes, EReportCategory } from "@/utils/enums"
 import type { TReportedMessageFE, TReportSession } from "@/utils/types/fe-api"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 import { toast } from "sonner"
 
 type TReportReason = "sensitive" | "annoying" | "scam" | "other"
@@ -50,9 +50,9 @@ export const ReportModal = ({
   const [reportSession, setReportSession] = useState<TReportSession | null>(null)
   const evidenceSectionRef = useRef<HTMLDivElement>(null)
 
-  // Chuyển đổi TStateDirectMessage thành TReportedMessageFE
+  // Chuyển đổi TStateMessage thành TReportedMessageFE
   const convertMessageToReported = useCallback(
-    (message: TStateDirectMessage): TReportedMessageFE => {
+    (message: TStateMessage): TReportedMessageFE => {
       let messageContent = ""
 
       // Xác định content dựa trên type
@@ -75,9 +75,9 @@ export const ReportModal = ({
     [conversationId, conversationType]
   )
 
-  // Chuyển đổi TReportedMessageFE thành TStateDirectMessage cho initialMessages
+  // Chuyển đổi TReportedMessageFE thành TStateMessage cho initialMessages
   const convertReportedToStateMessage = useCallback(
-    (reportedMessage: TReportedMessageFE): TStateDirectMessage => {
+    (reportedMessage: TReportedMessageFE): TStateMessage => {
       return {
         id: reportedMessage.messageId,
         content: reportedMessage.messageType === "TEXT" ? reportedMessage.messageContent : "",
@@ -106,7 +106,7 @@ export const ReportModal = ({
   )
 
   // Lấy initial messages từ session
-  const getInitialMessages = useCallback((): TStateDirectMessage[] => {
+  const getInitialMessages = useCallback((): TStateMessage[] => {
     if (!reportSession?.reportedMessages) return []
     const initialMessages = reportSession.reportedMessages.map(convertReportedToStateMessage)
     return initialMessages
@@ -114,7 +114,7 @@ export const ReportModal = ({
 
   // Cập nhật report session khi messages thay đổi
   const updateReportSession = useCallback(
-    (messages: TStateDirectMessage[]) => {
+    (messages: TStateMessage[]) => {
       if (!conversationId) return
 
       // Cập nhật hoặc tạo session mới

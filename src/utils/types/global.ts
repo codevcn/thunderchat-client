@@ -56,6 +56,7 @@ export type TConversationCard = {
   type: EChatType
   createdAt: string
   unreadMessageCount: number
+  email?: string
 }
 
 export type TUnknownObject = {
@@ -146,4 +147,17 @@ export type TMediaDataCollection = {
   files: TMediaData[]
   audios: TMediaData[]
   links: TMediaData[]
+}
+
+export type TConversationSearchResult = {
+  id: number
+  type: EChatType
+  title: string
+  email?: string
+  avatar?: {
+    src: string
+  }
+  subtitle?: {
+    content: string
+  }
 }

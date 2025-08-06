@@ -4,6 +4,7 @@ import type {
   TMessageSearchOffset,
   TUserSearchOffset,
 } from "@/utils/types/be-api"
+import type { TConversationSearchResult } from "@/utils/types/global"
 
 export const searchGlobally = async (
   keyword: string,
@@ -21,3 +22,21 @@ export const searchGlobally = async (
     },
     { ...requestConfig }
   )
+
+export const searchConversations = async (
+  keyword: string
+): Promise<TConversationSearchResult[]> => {
+  try {
+    const response = await clientAxios.post(
+      "/search/conversations",
+      {
+        keyword,
+      },
+      { ...requestConfig }
+    )
+    return response.data
+  } catch (error) {
+    console.error("Error searching conversations:", error)
+    throw error
+  }
+}

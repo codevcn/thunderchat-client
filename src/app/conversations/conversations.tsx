@@ -534,6 +534,7 @@ type TConversationCardProps = {
   onPinToggle: (id: number) => void
   pinLoading: boolean
   conversationData: TConversationCard
+  onTogglePin: (id: number) => void
 }
 
 const ConversationCard = ({
@@ -542,6 +543,7 @@ const ConversationCard = ({
   onPinToggle,
   pinLoading,
   conversationData,
+  onTogglePin,
 }: TConversationCardProps) => {
   const { id, type, avatar, title, lastMessageTime, subtitle, pinIndex, unreadMessageCount } =
     conversationData
@@ -593,11 +595,25 @@ const ConversationCard = ({
                 </span>
               </span>
             )}
-            {!!pinIndex && pinIndex !== -1 && pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
-              <CustomTooltip title="This directChat was pinned" placement="bottom">
-                <Pin color="currentColor" size={21} />
-              </CustomTooltip>
-            )}
+            <div className="flex items-center gap-1">
+              {!!pinIndex && pinIndex !== -1 && pinIndex <= MAX_NUMBER_OF_PINNED_CONVERSATIONS && (
+                <CustomTooltip title="This directChat was pinned" placement="bottom">
+                  <Pin color="currentColor" size={21} />
+                </CustomTooltip>
+              )}
+              {type === EChatType.DIRECT && (
+                <div
+                  className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                >
+                  <PinButton
+                    isPinned={isPinned}
+                    onToggle={() => onTogglePin(id)}
+                    loading={pinLoading}
+                    size={16}
+                  />
+                </div>
+              )}
+            </div>
             {type === EChatType.DIRECT && (
               <div
                 className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
@@ -633,6 +649,7 @@ const ConversationCards = () => {
     pinnedCount,
     togglePinDirectChat,
     isDirectChatPinned,
+    getPinnedDirectChat,
     loading: pinLoading,
     fetchPinnedDirectChats,
   } = usePinDirectChats()
@@ -688,26 +705,34 @@ const ConversationCards = () => {
     const [directChats, groupChats] = await Promise.all([fetchDirectChats(), fetchGroupChats()])
     const allChats = [...directChats, ...groupChats]
 
-    // Enhanced sorting: pinned chats first, then by time
+    // Sort using pinnedAt order from API
     const sortedChats = allChats.sort((a, b) => {
       const aIsPinned = a.type === EChatType.DIRECT ? isDirectChatPinned(a.id) : false
       const bIsPinned = b.type === EChatType.DIRECT ? isDirectChatPinned(b.id) : false
 
-      // If both have same pin status, sort by time
-      if (aIsPinned === bIsPinned) {
-        const getTimestamp = (chat: TConversationCard) => {
-          // Use lastMessageTime if available, otherwise use createdAt
-          const timeToUse = chat.lastMessageTime || chat.createdAt
-          return new Date(timeToUse).getTime()
+      // Pinned chats always go first
+      if (aIsPinned && !bIsPinned) return -1
+      if (!aIsPinned && bIsPinned) return 1
+
+      // For pinned chats, use pinnedAt order from API
+      if (aIsPinned && bIsPinned) {
+        const aPinnedChat = getPinnedDirectChat(a.id)
+        const bPinnedChat = getPinnedDirectChat(b.id)
+
+        if (aPinnedChat && bPinnedChat) {
+          // pinnedAt is already sorted desc from API, so newer pinnedAt comes first
+          return new Date(bPinnedChat.pinnedAt).getTime() - new Date(aPinnedChat.pinnedAt).getTime()
         }
-        return getTimestamp(b) - getTimestamp(a) // Latest first
       }
 
-      // If different pin status, pinned ones go first
-      return aIsPinned ? -1 : 1
+      // For unpinned chats, sort by message time
+      const getTimestamp = (chat: TConversationCard) => {
+        const timeToUse = chat.lastMessageTime || chat.createdAt
+        return new Date(timeToUse).getTime()
+      }
+      return getTimestamp(b) - getTimestamp(a) // Latest first
     })
 
-    // Clear existing conversations and add new ones to avoid duplicates
     dispatch(addConversations(sortedChats))
   }
 
@@ -856,24 +881,15 @@ const ConversationCards = () => {
 
   // WebSocket listener for direct chat pin events
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
-
     const handlePinDirectChat = (data: TPinDirectChatEventData) => {
       // Refresh pinned chats when pin status changes
       fetchPinnedDirectChats()
-
-      // Debounce conversations refresh to avoid multiple calls
-      clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => {
-        fetchConversations()
-      }, 100)
     }
 
     clientSocket.socket.on(ESocketEvents.pin_direct_chat, handlePinDirectChat)
 
     return () => {
       clientSocket.socket.off(ESocketEvents.pin_direct_chat, handlePinDirectChat)
-      clearTimeout(timeoutId)
     }
   }, [fetchPinnedDirectChats])
 
@@ -884,17 +900,29 @@ const ConversationCards = () => {
         const aIsPinned = a.type === EChatType.DIRECT ? isDirectChatPinned(a.id) : false
         const bIsPinned = b.type === EChatType.DIRECT ? isDirectChatPinned(b.id) : false
 
-        // If both have same pin status, sort by time
-        if (aIsPinned === bIsPinned) {
-          const getTimestamp = (chat: TConversationCard) => {
-            const timeToUse = chat.lastMessageTime || chat.createdAt
-            return new Date(timeToUse).getTime()
+        // Pinned chats always go first
+        if (aIsPinned && !bIsPinned) return -1
+        if (!aIsPinned && bIsPinned) return 1
+
+        // For pinned chats, use pinnedAt order from API
+        if (aIsPinned && bIsPinned) {
+          const aPinnedChat = getPinnedDirectChat(a.id)
+          const bPinnedChat = getPinnedDirectChat(b.id)
+
+          if (aPinnedChat && bPinnedChat) {
+            // pinnedAt is already sorted desc from API, so newer pinnedAt comes first
+            return (
+              new Date(bPinnedChat.pinnedAt).getTime() - new Date(aPinnedChat.pinnedAt).getTime()
+            )
           }
-          return getTimestamp(b) - getTimestamp(a) // Latest first
         }
 
-        // If different pin status, pinned ones go first
-        return aIsPinned ? -1 : 1
+        // For unpinned chats, sort by message time
+        const getTimestamp = (chat: TConversationCard) => {
+          const timeToUse = chat.lastMessageTime || chat.createdAt
+          return new Date(timeToUse).getTime()
+        }
+        return getTimestamp(b) - getTimestamp(a) // Latest first
       })
 
       // Only update if order actually changed
@@ -905,7 +933,7 @@ const ConversationCards = () => {
         dispatch(setConversations(sortedChats))
       }
     }
-  }, [pinnedDirectChats, conversations, isDirectChatPinned, dispatch])
+  }, [pinnedDirectChats, conversations, isDirectChatPinned, getPinnedDirectChat, dispatch])
 
   useEffect(() => {
     if (!conversations || conversations.length === 0) {
@@ -938,6 +966,7 @@ const ConversationCards = () => {
             onPinToggle={handlePinToggle}
             pinLoading={pinLoading}
             conversationData={conversation}
+            onTogglePin={handlePinToggle}
           />
         )
       })}

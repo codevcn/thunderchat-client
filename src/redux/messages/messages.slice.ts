@@ -22,7 +22,6 @@ type TMessagesState = {
   directMessages: TStateDirectMessage[] | null
   groupMessages: TStateGroupMessage[] | null
   fetchedMsgs: boolean
-  tempChatData: TDirectChatData | null
 }
 
 const initialState: TMessagesState = {
@@ -32,7 +31,6 @@ const initialState: TMessagesState = {
   directMessages: null,
   groupMessages: null,
   fetchedMsgs: false,
-  tempChatData: null,
 }
 
 export const messagesSlice = createSlice({
@@ -87,6 +85,9 @@ export const messagesSlice = createSlice({
     setDirectChat: (state, action: PayloadAction<TDirectChatData>) => {
       state.directChat = action.payload
     },
+    resetDirectChat: (state) => {
+      state.directChat = null
+    },
     updateDirectChat: (
       state,
       action: PayloadAction<TDeepPartial<THierarchyKeyObject<TDirectChatData>>>
@@ -109,11 +110,8 @@ export const messagesSlice = createSlice({
         }
       }
     },
-    setTempChatData: (state, action: PayloadAction<TDirectChatData>) => {
-      state.tempChatData = action.payload
-    },
     resetAllChatData: (state) => {
-      // set all data to null except tempChatData
+      // set all data to null
       state.directChat = null
       state.groupChat = null
       state.groupChatMembers = null
@@ -138,7 +136,7 @@ export const {
   updateGroupChat,
   removeGroupChatMember,
   setDirectChat,
-  setTempChatData,
+  resetDirectChat,
   resetAllChatData,
   setFetchedMsgs,
   mergeMessages,

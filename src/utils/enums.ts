@@ -125,3 +125,13 @@ export enum EBanType {
   TEMPORARY_BAN = "TEMPORARY_BAN",
   PERMANENT_BAN = "PERMANENT_BAN",
 }
+
+export enum EMessageTypeAllTypes {
+  TEXT = "TEXT",
+  STICKER = "STICKER",
+  IMAGE = "IMAGE",
+  VIDEO = "VIDEO",
+  AUDIO = "AUDIO",
+  DOCUMENT = "DOCUMENT",
+  PIN_NOTICE = "PIN_NOTICE",
+}

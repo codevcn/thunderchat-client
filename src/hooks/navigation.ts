@@ -35,10 +35,11 @@ export const useSamePathNavigator = () => {
 
 export const useNavToConversation = () => {
   const router = useRouter()
-  return (id: number, type: EChatType, isTemp?: boolean) => {
+  return (id: number, type: EChatType, isTemp?: boolean, messageId?: number) => {
     router.push(
       createPathWithParams("/conversations", {
         [isTemp ? "tid" : type === EChatType.DIRECT ? "cid" : "gid"]: id.toString(),
+        ...(messageId ? { mid: `${messageId}` } : {}),
       })
     )
   }

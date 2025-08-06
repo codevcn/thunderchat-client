@@ -20,7 +20,7 @@ import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.con
 import { useAudioMessages } from "@/hooks/voice-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateDirectMessage } from "@/utils/types/global"
-import { setDirectChat } from "@/redux/messages/messages.slice"
+import { resetAllChatData, setDirectChat } from "@/redux/messages/messages.slice"
 import type { TPinMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
@@ -169,6 +169,10 @@ const Main = ({ directChat, canSend }: TMainProps) => {
   const directChatIdRef = useRef<number | undefined>(directChat?.id)
   const fetchPinnedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  const resetAllChatDataHandler = () => {
+    dispatch(resetAllChatData())
+  }
+
   useEffect(() => {
     directChatIdRef.current = directChat?.id
   }, [directChat?.id])
@@ -202,6 +206,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
     }
     clientSocket.socket.on(ESocketEvents.pin_message, handlePinMessage)
     return () => {
+      resetAllChatDataHandler()
       clientSocket.socket.off(ESocketEvents.pin_message, handlePinMessage)
       // Cleanup timeout
       if (fetchPinnedTimeoutRef.current) {

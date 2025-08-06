@@ -2,6 +2,7 @@ import dayjs from "dayjs"
 import type { TEmoji, TFormData, THighlightOffsets } from "./types/global"
 import DOMPurify from "dompurify"
 import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
+import { EMessageMediaTypes, EMessageTypeAllTypes, EMessageTypes } from "./enums"
 
 export const setLastSeen = (date: string) => {
   return dayjs(date).format("MM/DD/YYYY, h:mm A")
@@ -233,4 +234,26 @@ export const checkNewConversationIsCurrentChat = (
     newConversationId === currentChatId ||
     (currentChatId === -1 && memberIdsOfNewConversation.includes(myUserId))
   )
+}
+
+export const converToMessageTypeAllTypes = (
+  type: EMessageTypes,
+  mediaType?: EMessageMediaTypes
+): EMessageTypeAllTypes => {
+  if (type === EMessageTypes.STICKER) {
+    return EMessageTypeAllTypes.STICKER
+  } else if (type === EMessageTypes.MEDIA) {
+    if (mediaType === EMessageMediaTypes.IMAGE) {
+      return EMessageTypeAllTypes.IMAGE
+    } else if (mediaType === EMessageMediaTypes.VIDEO) {
+      return EMessageTypeAllTypes.VIDEO
+    } else if (mediaType === EMessageMediaTypes.AUDIO) {
+      return EMessageTypeAllTypes.AUDIO
+    }
+    return EMessageTypeAllTypes.DOCUMENT
+  } else if (type === EMessageTypes.PIN_NOTICE) {
+    return EMessageTypeAllTypes.PIN_NOTICE
+  } else {
+    return EMessageTypeAllTypes.TEXT
+  }
 }

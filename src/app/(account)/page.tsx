@@ -288,7 +288,7 @@ const AccountPage = ({
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold text-white pointer-events-none"
           style={{ whiteSpace: "nowrap" }}
         >
-          Settings
+          Profile
         </span>
         {/* Icon on the right */}
         <div className="ml-auto flex items-center gap-2 z-10">

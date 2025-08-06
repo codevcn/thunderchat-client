@@ -138,13 +138,12 @@ const ImageModal = ({
 
 type TFileIconProps = {
   fileTypeText: string
-  onDownload: (e: React.MouseEvent) => void
-  fileIconRef: React.RefObject<HTMLDivElement | null>
+  onDownload: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
-const FileIcon = ({ fileTypeText, onDownload, fileIconRef }: TFileIconProps) => {
+const FileIcon = ({ fileTypeText, onDownload }: TFileIconProps) => {
   return (
-    <div className="STYLE-file-icon" onClick={onDownload} ref={fileIconRef}>
+    <div className="STYLE-file-icon" onClick={onDownload} title={fileTypeText}>
       <span className="STYLE-file-icon-extension">{fileTypeText}</span>
       <div className="STYLE-file-icon-download">
         <Download size={20} />
@@ -157,7 +156,6 @@ const FileIcon = ({ fileTypeText, onDownload, fileIconRef }: TFileIconProps) => 
 const Content = ({ content, stickerUrl, type, Media, message, user }: TContentProps) => {
   const { url: mediaUrl, fileName, type: mediaType, fileSize } = Media || {}
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
-  const fileIconRef = useRef<HTMLDivElement>(null)
 
   if (message?.isDeleted) {
     return (
@@ -211,19 +209,19 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   }
   // Hiển thị document
   if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT && mediaUrl) {
-    const downloadFile = async (e: React.MouseEvent) => {
-      e.preventDefault()
+    const downloadFile = async (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation()
+      e.preventDefault()
+      const fileIconEle = e.currentTarget
       try {
         const response = await FileService.downloadFile(mediaUrl, (loaded, total) => {
           const percent = Math.round((loaded * 100) / (total || 1))
-          fileIconRef.current!.classList.add("downloading")
-          fileIconRef.current!.querySelector(".STYLE-file-icon-progress")!.textContent =
-            `${percent}%`
+          fileIconEle.classList.add("downloading")
+          fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = `${percent}%`
         })
 
-        fileIconRef.current!.classList.remove("downloading")
-        fileIconRef.current!.querySelector(".STYLE-file-icon-progress")!.textContent = ""
+        fileIconEle.classList.remove("downloading")
+        fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = ""
 
         // Tạo URL từ blob để tải
         const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -235,8 +233,8 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
       } catch (error) {
-        fileIconRef.current!.classList.remove("downloading")
-        fileIconRef.current!.querySelector(".STYLE-file-icon-progress")!.textContent = ""
+        fileIconEle.classList.remove("downloading")
+        fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = ""
       }
     }
 
@@ -253,13 +251,12 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
           <FileIcon
             fileTypeText={mediaType || fileName?.split(".").pop()?.toUpperCase() || "Unknown"}
             onDownload={downloadFile}
-            fileIconRef={fileIconRef}
           />
           <div className="flex-1 min-w-0">
             <div className="truncate font-medium text-sm text-regular-white-cl">
               {fileName || "File"}
             </div>
-            <div className="text-xs text-gray-400">{formatBytes(fileSize)}</div>
+            <div className="text-xs text-white/70 mt-1">{formatBytes(fileSize)}</div>
           </div>
         </div>
       </div>

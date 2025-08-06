@@ -351,12 +351,13 @@ svg {
 }
 
 .STYLE-file-icon {
-  $width: 50px;
+  $width: 55px;
+  $height: 50px;
 
   display: flex;
   justify-content: center;
   width: $width;
-  height: $width;
+  height: $height;
   border-radius: 6px;
   background-color: var(--tdc-regular-red-cl);
   position: relative;
@@ -386,25 +387,14 @@ svg {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: $width;
+    max-width: calc($width - 6px);
+    font-size: 0.85rem;
   }
 
   .STYLE-file-icon-download,
   .STYLE-file-icon-progress {
     opacity: 0;
     transform: translate(-50%, -20%);
-  }
-
-  &.downloading {
-    .STYLE-file-icon-progress {
-      opacity: 1;
-    }
-    .STYLE-file-icon-download {
-      opacity: 0;
-    }
-    .STYLE-file-icon-extension {
-      opacity: 0;
-    }
   }
 
   &::after {
@@ -433,6 +423,18 @@ svg {
 
     &::after {
       border-width: 0;
+    }
+  }
+
+  &.downloading {
+    .STYLE-file-icon-progress {
+      opacity: 1;
+    }
+    .STYLE-file-icon-download {
+      opacity: 0;
+    }
+    .STYLE-file-icon-extension {
+      opacity: 0;
     }
   }
 }

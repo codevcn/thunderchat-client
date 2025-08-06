@@ -23,7 +23,6 @@ export const getFindConversationWithOtherUser = (otherUserId: number) =>
   )
 export const getDirectMessageContext = (messageId: number) => {
   const url = `/message/context/${messageId}`
-  console.log("[DEBUG] Gọi API context:", url)
   return clientAxios.get(url, requestConfig)
 }
 

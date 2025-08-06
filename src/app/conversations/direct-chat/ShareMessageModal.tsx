@@ -14,6 +14,7 @@ import type {
   TConversationSearchResult,
 } from "@/utils/types/global"
 import { EMessageTypes } from "@/utils/enums"
+import { converToMessageTypeAllTypes } from "@/utils/helpers"
 
 interface ShareMessageModalProps {
   open: boolean
@@ -143,10 +144,6 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                     }
 
                     try {
-                      // Debug: Log dữ liệu để kiểm tra
-                      console.log("Message to share:", messageToShare)
-                      console.log("Conversation:", conversation)
-
                       // Đóng modal
                       onClose()
 
@@ -208,28 +205,29 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                             }
                           }
 
-                          console.log("Sending direct message payload:", payload)
-
                           // Gửi tin nhắn sử dụng chattingService như trong codebase
-                          chattingService.sendMessage(messageToShare.type, payload, (res) => {
-                            console.log("Direct message response:", res)
-                            if (res && typeof res === "object" && Object.keys(res).length > 0) {
-                              if ("success" in res && res.success) {
-                                chattingService.setAcknowledgmentFlag(true)
-                                chattingService.recursiveSendingQueueMessages()
-                                toast.success("Đã chia sẻ tin nhắn!")
-                              } else if ("isError" in res && res.isError) {
-                                console.error("Direct message failed:", res)
-                                toast.error(res?.message || "Chia sẻ thất bại!")
+                          chattingService.sendMessage(
+                            converToMessageTypeAllTypes(
+                              messageToShare.type,
+                              messageToShare.Media?.type
+                            ),
+                            payload,
+                            (res) => {
+                              if (res && typeof res === "object" && Object.keys(res).length > 0) {
+                                if ("success" in res && res.success) {
+                                  chattingService.setAcknowledgmentFlag(true)
+                                  chattingService.recursiveSendingQueueMessages()
+                                  toast.success("Đã chia sẻ tin nhắn!")
+                                } else if ("isError" in res && res.isError) {
+                                  toast.error(res?.message || "Chia sẻ thất bại!")
+                                }
+                              } else {
+                                // Trường hợp response rỗng hoặc không hợp lệ
+                                toast.error("Không nhận được phản hồi từ server")
                               }
-                            } else {
-                              // Trường hợp response rỗng hoặc không hợp lệ
-                              console.warn("Empty or invalid response from server:", res)
-                              toast.error("Không nhận được phản hồi từ server")
                             }
-                          })
+                          )
                         } catch (error) {
-                          console.error("Lỗi khi lấy thông tin direct chat:", error)
                           toast.error("Không thể lấy thông tin cuộc trò chuyện")
                         }
                       }
@@ -237,7 +235,6 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                       // Gọi callback nếu có
                       onSelectConversation?.(conversation as TConversationCard)
                     } catch (error) {
-                      console.error("Lỗi khi chia sẻ tin nhắn:", error)
                       toast.error("Không thể chia sẻ tin nhắn!")
                     }
                   }}
@@ -277,10 +274,6 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                     }
 
                     try {
-                      // Debug: Log dữ liệu để kiểm tra
-                      console.log("Message to share:", messageToShare)
-                      console.log("Conversation:", conversation)
-
                       // Đóng modal
                       onClose()
 
@@ -342,28 +335,29 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                             }
                           }
 
-                          console.log("Sending direct message payload:", payload)
-
                           // Gửi tin nhắn sử dụng chattingService như trong codebase
-                          chattingService.sendMessage(messageToShare.type, payload, (res) => {
-                            console.log("Direct message response:", res)
-                            if (res && typeof res === "object" && Object.keys(res).length > 0) {
-                              if ("success" in res && res.success) {
-                                chattingService.setAcknowledgmentFlag(true)
-                                chattingService.recursiveSendingQueueMessages()
-                                toast.success("Đã chia sẻ tin nhắn!")
-                              } else if ("isError" in res && res.isError) {
-                                console.error("Direct message failed:", res)
-                                toast.error(res?.message || "Chia sẻ thất bại!")
+                          chattingService.sendMessage(
+                            converToMessageTypeAllTypes(
+                              messageToShare.type,
+                              messageToShare.Media?.type
+                            ),
+                            payload,
+                            (res) => {
+                              if (res && typeof res === "object" && Object.keys(res).length > 0) {
+                                if ("success" in res && res.success) {
+                                  chattingService.setAcknowledgmentFlag(true)
+                                  chattingService.recursiveSendingQueueMessages()
+                                  toast.success("Đã chia sẻ tin nhắn!")
+                                } else if ("isError" in res && res.isError) {
+                                  toast.error(res?.message || "Chia sẻ thất bại!")
+                                }
+                              } else {
+                                // Trường hợp response rỗng hoặc không hợp lệ
+                                toast.error("Không nhận được phản hồi từ server")
                               }
-                            } else {
-                              // Trường hợp response rỗng hoặc không hợp lệ
-                              console.warn("Empty or invalid response from server:", res)
-                              toast.error("Không nhận được phản hồi từ server")
                             }
-                          })
+                          )
                         } catch (error) {
-                          console.error("Lỗi khi lấy thông tin direct chat:", error)
                           toast.error("Không thể lấy thông tin cuộc trò chuyện")
                         }
                       }
@@ -371,7 +365,6 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                       // Gọi callback nếu có
                       onSelectConversation?.(conversation)
                     } catch (error) {
-                      console.error("Lỗi khi chia sẻ tin nhắn:", error)
                       toast.error("Không thể chia sẻ tin nhắn!")
                     }
                   }}

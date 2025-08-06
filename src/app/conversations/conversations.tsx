@@ -8,7 +8,7 @@ import {
   toast,
   PinButton,
 } from "@/components/materials"
-import { Search as SearchIcon, ArrowLeft, X, Pin, Menu, Users } from "lucide-react"
+import { Search as SearchIcon, ArrowLeft, X, Menu, Users } from "lucide-react"
 import dayjs from "dayjs"
 import { useDebounce } from "@/hooks/debounce"
 import type {
@@ -39,7 +39,6 @@ import { directChatService } from "@/services/direct-chat.service"
 import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
 import {
   addConversations,
-  clearConversations,
   setConversations,
   updateSingleConversation,
   updateUnreadMsgCountOnCard,
@@ -59,17 +58,14 @@ import {
 } from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
-import { setDirectChat, setTempChatData, updateDirectChat } from "@/redux/messages/messages.slice"
+import { updateDirectChat } from "@/redux/messages/messages.slice"
 import { usePinDirectChats } from "@/hooks/pin-messages"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TPinDirectChatEventData } from "@/utils/types/socket"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import type { TSendDirectMessageRes } from "@/utils/types/socket"
-import { convertToDirectChatsUIData } from "@/utils/data-convertors/conversations-convertor"
 import { localStorageManager } from "@/utils/local-storage"
-import { useSearchParams } from "next/navigation"
 
 const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 const SEARCH_LIMIT: number = 10
@@ -169,10 +165,17 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
     type: "users" | "messages",
     chatType: EChatType,
     chatId?: number,
-    otherUser?: TUserWithProfile
+    otherUser?: TUserWithProfile,
+    messageId?: number
   ) => {
-    if (type === "messages" && chatId) {
-      navToConversation(chatId, chatType)
+    if (type === "messages" && chatId && messageId) {
+      dispatch((_, getState) => {
+        if (getState().messages.directChat?.id === chatId) {
+          eventEmitter.emit(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, messageId)
+        } else {
+          navToConversation(chatId, chatType, false, messageId)
+        }
+      })
     } else if (type === "users" && otherUser) {
       const otherUserId = otherUser.id
       directChatService
@@ -342,7 +345,9 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                     avatarUrl={user.Profile.avatar}
                     convName={user.Profile.fullName || ""}
                     subtitle=""
-                    onStartChat={() => startChatHandler("users", EChatType.DIRECT, undefined, user)}
+                    onStartChat={() =>
+                      startChatHandler("users", EChatType.DIRECT, undefined, user, undefined)
+                    }
                     email={user.email}
                   />
                 ))}
@@ -366,7 +371,13 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
                     subtitle={message.messageContent}
                     highlights={message.highlights}
                     onStartChat={() =>
-                      startChatHandler("messages", message.chatType, message.chatId)
+                      startChatHandler(
+                        "messages",
+                        message.chatType,
+                        message.chatId,
+                        undefined,
+                        message.id
+                      )
                     }
                   />
                 ))}

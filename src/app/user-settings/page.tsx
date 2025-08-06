@@ -39,6 +39,35 @@ function ToggleSwitch({
   )
 }
 
+type TPrivacyContentProps = {
+  onlyReceiveFriendMessage: boolean
+  handleTogglePrivacy: (value: boolean) => void
+}
+
+// UI cho tab Quyền riêng tư
+const PrivacyContent = ({
+  onlyReceiveFriendMessage,
+  handleTogglePrivacy,
+}: TPrivacyContentProps) => {
+  return (
+    <div className="flex-1 flex justify-center bg-regular-black-cl min-h-screen px-16 py-8">
+      <div className="w-full h-fit bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl p-8 shadow-lg overflow-auto">
+        <div className="font-bold text-xl text-regular-white-cl">Privacy</div>
+        <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-4 mt-6">
+          <span className="text-base text-regular-white-cl font-medium">
+            Block messages from strangers
+          </span>
+          <ToggleSwitch
+            checked={onlyReceiveFriendMessage}
+            onChange={handleTogglePrivacy}
+            labelId="toggle-block-stranger"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function UserSettingsPage() {
   const [selectedTab, setSelectedTab] = useState("privacy")
   const [onlyReceiveFriendMessage, setOnlyReceiveFriendMessage] = useState(false)
@@ -72,25 +101,6 @@ export default function UserSettingsPage() {
         toast.error("Cập nhật thất bại!")
       })
   }
-
-  // UI cho tab Quyền riêng tư
-  const privacyContent = (
-    <div className="flex-1 flex items-center justify-center bg-regular-black-cl min-h-screen">
-      <div className="w-full max-w-[600px] min-w-[320px] min-h-[340px] max-h-[90vh] bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl p-8 shadow-lg flex flex-col gap-8 overflow-auto">
-        <div className="font-bold text-xl text-regular-white-cl mb-4">Privacy</div>
-        <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-4">
-          <span className="text-base text-regular-white-cl font-medium">
-            Block messages from strangers
-          </span>
-          <ToggleSwitch
-            checked={onlyReceiveFriendMessage}
-            onChange={handleTogglePrivacy}
-            labelId="toggle-block-stranger"
-          />
-        </div>
-      </div>
-    </div>
-  )
 
   return (
     <div
@@ -160,7 +170,12 @@ export default function UserSettingsPage() {
         </div>
       </div>
       {/* MAIN CONTENT */}
-      {selectedTab === "privacy" && privacyContent}
+      {selectedTab === "privacy" && (
+        <PrivacyContent
+          onlyReceiveFriendMessage={onlyReceiveFriendMessage}
+          handleTogglePrivacy={handleTogglePrivacy}
+        />
+      )}
     </div>
   )
 }

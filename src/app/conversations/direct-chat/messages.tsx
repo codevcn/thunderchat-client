@@ -4,7 +4,13 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useRef, useState, useEffect, memo } from "react"
 import type { TGetMessagesMessage, TSticker, TUserWithoutPassword } from "@/utils/types/be-api"
 import { Spinner } from "@/components/materials/spinner"
-import { EChatType, EMessageTypes, EPaginations, ESortTypes } from "@/utils/enums"
+import {
+  EChatType,
+  EMessageTypes,
+  EMessageTypeAllTypes,
+  EPaginations,
+  ESortTypes,
+} from "@/utils/enums"
 import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
 import { createPortal } from "react-dom"
 import { useUser } from "@/hooks/user"
@@ -14,6 +20,7 @@ import {
   setLastSentMessage,
   resetDirectMessages,
   setFetchedMsgs,
+  resetAllChatData,
 } from "@/redux/messages/messages.slice"
 import { displayMessageStickyTime } from "@/utils/date-time"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -62,7 +69,7 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
   const sendGreetingSticker = () => {
     if (greetingSticker) {
       chattingService.sendMessage(
-        EMessageTypes.STICKER,
+        EMessageTypeAllTypes.STICKER,
         {
           receiverId: user.id === recipientId ? creatorId : recipientId,
           content: `${greetingSticker.id}`,
@@ -598,6 +605,21 @@ export const Messages = memo(
       })
     }
 
+    const scrollToQueriedMessageHandler = (messageId?: number) => {
+      if (messageId) {
+        showMessageContext(messageId)
+      } else {
+        const messageId = new URLSearchParams(window.location.search).get("mid")
+        if (messageId) {
+          showMessageContext(parseInt(messageId))
+        }
+      }
+    }
+
+    const resetAllChatDataHandler = () => {
+      dispatch(resetAllChatData())
+    }
+
     // Xử lý thay đổi danh sách tin nhắn
     useEffect(() => {
       handleMessagesChange()
@@ -621,6 +643,7 @@ export const Messages = memo(
     useEffect(() => {
       startFetchingMessages()
       handleReadyNewMessage()
+      eventEmitter.on(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, scrollToQueriedMessageHandler)
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
@@ -628,6 +651,7 @@ export const Messages = memo(
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
       clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
       return () => {
+        resetAllChatDataHandler()
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)

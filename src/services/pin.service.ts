@@ -16,7 +16,8 @@ import {
   type TUnpinDirectChatResponse,
   type TPinnedDirectChat,
 } from "@/apis/pin"
-import { EAppRole } from "@/utils/enums"
+import { EAppRole, EMessageTypes } from "@/utils/enums"
+import { EMessageStatus } from "@/utils/socket/enums"
 import type { TStateMessage } from "@/utils/types/global"
 
 class PinService {
@@ -79,57 +80,49 @@ class PinService {
 
   // Helper function để chuyển đổi TPinnedMessage sang TStateMessage
   private convertPinnedMessageToStateMessage(pinnedMessage: TPinnedMessage): TStateMessage {
-    const directMessage = pinnedMessage.Message
-    const { Media, Sticker } = pinnedMessage
-    const { ReplyTo } = directMessage
+    const message = pinnedMessage.Message
+    const { Media, Sticker, ReplyTo } = message
     return {
-      id: directMessage.id,
-      content: directMessage.content,
-      authorId: directMessage.authorId,
-      directChatId: directMessage.directChatId,
-      status: directMessage.status as any, // Cast to EMessageStatus
-      type: directMessage.type as any, // Cast to EMessageTypes
-      createdAt: directMessage.createdAt,
+      id: message.id,
+      content: message.content,
+      authorId: message.authorId,
+      directChatId: message.directChatId,
+      status: message.status as EMessageStatus,
+      type: message.type as EMessageTypes,
+      createdAt: message.createdAt,
       Author: {
-        ...directMessage.Author,
+        ...message.Author,
         password: "", // Add missing password field
-        role: directMessage.Author.role as EAppRole, // Cast to EAppRole
+        role: message.Author.role as EAppRole, // Cast to EAppRole
       },
       ReplyTo: ReplyTo
         ? {
             id: ReplyTo.id,
             content: ReplyTo.content,
             authorId: ReplyTo.authorId,
-            directChatId: directMessage.directChatId,
-            status: "SEEN" as any,
-            type: "TEXT" as any,
-            createdAt: directMessage.createdAt,
+            directChatId: message.directChatId,
+            status: EMessageStatus.SEEN,
+            type: EMessageTypes.TEXT,
+            createdAt: message.createdAt,
             Author: {
               ...ReplyTo.Author,
               password: "", // Add missing password field
               role: ReplyTo.Author.role as EAppRole, // Cast to EAppRole
+              createdAt: new Date().toISOString(),
+              Profile: {
+                ...ReplyTo.Author.Profile,
+                about: ReplyTo.Author.Profile.about || undefined,
+                avatar: ReplyTo.Author.Profile.avatar || undefined,
+              },
             },
+            isDeleted: false,
           }
         : null,
       isNewMsg: false,
-      isDeleted: false,
-      Media: {
-        id: Media?.id,
-        type: Media?.type,
-        createdAt: Media?.createdAt,
-        url: Media?.url,
-        fileSize: Media?.fileSize,
-        fileName: Media?.fileName,
-        thumbnailUrl: Media?.thumbnailUrl,
-      },
-      Sticker: {
-        id: Sticker?.id,
-        stickerName: Sticker?.stickerName,
-        imageUrl: Sticker?.imageUrl,
-        categoryId: Sticker?.categoryId,
-        createdAt: Sticker?.createdAt,
-      },
-    } as TStateMessage
+      isDeleted: message.isDeleted,
+      Media,
+      Sticker,
+    }
   }
 }
 

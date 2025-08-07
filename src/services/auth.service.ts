@@ -7,7 +7,7 @@ import {
   postLogoutUser,
 } from "@/apis/auth"
 import type { TUserWithProfile } from "@/utils/types/be-api"
-import type { TSuccess } from "@/utils/types/global"
+import type { TSocketId, TSuccess } from "@/utils/types/global"
 
 class AuthService {
   async checkAuth(): Promise<TUserWithProfile> {
@@ -20,8 +20,8 @@ class AuthService {
     return data
   }
 
-  async logoutUser(): Promise<TSuccess> {
-    const { data } = await postLogoutUser()
+  async logoutUser(socketId: TSocketId): Promise<TSuccess> {
+    const { data } = await postLogoutUser(socketId)
     return data
   }
   // Admin methods

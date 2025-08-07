@@ -1,5 +1,5 @@
 import type { HttpStatusCode } from "axios"
-import type { EMessageStatus } from "../socket/enums"
+import type { EMessageStatus, EOnlineStatus } from "../socket/enums"
 import type { EFriendRequestStatus, EMessageTypeAllTypes } from "@/utils/enums"
 import type { TSuccess } from "./global"
 import type { TMessage } from "./be-api"
@@ -58,4 +58,16 @@ export type TPinDirectChatEventData = {
 
 export type TSendDirectMessageRes = TSuccess & {
   newMessage: TMessage
+}
+
+export type TCheckUserOnlineEmitPayload = {
+  userId: number
+}
+
+export type TCheckUserOnlineStatusRes = TSuccess & {
+  onlineStatus: EOnlineStatus
+}
+
+export type TJoinDirectChatRoomEmitPayload = {
+  directChatId: number
 }

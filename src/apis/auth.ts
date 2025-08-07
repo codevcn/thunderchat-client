@@ -1,4 +1,4 @@
-import type { TSuccess } from "@/utils/types/global"
+import type { TSocketId, TSuccess } from "@/utils/types/global"
 import { clientAxios, requestConfig } from "@/configs/axios"
 import type { TLoginUserParams, TUserWithProfile } from "../utils/types/be-api"
 
@@ -8,7 +8,8 @@ export const postLoginUser = (data: TLoginUserParams) =>
 export const getCheckAuth = () =>
   clientAxios.get<TUserWithProfile>("/auth/check-auth", requestConfig)
 
-export const postLogoutUser = () => clientAxios.post<TSuccess>("/auth/logout", {}, requestConfig)
+export const postLogoutUser = (socketId: TSocketId) =>
+  clientAxios.post<TSuccess>("/auth/logout", { socketId }, requestConfig)
 // Admin APIs
 export const postAdminLogin = (data: TLoginUserParams) =>
   clientAxios.post<TSuccess>("/auth/admin/login", data, requestConfig)

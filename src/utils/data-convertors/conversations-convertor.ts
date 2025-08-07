@@ -1,4 +1,9 @@
-import type { TFetchDirectChatsData, TFetchGroupChatsData, TUserWithProfile } from "../types/be-api"
+import type {
+  TFetchDirectChatsData,
+  TFetchGroupChatsData,
+  TUser,
+  TUserWithProfile,
+} from "../types/be-api"
 import type { TConversationCard } from "../types/global"
 import { EChatType, EMessageTypes } from "../enums"
 
@@ -39,9 +44,13 @@ export const convertToDirectChatsUIData = (
   })
 }
 
-export const convertToGroupChatsUIData = (data: TFetchGroupChatsData[]): TConversationCard[] => {
+export const convertToGroupChatsUIData = (
+  data: TFetchGroupChatsData[],
+  user: TUser
+): TConversationCard[] => {
   return data.map((item) => {
     const lastMessage = item.LastSentMessage
+    const creator = item.Creator
     return {
       id: item.id,
       avatar: {
@@ -51,7 +60,11 @@ export const convertToGroupChatsUIData = (data: TFetchGroupChatsData[]): TConver
       lastMessageTime: lastMessage?.createdAt,
       pinIndex: 0,
       subtitle: {
-        content: lastMessage?.content || "You created this chat",
+        content:
+          lastMessage?.content ||
+          (creator.id === user.id
+            ? "You created this chat"
+            : `This chat created by ${creator.Profile.fullName}`),
         type: lastMessage?.type || EMessageTypes.TEXT,
       },
       title: item.name,

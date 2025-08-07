@@ -135,7 +135,7 @@ export const renderMessageContent = (message: TStateMessage) => {
     return (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
-          <Mic className="w-4 h-4 text-green-400" />
+          <Mic className="w-4 h-4 text-regular-violet-cl" />
         </div>
         <span className="text-xs text-gray-300">Tin nhắn thoại</span>
       </div>
@@ -244,7 +244,7 @@ export const PinMessageModal = ({
                 </span>
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-white font-bold mb-1">Tin nhắn</div>
+                  <div className="font-semibold text-sm text-white mb-1">Tin nhắn</div>
                   <div className="text-xs text-gray-300 mb-1">
                     {msg.Author?.Profile?.fullName || "Người gửi"}
                   </div>

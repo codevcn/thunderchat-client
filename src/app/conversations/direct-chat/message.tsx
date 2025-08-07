@@ -247,8 +247,6 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
     )
   }
 
-  // if (type === EMessageTypes.MEDIA && mediaUrl && message) {
-  //   return <VoiceMessage audioUrl={mediaUrl} message={message} />
   if (
     type === EMessageTypes.MEDIA &&
     mediaType === EMessageMediaTypes.AUDIO &&

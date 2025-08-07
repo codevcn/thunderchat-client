@@ -316,14 +316,6 @@ export const Messages = memo(
       }
     }
 
-    const handleReadyNewMessage = () => {
-      if (readyNewMessage.current && directChatId !== -1) {
-        const newMessage = readyNewMessage.current
-        readyNewMessage.current = null
-        dispatch(mergeMessages([newMessage]))
-      }
-    }
-
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendMessage = (newMessage: TGetMessagesMessage) => {
       const { id } = newMessage
@@ -619,6 +611,18 @@ export const Messages = memo(
     const resetAllChatDataHandler = () => {
       dispatch(resetAllChatData())
     }
+
+    const handleReadyNewMessage = () => {
+      if (readyNewMessage.current && directChatId !== -1) {
+        const newMessage = readyNewMessage.current
+        readyNewMessage.current = null
+        dispatch(mergeMessages([newMessage]))
+      }
+    }
+
+    useEffect(() => {
+      handleReadyNewMessage()
+    }, [directChatId])
 
     // Xử lý thay đổi danh sách tin nhắn
     useEffect(() => {

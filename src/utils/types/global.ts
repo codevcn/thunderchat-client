@@ -1,6 +1,7 @@
 import type { AxiosError, HttpStatusCode } from "axios"
 import type { TMessage, TDirectChat, TMessageFullInfo, TDirectChatData } from "@/utils/types/be-api"
 import type { EChatType, EMessageMediaTypes, EMessageTypes } from "../enums"
+import type { Socket } from "socket.io-client"
 
 export type TStateMessage = TMessageFullInfo & {
   isNewMsg?: boolean
@@ -151,3 +152,5 @@ export type TConversationSearchResult = {
     content: string
   }
 }
+
+export type TSocketId = Socket["id"]

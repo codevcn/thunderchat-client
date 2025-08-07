@@ -58,7 +58,7 @@ import {
 } from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
-import { updateDirectChat } from "@/redux/messages/messages.slice"
+import { resetAllChatData, updateDirectChat } from "@/redux/messages/messages.slice"
 import { usePinDirectChats } from "@/hooks/pin-messages"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
@@ -184,6 +184,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
           if (directChat) {
             navToConversation(directChat.id, EChatType.DIRECT)
           } else {
+            dispatch(resetAllChatData())
             const tempChatData: TDirectChatData = {
               id: -1,
               createdAt: new Date().toISOString(),
@@ -580,7 +581,7 @@ const ConversationCard = ({
           fallbackClassName="bg-regular-violet-cl text-2xl"
         />
       </div>
-      <div className="w-[195px]">
+      <div className="w-[215px]">
         <div className="flex justify-between items-center w-full gap-3">
           <h3 className="truncate font-bold grow text-left leading-snug">{title}</h3>
           <div className="text-[10px] w-max min-w-max text-regular-icon-cl">
@@ -688,6 +689,7 @@ const ConversationCards = () => {
     try {
       return await groupChatService.fetchGroupChats(
         EPaginations.DIRECT_MESSAGES_PAGE_SIZE,
+        user,
         groupChatLastId.current
       )
     } catch (err) {
@@ -757,12 +759,12 @@ const ConversationCards = () => {
   const handleAddNewConversation = (
     newDirectChat: TDirectChat | null,
     newGroupChat: TGroupChat | null,
-    newMessage: TMessage,
+    newMessage: TMessage | null,
     sender: TUserWithProfile
   ) => {
     const lastDirectChat = localStorageManager.getLastDirectChatData()!
     let conversationCard: TConversationCard
-    if (newDirectChat) {
+    if (newDirectChat && newMessage) {
       conversationCard = {
         id: newDirectChat.id,
         type: EChatType.DIRECT,
@@ -792,14 +794,33 @@ const ConversationCards = () => {
         }
         conversationCard.title = senderFullName
       }
+    } else if (newGroupChat) {
+      const { name: chatTitle, creatorId } = newGroupChat
+      conversationCard = {
+        id: newGroupChat.id,
+        type: EChatType.GROUP,
+        lastMessageTime: undefined,
+        subtitle: {
+          content:
+            creatorId === user.id
+              ? "You created this chat"
+              : `This chat created by ${sender.Profile.fullName}`,
+          type: EMessageTypes.TEXT,
+        },
+        unreadMessageCount: 0,
+        createdAt: newGroupChat.createdAt,
+        pinIndex: -1,
+        avatar: {
+          src: newGroupChat.avatarUrl,
+          fallback: chatTitle[0],
+        },
+        title: chatTitle,
+      }
     }
     dispatch(addConversations([conversationCard!]))
   }
 
-  const handleUpdateCurrentChat = (
-    newDirectChat: TDirectChat | null,
-    newGroupChat: TGroupChat | null
-  ) => {
+  const handleUpdateCurrentChat = (newDirectChat: TDirectChat | null) => {
     dispatch((dispatch, getState) => {
       const currentDirectChat = getState().messages.directChat
       if (
@@ -829,7 +850,7 @@ const ConversationCards = () => {
     directChat: TDirectChat | null,
     groupChat: TGroupChat | null,
     type: EChatType,
-    newMessage: TMessage,
+    newMessage: TMessage | null,
     sender: TUserWithProfile
   ) => {
     if (type === EChatType.DIRECT && directChat) {
@@ -845,8 +866,10 @@ const ConversationCards = () => {
         })
       }
       handleAddNewConversation(directChat, null, newMessage, sender)
+      handleUpdateCurrentChat(directChat)
+    } else if (type === EChatType.GROUP && groupChat) {
+      handleAddNewConversation(null, groupChat, newMessage, sender)
     }
-    handleUpdateCurrentChat(directChat, groupChat)
   }
 
   const listenUnreadMessagesCount = (unreadMessageCount: number, conversationId: number) => {

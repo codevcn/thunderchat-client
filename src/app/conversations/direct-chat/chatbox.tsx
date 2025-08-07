@@ -1,7 +1,5 @@
 "use client"
 
-import { dev_test_values } from "../../../../temp/test"
-
 import { CustomAvatar, CustomTooltip, toast } from "@/components/materials"
 import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
@@ -10,7 +8,6 @@ import { useEffect, useMemo, useState, useRef } from "react"
 import { Search, Phone, MoreVertical, Pin } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
-import { setLastSeen } from "@/utils/helpers"
 import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
@@ -21,7 +18,7 @@ import { useAudioMessages } from "@/hooks/voice-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateMessage } from "@/utils/types/global"
 import { resetAllChatData, setDirectChat } from "@/redux/messages/messages.slice"
-import type { TPinMessageEventData } from "@/utils/types/socket"
+import type { TCheckUserOnlineStatusRes, TPinMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
 import { renderMessageContent } from "./pin-message"
@@ -29,6 +26,9 @@ import { CanceledError } from "axios"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
+import { EOnlineStatus } from "@/utils/socket/enums"
+
+const TYPING_TIMEOUT: number = 5000
 
 const TypingIndicator = () => {
   return (
@@ -64,26 +64,53 @@ const Header = ({
   canSend,
   directChat,
 }: THeaderProps) => {
-  const { Profile } = friendInfo
-  const { id } = directChat
+  const { Profile, id: friendId } = friendInfo
+  const { id: directChatId } = directChat
   const [isTyping, setIsTyping] = useState<boolean>(false)
+  const [friendOnlineStatus, setFriendOnlineStatus] = useState<EOnlineStatus>(EOnlineStatus.OFFLINE)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleTypingMessage = (typing: boolean, directChatId: number) => {
-    if (directChatId !== id) return
+    if (directChatId !== directChatId) return
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
     setIsTyping(typing)
+    if (typing) {
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false)
+      }, TYPING_TIMEOUT)
+    }
   }
 
   const resetTyping = () => {
     setIsTyping(false)
   }
 
+  const listenBroadcastFriendOnline = (userId: number, onlineStatus: EOnlineStatus) => {
+    if (userId !== friendId) return
+    setFriendOnlineStatus(onlineStatus)
+  }
+
+  const checkFriendOnlineStatus = () => {
+    clientSocket.socket.emit(
+      ESocketEvents.check_user_online_status,
+      { userId: friendId },
+      (data: TCheckUserOnlineStatusRes) => {
+        setFriendOnlineStatus(data.onlineStatus)
+      }
+    )
+  }
+
   useEffect(() => {
     resetTyping()
+    checkFriendOnlineStatus()
+    clientSocket.socket.on(ESocketEvents.broadcast_user_online_status, listenBroadcastFriendOnline)
     clientSocket.socket.on(ESocketEvents.typing_direct, handleTypingMessage)
     return () => {
       clientSocket.socket.removeListener(ESocketEvents.typing_direct, handleTypingMessage)
     }
-  }, [id])
+  }, [directChatId])
 
   return (
     <div className="flex justify-between gap-2 px-6 py-1.5 bg-regular-dark-gray-cl w-full box-border h-header">
@@ -100,7 +127,17 @@ const Header = ({
             <TypingIndicator />
           ) : (
             <div className="text-xs text-regular-text-secondary-cl">
-              {"Last seen " + setLastSeen(dev_test_values.user_1.lastOnline)}
+              {friendOnlineStatus === EOnlineStatus.ONLINE ? (
+                <div className="flex items-center gap-2">
+                  <span className="h-[10px] w-[10px] bg-[#4cf16e] rounded-full"></span>
+                  <span className="text-sm leading-none">Online</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="h-[10px] w-[10px] bg-[#535353] rounded-full"></span>
+                  <span className="text-sm leading-none">Offline</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -155,7 +192,7 @@ type TMainProps = {
 }
 
 const Main = ({ directChat, canSend }: TMainProps) => {
-  const { Recipient, Creator } = directChat
+  const { Recipient, Creator, id: directChatId } = directChat
   const user = useUser()!
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
@@ -169,13 +206,22 @@ const Main = ({ directChat, canSend }: TMainProps) => {
   const directChatIdRef = useRef<number | undefined>(directChat?.id)
   const fetchPinnedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  const removeDeletedMessagesFromPinnedMessages = (messages: TStateMessage[]) => {
+    return messages.filter((message) => !message.isDeleted)
+  }
+
   const resetAllChatDataHandler = () => {
     dispatch(resetAllChatData())
   }
 
+  const joinDirectChatRoom = () => {
+    clientSocket.socket.emit(ESocketEvents.join_direct_chat_room, { directChatId }, () => {})
+  }
+
   useEffect(() => {
-    directChatIdRef.current = directChat?.id
-  }, [directChat?.id])
+    directChatIdRef.current = directChatId
+    joinDirectChatRoom()
+  }, [directChatId])
 
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
@@ -196,7 +242,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
           pinService
             .getPinnedMessages(data.directChatId)
             .then((convertedMessages) => {
-              setPinnedMessages(convertedMessages)
+              setPinnedMessages(removeDeletedMessagesFromPinnedMessages(convertedMessages))
             })
             .catch(() => {
               setPinnedMessages([])
@@ -217,15 +263,15 @@ const Main = ({ directChat, canSend }: TMainProps) => {
 
   // Fetch pinned messages ban đầu khi vào phòng chat
   useEffect(() => {
-    if (directChat?.id) {
+    if (directChatId) {
       pinService
-        .getPinnedMessages(directChat.id)
+        .getPinnedMessages(directChatId)
         .then((convertedMessages) => {
-          setPinnedMessages(convertedMessages)
+          setPinnedMessages(removeDeletedMessagesFromPinnedMessages(convertedMessages))
         })
         .catch(() => setPinnedMessages([]))
     }
-  }, [directChat?.id])
+  }, [directChatId])
 
   // Add logging for setReplyMessage
   const handleSetReplyMessage = (msg: TStateMessage | null) => {
@@ -333,7 +379,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
           </div>
         </div>
       </div>
-      <InfoBar friendInfo={friendInfo} directChatId={directChat.id} />
+      <InfoBar friendInfo={friendInfo} directChatId={directChatId} />
     </div>
   )
 }

@@ -14,4 +14,7 @@ export enum ESocketEvents {
   pin_direct_chat = "pin_direct_chat",
   friend_request_action = "friend_request_action",
   new_conversation = "new_conversation",
+  broadcast_user_online_status = "broadcast_user_online_status",
+  check_user_online_status = "check_user_online_status",
+  join_direct_chat_room = "join_direct_chat_room",
 }

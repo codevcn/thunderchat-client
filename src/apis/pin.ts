@@ -46,8 +46,6 @@ export type TPinnedMessage = {
   directChatId: number
   pinnedBy: number
   pinnedAt: string
-  Sticker?: TSticker
-  Media?: TMessageMedia
   Message: {
     id: number
     content: string
@@ -58,12 +56,8 @@ export type TPinnedMessage = {
     status: string
     createdAt: string
     replyToId: number | null
-    // Các trường media có thể có hoặc không
-    stickerUrl?: string
-    mediaUrl?: string
-    fileName?: string
-    fileType?: string
-    fileSize?: number
+    isDeleted: boolean
+    isViolated: boolean
     Author: {
       id: number
       email: string
@@ -98,6 +92,8 @@ export type TPinnedMessage = {
         }
       }
     }
+    Sticker: TSticker | null
+    Media: TMessageMedia | null
   }
 }
 

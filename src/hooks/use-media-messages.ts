@@ -91,79 +91,36 @@ export const useMediaMessages = () => {
     setError(null)
 
     try {
-      // Fetch images/videos (6 items)
-      const imagesVideosResponse = await messageService.getMediaMessagesWithMultipleTypes(
+      // Fetch all media messages in one call
+      const response = await messageService.getMediaMessagesWithFilters(
         directChat.id,
-        [EMessageMediaTypes.IMAGE, EMessageMediaTypes.VIDEO],
-        {},
+        {}, // No type filter, get all media types
         1, // page
-        6, // limit
+        20, // limit - get more to have enough for all sections
         "desc" // sort
       )
 
-      // Fetch files (3 items)
-      const filesResponse = await messageService.getMediaMessagesWithFilters(
-        directChat.id,
-        { type: EMessageMediaTypes.DOCUMENT },
-        1, // page
-        3, // limit
-        "desc" // sort
-      )
+      if (response.success) {
+        console.log("Media messages response:", response.data.items)
 
-      // Fetch voices (3 items)
-      const voicesResponse = await messageService.getMediaMessagesWithFilters(
-        directChat.id,
-        { type: EMessageMediaTypes.AUDIO },
-        1, // page
-        3, // limit
-        "desc" // sort
-      )
+        // Lọc ra tin nhắn chưa bị xóa và sắp xếp theo thời gian
+        const nonDeletedMessages = response.data.items
+          .filter((msg: TMessage) => !msg.isDeleted)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-      // Fetch links (3 items) - TEXT messages with URLs
-      const linksResponse = await messageService.getMediaMessagesWithFilters(
-        directChat.id,
-        {}, // No type filter, will filter TEXT with URLs on frontend
-        1, // page
-        10, // Get more to filter for URLs
-        "desc" // sort
-      )
-
-      // Combine all responses
-      const allMessages: TMessageFullInfo[] = []
-
-      if (imagesVideosResponse.success) {
-        allMessages.push(...imagesVideosResponse.data.items)
+        console.log("Filtered media messages:", nonDeletedMessages)
+        console.log("Setting mediaMessages state with:", nonDeletedMessages.length, "items")
+        setMediaMessages(nonDeletedMessages)
+      } else {
+        console.error("Media messages API error:", response)
+        setError(response.message || "Failed to fetch media messages")
       }
-      if (filesResponse.success) {
-        allMessages.push(...filesResponse.data.items)
-      }
-      if (voicesResponse.success) {
-        allMessages.push(...voicesResponse.data.items)
-      }
-      if (linksResponse.success) {
-        // Filter for TEXT messages with URLs and limit to 3
-        const linkMessages = linksResponse.data.items
-          .filter(
-            (msg: TMessage) =>
-              msg.type === EMessageTypes.TEXT &&
-              msg.content &&
-              (msg.content.includes("http://") || msg.content.includes("https://"))
-          )
-          .slice(0, 3)
-        allMessages.push(...linkMessages)
-      }
-
-      // Lọc ra tin nhắn chưa bị xóa và sắp xếp theo thời gian
-      const nonDeletedMessages = allMessages
-        .filter((msg: TMessage) => !msg.isDeleted)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-      setMediaMessages(nonDeletedMessages)
 
       // Fetch statistics after media messages are updated
       await fetchStatistics()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred"
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

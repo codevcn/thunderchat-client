@@ -3,7 +3,7 @@ import {
   getFetchDirectMessages,
   getFetchGroupMessages,
   getFetchVoiceMessages,
-  getMediaMessages,
+  getMediaMessages as getMediaMessagesAPI,
   getMediaStatistics,
 } from "@/apis/messages"
 import { ESortTypes, EMessageMediaTypes } from "@/utils/enums"
@@ -56,7 +56,7 @@ class MessageService {
    */
   async getMediaMessages(params: TGetMediaMessagesParams): Promise<TGetMediaMessagesResponse> {
     try {
-      const { data } = await getMediaMessages(params)
+      const { data } = await getMediaMessagesAPI(params)
       return data
     } catch (error) {
       console.error("[MessageService] Error fetching media messages:", error)

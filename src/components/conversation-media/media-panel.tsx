@@ -66,7 +66,6 @@ const MediaPanel = React.memo(() => {
 
   // Custom hook để quản lý media messages
   const { mediaMessages, loading, error, statistics } = useMediaMessages()
-
   // Hàm kiểm tra URL - memoized
   const isUrl = useMemo(
     () => (text: string) => {
@@ -95,28 +94,49 @@ const MediaPanel = React.memo(() => {
       // Bỏ qua tin nhắn đã bị xóa
       if (message.isDeleted) return
 
-      if (!message.Media || !message.content) return
-
-      const messageData: TMediaData = {
-        id: message.id,
-        type: message.type,
-        mediaUrl: message.Media.url,
-        fileName: message.Media.fileName,
-        content: message.content,
-        createdAt: message.createdAt,
-        authorId: message.authorId,
-        fileSize: message.Media.fileSize,
-        thumbnailUrl: message.Media.thumbnailUrl,
-        mediaType: message.Media.type,
+      // Handle TEXT messages (links)
+      if (message.type === EMessageTypes.TEXT && message.content && isUrl(message.content)) {
+        const messageData: TMediaData = {
+          id: message.id,
+          type: message.type,
+          mediaUrl: message.content, // Use content as URL for links
+          fileName: message.content,
+          content: message.content,
+          createdAt: message.createdAt,
+          authorId: message.authorId,
+          fileSize: 0,
+          thumbnailUrl: "",
+          mediaType: EMessageMediaTypes.DOCUMENT, // Default type for links
+        }
+        links.push(messageData)
+        return
       }
 
-      if (message.type === EMessageTypes.MEDIA) {
-        if (message.Media.type === EMessageMediaTypes.IMAGE) images.push(messageData)
-        else if (message.Media.type === EMessageMediaTypes.VIDEO) videos.push(messageData)
-        else if (message.Media.type === EMessageMediaTypes.AUDIO) audios.push(messageData)
-        else if (message.Media.type === EMessageMediaTypes.DOCUMENT) files.push(messageData)
-      } else if (message.type === EMessageTypes.TEXT && isUrl(message.content)) {
-        links.push(messageData)
+      // Handle MEDIA messages
+      if (message.type === EMessageTypes.MEDIA && message.Media) {
+        const messageData: TMediaData = {
+          id: message.id,
+          type: message.type,
+          mediaUrl: message.Media.url,
+          fileName: message.Media.fileName,
+          content: message.content || "",
+          createdAt: message.createdAt,
+          authorId: message.authorId,
+          fileSize: message.Media.fileSize,
+          thumbnailUrl: message.Media.thumbnailUrl,
+          mediaType: message.Media.type,
+        }
+
+        if (message.Media.type === EMessageMediaTypes.IMAGE) {
+          images.push(messageData)
+        } else if (message.Media.type === EMessageMediaTypes.VIDEO) {
+          videos.push(messageData)
+        } else if (message.Media.type === EMessageMediaTypes.AUDIO) {
+          audios.push(messageData)
+        } else if (message.Media.type === EMessageMediaTypes.DOCUMENT) {
+          files.push(messageData)
+        }
+      } else {
       }
     })
 
@@ -124,13 +144,15 @@ const MediaPanel = React.memo(() => {
     const sortByLatest = (a: TMediaData, b: TMediaData) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 
-    return {
+    const result = {
       images: images.sort(sortByLatest),
       videos: videos.sort(sortByLatest),
       files: files.sort(sortByLatest),
       audios: audios.sort(sortByLatest),
       links: links.sort(sortByLatest),
     }
+
+    return result
   }, [mediaMessages, isUrl])
 
   // Memoized mixed media
@@ -348,7 +370,9 @@ const MediaPanel = React.memo(() => {
             )
           })}
           {mixedMedia.length === 0 && (
-            <div className="w-full text-center text-gray-400 py-4">No images or videos yet</div>
+            <div className="col-span-3 text-center text-gray-400 py-4 whitespace-nowrap">
+              No images or videos yet
+            </div>
           )}
         </div>
         {statistics.images + statistics.videos > 0 && (

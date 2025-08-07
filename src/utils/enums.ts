@@ -22,6 +22,7 @@ export enum EPaginations {
   FRIENDS_PAGE_SIZE = 5,
   SEARCH_USERS_PAGE_SIZE = 20,
   DIRECT_MESSAGES_PAGE_SIZE = 20,
+  GROUP_MESSAGES_PAGE_SIZE = 20,
 }
 
 export enum EDirectChatErrMsgs {

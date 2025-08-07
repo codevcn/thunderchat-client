@@ -1,8 +1,7 @@
 "use client"
 
-import { CustomTooltip, IconButton, Spinner, CircularProgress } from "@/components/materials"
+import { CustomTooltip, IconButton, CircularProgress } from "@/components/materials"
 import {
-  Download,
   FileVideo,
   Mic,
   Paperclip,
@@ -28,7 +27,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TDirectChat, TSticker } from "@/utils/types/be-api"
+import type { TGroupChat, TSticker } from "@/utils/types/be-api"
 import type { TEmoji, TStateMessage } from "@/utils/types/global"
 import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
 import { toast } from "sonner"
@@ -57,20 +56,19 @@ type TExpressionCategory = "emoji" | "sticker"
 type TExpressionPickerProps = {
   textFieldRef: React.RefObject<HTMLDivElement | null>
   expressionPopoverRef: React.RefObject<HTMLDivElement | null>
-  directChat: TDirectChat
+  groupChat: TGroupChat
 }
 
 const ExpressionPicker = ({
   textFieldRef,
   expressionPopoverRef,
-  directChat,
+  groupChat,
 }: TExpressionPickerProps) => {
   const [showPicker, setShowPicker] = useState<boolean>(false)
   const [category, setCategory] = useState<TExpressionCategory>("emoji")
   const addEmojiBtnRef = useRef<HTMLButtonElement>(null)
   const appRootEle = useRootLayoutContext().appRootRef!.current!
-  const user = useUser()!
-  const { recipientId, creatorId } = directChat
+  const { id: groupChatId } = groupChat
   const handleSelectEmoji = (emojiObject: TEmoji) => {
     const textField = textFieldRef.current
     if (textField) {
@@ -86,7 +84,7 @@ const ExpressionPicker = ({
       EMessageTypeAllTypes.STICKER,
       {
         content: `${sticker.id}`,
-        receiverId: user.id === recipientId ? creatorId : recipientId,
+        groupChatId,
         token: chattingService.getMessageToken(),
         timestamp: new Date(),
       },
@@ -212,7 +210,7 @@ const useCustomDebounce = (typingFlagRef: React.RefObject<TTypingFlags | undefin
 }
 
 type TMessageTextFieldProps = {
-  directChat: TDirectChat
+  groupChat: TGroupChat
   setHasContent: (hasContent: boolean) => void
   hasContent: boolean
   textFieldRef: React.RefObject<HTMLDivElement | null>
@@ -223,7 +221,7 @@ type TMessageTextFieldProps = {
 }
 
 const MessageTextField = ({
-  directChat,
+  groupChat,
   setHasContent,
   hasContent,
   textFieldRef,
@@ -232,24 +230,18 @@ const MessageTextField = ({
   replyMessage,
   setReplyMessage,
 }: TMessageTextFieldProps) => {
-  const { recipientId, creatorId } = directChat
-  const user = useUser()!
+  const { id: groupChatId } = groupChat
   const typingFlagRef = useRef<TTypingFlags | undefined>(undefined)
   const debounce = useCustomDebounce(typingFlagRef)
 
   const indicateUserIsTyping = debounce((type: TTypingFlags) => {
-    clientSocket.socket.emit(ESocketEvents.typing_direct, {
-      receiverId: recipientId === user.id ? creatorId : recipientId,
+    clientSocket.socket.emit(ESocketEvents.typing_group, {
+      groupChatId,
       isTyping: type === "typing",
-      directChatId: directChat.id,
     })
   }, INDICATE_TYPING_DELAY)
 
   const handleTyping = (msg: string) => {
-    // Clean up message: loại bỏ link tags và decode HTML
-    const cleanedMsg = cleanMessageContent(msg)
-    // Kiểm tra emoji trong message đã clean
-    const emojis = extractEmojisFromMessage(cleanedMsg)
     if (msg.trim() && msg.length > 0) {
       setHasContent(true)
     } else {
@@ -274,7 +266,7 @@ const MessageTextField = ({
   }
 
   // Xử lý paste event để đảm bảo emoji hiển thị đúng
-  const handlePaste = (e: ClipboardEvent) => {
+  const handlePaste = (_: ClipboardEvent) => {
     const textField = textFieldRef.current
     if (!textField) return
 
@@ -344,7 +336,7 @@ const MessageTextField = ({
 
     const payload: TChattingPayload["msgPayload"] = {
       content: msgToSend,
-      receiverId: user.id === recipientId ? creatorId : recipientId,
+      groupChatId,
       token: chattingService.getMessageToken(),
       timestamp: new Date(),
     }
@@ -461,14 +453,14 @@ function FileTypeMenu({
 }
 
 type TTypeMessageBarProps = {
-  directChat: TDirectChat
+  groupChat: TGroupChat
   replyMessage: TStateMessage | null
   setReplyMessage: (msg: any | null) => void
   canSend?: boolean | null
 }
 
 export const TypeMessageBar = memo(
-  ({ directChat, replyMessage, setReplyMessage, canSend }: TTypeMessageBarProps) => {
+  ({ groupChat, replyMessage, setReplyMessage, canSend }: TTypeMessageBarProps) => {
     const user = useUser()
     const textFieldRef = useRef<HTMLDivElement | null>(null)
     const [hasContent, setHasContent] = useState<boolean>(false)
@@ -524,7 +516,7 @@ export const TypeMessageBar = memo(
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!user) return
-      const { recipientId, creatorId } = directChat
+      const { id: groupChatId } = groupChat
       const files = Array.from(e.target.files || [])
       if (files.length === 0) return
 
@@ -605,7 +597,7 @@ export const TypeMessageBar = memo(
 
           const msgPayload: TChattingPayload["msgPayload"] = {
             content: `${id}`, // hoặc caption nếu có
-            receiverId: user.id === recipientId ? creatorId : recipientId,
+            groupChatId,
             token: chattingService.getMessageToken(),
             timestamp: new Date(),
           }
@@ -781,10 +773,10 @@ export const TypeMessageBar = memo(
         const { id } = await FileService.uploadFile(webmFile)
 
         // Gửi message (BE sẽ nhận type là AUDIO, mediaUrl là link S3 .webm)
-        const { recipientId, creatorId } = directChat
-        const msgPayload = {
+        const { id: groupChatId } = groupChat
+        const msgPayload: TChattingPayload["msgPayload"] = {
           content: `${id}`, // hoặc chú thích
-          receiverId: user!.id === recipientId ? creatorId : recipientId,
+          groupChatId,
           token: chattingService.getMessageToken(),
           timestamp: new Date(),
         }
@@ -897,11 +889,11 @@ export const TypeMessageBar = memo(
             <ExpressionPicker
               textFieldRef={textFieldRef}
               expressionPopoverRef={expressionPopoverRef}
-              directChat={directChat}
+              groupChat={groupChat}
             />
             <MessageTextField
               hasContent={hasContent}
-              directChat={directChat}
+              groupChat={groupChat}
               setHasContent={setHasContent}
               textFieldRef={textFieldRef}
               textFieldContainerRef={textFieldContainerRef}

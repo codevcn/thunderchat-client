@@ -15,9 +15,7 @@ import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { ArrowLeft, ArrowRight, Camera, X, Plus, RefreshCw } from "lucide-react"
 import { groupChatService } from "@/services/group-chat.service"
-import { useAppDispatch } from "@/hooks/redux"
-import { addConversations } from "@/redux/conversations/conversations.slice"
-import { EChatType, EMessageTypes } from "@/utils/enums"
+import { useUser } from "@/hooks/user"
 
 type TPrepareNewGroupProps = {
   pickedUsers: TSearchUsersData[]
@@ -39,7 +37,6 @@ const PrepareNewGroup = ({
   const [avatar, setAvatar] = useState<string>()
   const isCreatedRef = useRef<boolean>(false)
   const groupNameInputRef = useRef<HTMLInputElement>(null)
-  const dispatch = useAppDispatch()
 
   const closeBoard = () => {
     onOpen(false)
@@ -81,24 +78,6 @@ const PrepareNewGroup = ({
     }
   }
 
-  const addGroupChatToList = (groupName: string, groupChatId: number, avatarUrl?: string) => {
-    dispatch(
-      addConversations([
-        {
-          avatar: { src: avatarUrl, fallback: groupName[0] },
-          title: groupName,
-          subtitle: { content: "You created this group chat", type: EMessageTypes.TEXT },
-          lastMessageTime: new Date().toISOString(),
-          pinIndex: 0,
-          id: groupChatId,
-          type: EChatType.GROUP,
-          createdAt: new Date().toISOString(),
-          unreadMessageCount: 0,
-        },
-      ])
-    )
-  }
-
   const handleCreateGroup = async () => {
     const groupName = groupNameInputRef.current?.value
     if (!groupName) {
@@ -108,9 +87,8 @@ const PrepareNewGroup = ({
     setLoading("create-group")
     const memberIds = pickedUsers.map(({ id }) => id)
     try {
-      const groupChat = await groupChatService.createGroupChat(groupName, memberIds, avatar)
+      await groupChatService.createGroupChat(groupName, memberIds, avatar)
       isCreatedRef.current = true
-      addGroupChatToList(groupName, groupChat.id, avatar)
       closeCreateGroupChat()
     } catch (err) {
       toaster.error(axiosErrorHandler.handleHttpError(err).message)
@@ -209,7 +187,7 @@ const PrepareNewGroup = ({
             </div>
 
             <div className="space-y-4 mt-4">
-              {pickedUsers.map(({ Profile, id }) => (
+              {pickedUsers.map(({ Profile, id, email }) => (
                 <div key={id} className="flex items-center gap-3">
                   <CustomAvatar
                     imgSize={48}
@@ -226,7 +204,7 @@ const PrepareNewGroup = ({
                     >
                       {Profile.fullName}
                     </h3>
-                    <p className="text-[13px] text-gray-400">Last seen Jan 20, 2025 at 16:23</p>
+                    <p className="text-[13px] text-gray-400">{email}</p>
                   </div>
                 </div>
               ))}
@@ -265,6 +243,7 @@ export const AddMembersBoard = ({ open, onOpen }: TAddMembersBoardProps) => {
   const [loading, setLoading] = useState(false)
   const [openPrepareNewGroup, setOpenPrepareNewGroup] = useState(false)
   const debounce = useDebounce()
+  const user = useUser()!
 
   const searchUsers = debounce(() => {
     const keyword = inputRef.current?.value
@@ -276,7 +255,7 @@ export const AddMembersBoard = ({ open, onOpen }: TAddMembersBoardProps) => {
     userService
       .searchUsers(keyword)
       .then((res) => {
-        setSearchResults(res)
+        setSearchResults(res.filter(({ id }) => id !== user.id))
       })
       .catch((err) => {
         toaster.error(axiosErrorHandler.handleHttpError(err).message)
@@ -405,7 +384,7 @@ export const AddMembersBoard = ({ open, onOpen }: TAddMembersBoardProps) => {
                   >
                     {Profile.fullName}
                   </h3>
-                  <p className="text-[13px] text-gray-400">Last seen Jan 20, 2025 at 16:23</p>
+                  <p className="text-[13px] text-gray-400">{email}</p>
                 </div>
               </div>
             ))

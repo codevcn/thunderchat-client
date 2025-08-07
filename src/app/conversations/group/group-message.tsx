@@ -22,7 +22,6 @@ import Image from "next/image"
 import { CSS_VARIABLES } from "@/configs/css-variables"
 import VoiceMessage from "../../../components/voice-message/voice-message"
 import React, { useState, forwardRef, useEffect } from "react"
-import { pinService } from "@/services/pin.service"
 import { toast } from "sonner"
 import { DropdownMessage } from "@/components/materials/dropdown-message"
 import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
@@ -246,8 +245,6 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
     )
   }
 
-  // if (type === EMessageTypes.MEDIA && mediaUrl && message) {
-  //   return <VoiceMessage audioUrl={mediaUrl} message={message} />
   if (
     type === EMessageTypes.MEDIA &&
     mediaType === EMessageMediaTypes.AUDIO &&
@@ -395,22 +392,17 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       if (loadingPin) return
       setLoadingPin(true)
       try {
-        const response = await pinService.togglePinMessage(
-          message.id,
-          message.groupChatId!,
-          !isPinned
-        )
-
-        // Xử lý response dựa trên loại response
-        if ("success" in response) {
-          // Bỏ ghim thành công
-          onPinChange(false)
-          toast.success("Đã bỏ ghim tin nhắn")
-        } else {
-          // Ghim thành công
-          onPinChange(true)
-          toast.success("Đã ghim tin nhắn")
-        }
+        // const response = await pinService.togglePinGroupMessage()
+        // // Xử lý response dựa trên loại response
+        // if ("success" in response) {
+        //   // Bỏ ghim thành công
+        //   onPinChange(false)
+        //   toast.success("Đã bỏ ghim tin nhắn")
+        // } else {
+        //   // Ghim thành công
+        //   onPinChange(true)
+        //   toast.success("Đã ghim tin nhắn")
+        // }
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"
         toast.error(errorMessage)

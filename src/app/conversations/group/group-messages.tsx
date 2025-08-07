@@ -2,7 +2,7 @@
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useRef, useState, useEffect, memo } from "react"
-import type { TGetMessagesMessage, TSticker, TUserWithoutPassword } from "@/utils/types/be-api"
+import type { TGetMessagesMessage, TSticker } from "@/utils/types/be-api"
 import { Spinner } from "@/components/materials/spinner"
 import {
   EChatType,
@@ -47,13 +47,10 @@ const SHOW_SCROLL_BTN_THRESHOLD: number = 250
 
 type TNoMessagesYetProps = {
   groupChat: TGroupChatData
-  user: TUserWithoutPassword
-  canSend: boolean | null
 }
 
-const NoMessagesYet = ({ groupChat, user, canSend }: TNoMessagesYetProps) => {
+const NoMessagesYet = ({ groupChat }: TNoMessagesYetProps) => {
   const [greetingSticker, setGreetingSticker] = useState<TSticker | null>(null)
-  const { recipientId, creatorId, id: groupChatId } = groupChat
 
   const fetchRandomSticker = async () => {
     await expressionService
@@ -71,7 +68,7 @@ const NoMessagesYet = ({ groupChat, user, canSend }: TNoMessagesYetProps) => {
       chattingService.sendMessage(
         EMessageTypeAllTypes.STICKER,
         {
-          receiverId: user.id === recipientId ? creatorId : recipientId,
+          groupChatId: groupChat.id,
           content: `${greetingSticker.id}`,
           token: chattingService.getMessageToken(),
           timestamp: new Date(),
@@ -91,9 +88,7 @@ const NoMessagesYet = ({ groupChat, user, canSend }: TNoMessagesYetProps) => {
 
   useEffect(() => {
     fetchRandomSticker()
-  }, [groupChatId])
-
-  if (canSend === false) return null
+  }, [groupChat.id])
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 m-auto text-center text-base">
@@ -116,13 +111,12 @@ const NoMessagesYet = ({ groupChat, user, canSend }: TNoMessagesYetProps) => {
 }
 
 type TMessagesProps = {
-  directChat: TGroupChatData
+  groupChat: TGroupChatData
   onReply: (msg: TStateMessage) => void
   pinnedMessages: TStateMessage[]
   setPinnedMessages: React.Dispatch<React.SetStateAction<TStateMessage[]>>
   showPinnedModal: boolean
   setShowPinnedModal: React.Dispatch<React.SetStateAction<boolean>>
-  canSend: boolean | null
 }
 
 type TMessagesLoadingState = "loading-messages"
@@ -146,16 +140,15 @@ function findMissingRanges(ids: number[]): [number, number][] {
 
 export const Messages = memo(
   ({
-    directChat,
+    groupChat,
     onReply: onReplyFromProps,
     pinnedMessages,
     setPinnedMessages,
     showPinnedModal,
     setShowPinnedModal,
-    canSend,
   }: TMessagesProps) => {
-    const { id: directChatId, recipientId, creatorId, lastSentMessageId } = directChat
-    const { directMessages: messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
+    const { id: groupChatId, lastSentMessageId } = groupChat
+    const { groupMessages: messages, fetchedMsgs } = useAppSelector(({ messages }) => messages)
     const [loading, setLoading] = useState<TMessagesLoadingState>()
     const user = useUser()!
     const messagesContainer = useRef<HTMLDivElement>(null) // Tham chiếu đến phần tử chứa danh sách tin nhắn
@@ -240,7 +233,7 @@ export const Messages = memo(
     }
 
     const fetchMessages = async (
-      directChatId: number,
+      groupChatId: number,
       msgOffset: number | undefined,
       isFirstTime: boolean
     ) => {
@@ -252,16 +245,16 @@ export const Messages = memo(
       const scrollHeightBefore = msgsContainerEle.scrollHeight // Chiều cao trước khi thêm
       const scrollTopBefore = msgsContainerEle.scrollTop // Vị trí cuộn từ top
       messageService
-        .fetchDirectMessages({
-          directChatId,
+        .fetchGroupMessages({
+          groupChatId,
           msgOffset,
-          limit: EPaginations.DIRECT_MESSAGES_PAGE_SIZE,
+          limit: EPaginations.GROUP_MESSAGES_PAGE_SIZE,
           sortType: ESortTypes.ASC,
           isFirstTime,
         })
         .then((result) => {
           hasMoreMessages.current = result.hasMoreMessages
-          dispatch(mergeMessages(result.directMessages))
+          dispatch(mergeMessages(result.groupMessages))
           dispatch(setFetchedMsgs(true))
         })
         .catch((error) => {
@@ -288,7 +281,7 @@ export const Messages = memo(
         eventEmitter.emit(EInternalEvents.SCROLL_OUT_OF_BOTTOM)
         // Check if the user scrolled to the top then fetch more messages
         if (messagesContainer.scrollTop < 10 && hasMoreMessages.current && !loading) {
-          fetchMessages(directChatId, msgOffset.current, false)
+          fetchMessages(groupChatId, msgOffset.current, false)
         }
       }
     }
@@ -316,25 +309,17 @@ export const Messages = memo(
       }
     }
 
-    const handleReadyNewMessage = () => {
-      if (readyNewMessage.current && directChatId !== -1) {
-        const newMessage = readyNewMessage.current
-        readyNewMessage.current = null
-        dispatch(mergeMessages([newMessage]))
-      }
-    }
-
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendMessage = (newMessage: TGetMessagesMessage) => {
       const { id } = newMessage
-      if (directChatId === -1) {
+      if (groupChatId === -1) {
         readyNewMessage.current = newMessage
         return
       }
-      if (newMessage.directChatId !== directChatId) return
+      if (newMessage.groupChatId !== groupChatId) return
       dispatch(mergeMessages([newMessage]))
-      dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.DIRECT }))
-      clientSocket.setMessageOffset(id, directChatId)
+      dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.GROUP }))
+      clientSocket.setMessageOffset(id, groupChatId)
     }
 
     // Xử lý sự kiện kết nối lại từ server
@@ -342,7 +327,7 @@ export const Messages = memo(
       if (newMessages && newMessages.length > 0) {
         dispatch(mergeMessages(newMessages))
         const { id } = newMessages[newMessages.length - 1]
-        clientSocket.setMessageOffset(id, directChatId)
+        clientSocket.setMessageOffset(id, groupChatId)
       }
     }
 
@@ -358,7 +343,7 @@ export const Messages = memo(
         eventEmitter.emit(
           EInternalEvents.UNREAD_MESSAGES_COUNT,
           unreadMessagesRef.current.count,
-          directChatId
+          groupChatId
         )
       }
     }
@@ -394,7 +379,7 @@ export const Messages = memo(
           eventEmitter.emit(
             EInternalEvents.UNREAD_MESSAGES_COUNT,
             unreadMessagesRef.current.count,
-            directChatId
+            groupChatId
           )
         }
       }
@@ -417,10 +402,10 @@ export const Messages = memo(
         const unreadMessages = unreadMessagesRef.current
         if (unreadMessages.count > 0) unreadMessages.count -= 1
         unreadMessages.firstUnreadMsgEle = null
-        eventEmitter.emit(EInternalEvents.UNREAD_MESSAGES_COUNT, unreadMessages.count, directChatId)
-        clientSocket.socket.emit(ESocketEvents.message_seen_direct, {
+        eventEmitter.emit(EInternalEvents.UNREAD_MESSAGES_COUNT, unreadMessages.count, groupChatId)
+        clientSocket.socket.emit(ESocketEvents.message_seen_group, {
           messageId: msgId,
-          receiverId: recipientId === user.id ? creatorId : recipientId,
+          groupChatId,
         })
       }
     }
@@ -512,7 +497,7 @@ export const Messages = memo(
     // Hàm dùng chung để show context quanh 1 messageId (áp dụng cho pinned, reply, nút Xem)
     const showMessageContext = async (messageId: number) => {
       try {
-        const contextMsgs = await directChatService.getMessageContext(messageId)
+        const contextMsgs = await groupChatService.getMessageContext(messageId)
         // Đánh dấu context
         const contextWithFlag = contextMsgs.map((msg: TStateMessage) => ({
           ...msg,
@@ -548,7 +533,7 @@ export const Messages = memo(
       let offset = fromId - 1
       let done = false
       while (!done) {
-        const newerMsgs = await directChatService.getNewerMessages(directChatId, offset, 20)
+        const newerMsgs = await groupChatService.getNewerMessages(groupChatId, offset, 20)
         if (!newerMsgs || newerMsgs.length === 0) {
           break
         }
@@ -573,7 +558,7 @@ export const Messages = memo(
       // Nếu đang ở context, lấy offset là contextEndId, ngược lại lấy id cuối cùng của mảng
       const offset = contextEndId ?? messages[messages.length - 1].id
       try {
-        const newerMsgs = await directChatService.getNewerMessages(directChatId, offset, 20)
+        const newerMsgs = await groupChatService.getNewerMessages(groupChatId, offset, 20)
         if (newerMsgs && newerMsgs.length > 0) {
           dispatch(mergeMessages(newerMsgs))
           // Nếu đang ở context, cập nhật contextEndId = id lớn nhất vừa merge (hoặc set null nếu đã hết context)
@@ -592,7 +577,7 @@ export const Messages = memo(
 
     const startFetchingMessages = () => {
       dispatch(resetGroupMessages())
-      fetchMessages(directChatId, undefined, true)
+      fetchMessages(groupChatId, undefined, true)
     }
 
     const handleMessagesChange = () => {
@@ -619,6 +604,18 @@ export const Messages = memo(
     const resetAllChatDataHandler = () => {
       dispatch(resetAllChatData())
     }
+
+    const handleReadyNewMessage = () => {
+      if (readyNewMessage.current && groupChatId !== -1) {
+        const newMessage = readyNewMessage.current
+        readyNewMessage.current = null
+        dispatch(mergeMessages([newMessage]))
+      }
+    }
+
+    useEffect(() => {
+      handleReadyNewMessage()
+    }, [groupChatId])
 
     // Xử lý thay đổi danh sách tin nhắn
     useEffect(() => {
@@ -647,20 +644,20 @@ export const Messages = memo(
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-      eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
+      eventEmitter.on(EInternalEvents.SEND_MESSAGE_GROUP, listenSendMessage)
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
-      clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
+      clientSocket.socket.on(ESocketEvents.message_seen_group, handleMessageSeen)
       return () => {
         resetAllChatDataHandler()
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-        eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
+        eventEmitter.off(EInternalEvents.SEND_MESSAGE_GROUP, listenSendMessage)
         clientSocket.socket.removeListener(
           ESocketEvents.recovered_connection,
           handleRecoverdConnection
         )
-        clientSocket.socket.removeListener(ESocketEvents.message_seen_direct, handleMessageSeen)
+        clientSocket.socket.removeListener(ESocketEvents.message_seen_group, handleMessageSeen)
       }
     }, [])
 
@@ -679,7 +676,7 @@ export const Messages = memo(
     // Hàm bỏ ghim tin nhắn (unpin)
     const handleUnpinMessage = async (msgId: number) => {
       try {
-        const response = await pinService.togglePinMessage(msgId, directChat.id, false)
+        const response = await pinService.togglePinMessage(msgId, groupChat.id, false)
         // Xử lý response dựa trên loại response
         if ("success" in response && response.success) {
           setPinnedMessages((prev) => prev.filter((m) => m.id !== msgId))
@@ -753,7 +750,7 @@ export const Messages = memo(
                 {mappedMessages}
               </div>
             ) : (
-              <NoMessagesYet directChat={directChat} user={user} canSend={canSend} />
+              <NoMessagesYet groupChat={groupChat} />
             )
           ) : (
             <div className="m-auto w-11 h-11">

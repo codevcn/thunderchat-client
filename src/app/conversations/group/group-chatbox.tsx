@@ -1,16 +1,13 @@
 "use client"
 
-import { dev_test_values } from "../../../../temp/test"
-
 import { CustomAvatar, CustomTooltip, toast } from "@/components/materials"
 import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./group-messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { useEffect, useMemo, useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Search, Phone, MoreVertical, Pin } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
-import { setLastSeen } from "@/utils/helpers"
 import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
@@ -18,19 +15,24 @@ import type { TGroupChatData, TUserWithProfile } from "@/utils/types/be-api"
 import { VoiceMessagePlayer } from "../../../components/voice-message/voice-message-player-props"
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
 import { useAudioMessages } from "@/hooks/voice-messages"
-import { useUser } from "@/hooks/user"
 import type { TStateMessage } from "@/utils/types/global"
-import { resetAllChatData, setDirectChat } from "@/redux/messages/messages.slice"
-import type { TPinMessageEventData } from "@/utils/types/socket"
+import { resetAllChatData, setGroupChat } from "@/redux/messages/messages.slice"
+import type { TPinGroupMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
-import { directChatService } from "@/services/direct-chat.service"
 import { renderMessageContent } from "./pin-message"
 import { CanceledError } from "axios"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
+import { groupChatService } from "@/services/group-chat.service"
 
-const TypingIndicator = () => {
+const TYPING_TIMEOUT: number = 5000
+
+type TTypingIndicatorProps = {
+  users: TTypingUsers["typingUsers"]
+}
+
+const TypingIndicator = ({ users }: TTypingIndicatorProps) => {
   return (
     <div className="flex items-center gap-2 text-xs text-gray-300">
       <div className="flex gap-1">
@@ -44,64 +46,111 @@ const TypingIndicator = () => {
           style={{ animationDelay: "0.4s" }}
         ></div>
       </div>
-      <span>Đang nhập...</span>
+      <div>
+        {users.length > 1 ? (
+          <div className="flex items-center gap-0.5">
+            {users.map((user) => (
+              <CustomAvatar
+                src={user.Profile.avatar}
+                imgSize={16}
+                fallbackClassName="bg-regular-violet-cl text-xs"
+                fallback={user.Profile.fullName[0].toUpperCase()}
+              />
+            ))}
+          </div>
+        ) : (
+          <span>
+            <span>{users[0].Profile.fullName}</span> is typing...
+          </span>
+        )}
+      </div>
     </div>
   )
+}
+
+type TTypingUsers = {
+  isTyping: boolean
+  typingUsers: TUserWithProfile[]
+}
+
+const initialTypingUsers: TTypingUsers = {
+  isTyping: false,
+  typingUsers: [],
 }
 
 type THeaderProps = {
   infoBarIsOpened: boolean
   onOpenInfoBar: (open: boolean) => void
-  friendInfo: TUserWithProfile
-  canSend: boolean | null
-  directChat: TGroupChatData
+  groupChat: TGroupChatData
 }
 
-const Header = ({
-  infoBarIsOpened,
-  onOpenInfoBar,
-  friendInfo,
-  canSend,
-  directChat,
-}: THeaderProps) => {
-  const { Profile } = friendInfo
-  const { id } = directChat
-  const [isTyping, setIsTyping] = useState<boolean>(false)
+const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => {
+  const { avatarUrl, id: groupChatId, name: groupChatName } = groupChat
+  const [typingUsers, setTypingUsers] = useState<TTypingUsers>(initialTypingUsers)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const { groupChatMembers } = useAppSelector(({ messages }) => messages)
 
-  const handleTypingMessage = (typing: boolean, directChatId: number) => {
-    if (directChatId !== id) return
-    setIsTyping(typing)
+  const handleTypingMessage = (typing: boolean, groupChatId: number, user: TUserWithProfile) => {
+    if (groupChatId !== groupChatId) return
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+    setTypingUsers((prev) => {
+      const currentTypingUsers = prev.typingUsers
+      if (currentTypingUsers.some((u) => u.id === user.id)) {
+        return {
+          ...prev,
+          isTyping: true,
+        }
+      }
+      return {
+        isTyping: true,
+        typingUsers: [...currentTypingUsers, user],
+      }
+    })
+    if (typing) {
+      typingTimeoutRef.current = setTimeout(() => {
+        setTypingUsers((prev) => {
+          return {
+            ...prev,
+            isTyping: false,
+          }
+        })
+      }, TYPING_TIMEOUT)
+    }
   }
 
   const resetTyping = () => {
-    setIsTyping(false)
+    setTypingUsers(initialTypingUsers)
   }
 
   useEffect(() => {
     resetTyping()
-    clientSocket.socket.on(ESocketEvents.typing_direct, handleTypingMessage)
+    clientSocket.socket.on(ESocketEvents.typing_group, handleTypingMessage)
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.typing_direct, handleTypingMessage)
+      clientSocket.socket.removeListener(ESocketEvents.typing_group, handleTypingMessage)
     }
-  }, [id])
+  }, [groupChatId])
 
   return (
     <div className="flex justify-between gap-2 px-6 py-1.5 bg-regular-dark-gray-cl w-full box-border h-header">
       <div className="flex gap-2">
         <CustomAvatar
-          src={Profile.avatar}
+          src={avatarUrl}
           imgSize={45}
           fallbackClassName="bg-regular-violet-cl text-2xl"
-          fallback={Profile.fullName[0].toUpperCase()}
+          fallback={groupChatName[0].toUpperCase()}
         />
         <div className="flex flex-col justify-center gap-2">
-          <h3 className="text-lg font-bold w-fit text-white leading-none">{Profile.fullName}</h3>
-          {isTyping ? (
-            <TypingIndicator />
+          <h3 className="text-lg font-bold w-fit text-white leading-none">{groupChatName}</h3>
+          {typingUsers.isTyping ? (
+            <TypingIndicator users={typingUsers.typingUsers} />
           ) : (
-            <div className="text-xs text-regular-text-secondary-cl">
-              {"Last seen " + setLastSeen(dev_test_values.user_1.lastOnline)}
-            </div>
+            groupChatMembers && (
+              <div className="text-xs text-regular-text-secondary-cl">
+                <span>{groupChatMembers.length}</span> members
+              </div>
+            )
           )}
         </div>
       </div>
@@ -118,20 +167,9 @@ const Header = ({
         </CustomTooltip>
 
         <CustomTooltip title="Call" placement="bottom" align="end">
-          <div style={canSend === false ? { opacity: 0.5, pointerEvents: "none" } : {}}>
-            <IconButton
-              className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
-              onClick={
-                canSend === false
-                  ? undefined
-                  : () => {
-                      /* logic gọi */
-                    }
-              }
-            >
-              <Phone />
-            </IconButton>
-          </div>
+          <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
+            <Phone />
+          </IconButton>
         </CustomTooltip>
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
@@ -151,12 +189,10 @@ const Header = ({
 
 type TMainProps = {
   groupChat: TGroupChatData
-  canSend: boolean | null
 }
 
-const Main = ({ groupChat, canSend }: TMainProps) => {
-  const { Recipient, Creator } = groupChat
-  const user = useUser()!
+const Main = ({ groupChat }: TMainProps) => {
+  const { id: groupChatId } = groupChat
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
   const dispatch = useAppDispatch()
   const { showPlayer } = useVoicePlayer()
@@ -165,49 +201,57 @@ const Main = ({ groupChat, canSend }: TMainProps) => {
   const [showPinnedModal, setShowPinnedModal] = useState(false)
   const [pinnedMessages, setPinnedMessages] = useState<TStateMessage[]>([])
 
-  // Ref để luôn lấy directChat.id mới nhất trong handler
-  const directChatIdRef = useRef<number | undefined>(directChat?.id)
+  // Ref để luôn lấy groupChat.id mới nhất trong handler
+  const groupChatIdRef = useRef<number | undefined>(groupChat?.id)
   const fetchPinnedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const removeDeletedMessagesFromPinnedMessages = (messages: TStateMessage[]) => {
+    return messages.filter((message) => !message.isDeleted)
+  }
 
   const resetAllChatDataHandler = () => {
     dispatch(resetAllChatData())
   }
 
+  const joinGroupChatRoom = () => {
+    clientSocket.socket.emit(ESocketEvents.join_group_chat_room, { groupChatId }, () => {})
+  }
+
+  const handlePinMessage = (data: TPinGroupMessageEventData) => {
+    const currentChatId = groupChatIdRef.current
+    // Kiểm tra xem event có thuộc về chat hiện tại không
+    if (data.groupChatId === currentChatId) {
+      // Clear timeout cũ nếu có
+      if (fetchPinnedTimeoutRef.current) {
+        clearTimeout(fetchPinnedTimeoutRef.current)
+      }
+      // Debounce fetch để tránh fetch quá nhiều lần
+      fetchPinnedTimeoutRef.current = setTimeout(() => {
+        pinService
+          .getPinnedMessages(data.groupChatId)
+          .then((convertedMessages) => {
+            setPinnedMessages(removeDeletedMessagesFromPinnedMessages(convertedMessages))
+          })
+          .catch(() => {
+            setPinnedMessages([])
+          })
+      }, 300) // Delay 500ms
+    }
+  }
+
   useEffect(() => {
-    directChatIdRef.current = directChat?.id
-  }, [directChat?.id])
+    groupChatIdRef.current = groupChatId
+    joinGroupChatRoom()
+  }, [groupChatId])
 
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
     // Remove toàn bộ listener cũ trước khi đăng ký mới
     clientSocket.socket.off(ESocketEvents.pin_message)
-    const handlePinMessage = (data: TPinMessageEventData) => {
-      const currentChatId = directChatIdRef.current
-
-      // Kiểm tra xem event có thuộc về chat hiện tại không
-      if (data.directChatId === currentChatId) {
-        // Clear timeout cũ nếu có
-        if (fetchPinnedTimeoutRef.current) {
-          clearTimeout(fetchPinnedTimeoutRef.current)
-        }
-
-        // Debounce fetch để tránh fetch quá nhiều lần
-        fetchPinnedTimeoutRef.current = setTimeout(() => {
-          pinService
-            .getPinnedMessages(data.directChatId)
-            .then((convertedMessages) => {
-              setPinnedMessages(convertedMessages)
-            })
-            .catch(() => {
-              setPinnedMessages([])
-            })
-        }, 500) // Delay 500ms
-      }
-    }
-    clientSocket.socket.on(ESocketEvents.pin_message, handlePinMessage)
+    clientSocket.socket.on(ESocketEvents.pin_group_message, handlePinMessage)
     return () => {
       resetAllChatDataHandler()
-      clientSocket.socket.off(ESocketEvents.pin_message, handlePinMessage)
+      clientSocket.socket.off(ESocketEvents.pin_group_message, handlePinMessage)
       // Cleanup timeout
       if (fetchPinnedTimeoutRef.current) {
         clearTimeout(fetchPinnedTimeoutRef.current)
@@ -217,15 +261,15 @@ const Main = ({ groupChat, canSend }: TMainProps) => {
 
   // Fetch pinned messages ban đầu khi vào phòng chat
   useEffect(() => {
-    if (directChat?.id) {
+    if (groupChatId) {
       pinService
-        .getPinnedMessages(directChat.id)
+        .getPinnedMessages(groupChatId)
         .then((convertedMessages) => {
-          setPinnedMessages(convertedMessages)
+          setPinnedMessages(removeDeletedMessagesFromPinnedMessages(convertedMessages))
         })
         .catch(() => setPinnedMessages([]))
     }
-  }, [directChat?.id])
+  }, [groupChatId])
 
   // Add logging for setReplyMessage
   const handleSetReplyMessage = (msg: TStateMessage | null) => {
@@ -239,10 +283,6 @@ const Main = ({ groupChat, canSend }: TMainProps) => {
   // Hook để quản lý danh sách audio messages
   useAudioMessages()
 
-  const friendInfo = useMemo<TUserWithProfile>(() => {
-    return user.id === Creator.id ? Recipient : Creator
-  }, [Recipient, Creator])
-
   // Lấy tin nhắn ghim mới nhất (API đã sort đúng thứ tự mới nhất đến cũ nhất)
   const latestPinned = pinnedMessages[0] || null
 
@@ -252,13 +292,11 @@ const Main = ({ groupChat, canSend }: TMainProps) => {
         <Header
           infoBarIsOpened={infoBarIsOpened}
           onOpenInfoBar={handleOpenInfoBar}
-          friendInfo={friendInfo}
-          canSend={canSend}
-          directChat={directChat}
+          groupChat={groupChat}
         />
 
         {/* Box pinned messages ngay dưới header */}
-        {pinnedMessages.length > 0 && canSend !== false && (
+        {pinnedMessages.length > 0 && (
           <div
             className={`
               w-full px-6 mt-1
@@ -313,46 +351,46 @@ const Main = ({ groupChat, canSend }: TMainProps) => {
           <div className="flex flex-col flex-1 w-full justify-between h-0">
             <div className="flex-1 w-full overflow-y-auto">
               <Messages
-                directChat={directChat}
+                groupChat={groupChat}
                 onReply={handleSetReplyMessage}
                 pinnedMessages={pinnedMessages}
                 setPinnedMessages={setPinnedMessages}
                 showPinnedModal={showPinnedModal}
                 setShowPinnedModal={setShowPinnedModal}
-                canSend={canSend}
               />
             </div>
             <div className="w-full flex justify-center">
               <TypeMessageBar
-                directChat={directChat}
+                groupChat={groupChat}
                 replyMessage={replyMessage}
                 setReplyMessage={handleSetReplyMessage}
-                canSend={canSend}
               />
             </div>
           </div>
         </div>
       </div>
-      <InfoBar friendInfo={friendInfo} directChatId={directChat.id} />
+      <InfoBar />
     </div>
   )
 }
 
-let fetchDirectChatAbortController: AbortController = new AbortController()
+let fetchGroupChatAbortController: AbortController = new AbortController()
 
 export const GroupChatbox = () => {
-  const { directChat } = useAppSelector(({ messages }) => messages)
+  const { groupChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
-  const [canSend, setCanSend] = useState<boolean | null>(null)
-  const user = useUser()
 
-  const handleFetchDirectChat = (directChatId: number) => {
-    fetchDirectChatAbortController.abort()
-    fetchDirectChatAbortController = new AbortController()
-    directChatService
-      .fetchDirectChat(directChatId, fetchDirectChatAbortController.signal)
-      .then((directChat) => {
-        dispatch(setDirectChat(directChat))
+  const handleFetchGroupChat = (groupChatId: number) => {
+    fetchGroupChatAbortController.abort()
+    fetchGroupChatAbortController = new AbortController()
+    groupChatService
+      .fetchGroupChat(groupChatId, fetchGroupChatAbortController.signal)
+      .then((groupChat) => {
+        console.log(">>> fetched group chat:", groupChat)
+        dispatch(resetAllChatData())
+        requestAnimationFrame(() => {
+          dispatch(setGroupChat(groupChat))
+        })
       })
       .catch((err) => {
         if (!(err instanceof CanceledError)) {
@@ -362,31 +400,16 @@ export const GroupChatbox = () => {
   }
 
   useEffect(() => {
-    eventEmitter.on(EInternalEvents.FETCH_DIRECT_CHAT, handleFetchDirectChat)
+    eventEmitter.on(EInternalEvents.FETCH_GROUP_CHAT, handleFetchGroupChat)
     return () => {
-      fetchDirectChatAbortController.abort()
+      fetchGroupChatAbortController.abort()
     }
   }, [])
 
-  useEffect(() => {
-    if (!directChat) return
-    const receiverId =
-      user?.id === directChat.recipientId ? directChat.creatorId : directChat.recipientId
-    directChatService
-      .checkCanSendMessage(receiverId)
-      .then((result) => {
-        setCanSend(result)
-      })
-      .catch((error) => {
-        console.error("[DEBUG] Error checking canSend:", error)
-        setCanSend(true) // Default to true on error
-      })
-  }, [directChat?.id, user?.id])
-
   return (
-    directChat && (
+    groupChat && (
       <VoicePlayerProvider>
-        <Main groupChat={directChat} canSend={canSend} />
+        <Main groupChat={groupChat} />
       </VoicePlayerProvider>
     )
   )

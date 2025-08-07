@@ -13,7 +13,8 @@ export type TWsErrorResponse = {
 export type TChattingPayload = {
   type: EMessageTypeAllTypes
   msgPayload: {
-    receiverId: number
+    receiverId?: number
+    groupChatId?: number
     content: string
     token: string
     timestamp: Date
@@ -28,13 +29,19 @@ export type TMsgSeenListenPayload = {
 
 export type TMsgSeenEmitPayload = {
   messageId: number
-  receiverId: number
+  receiverId?: number
+  groupChatId?: number
 }
 
 export type TTypingEmitPayload = {
   receiverId: number
   isTyping: boolean
   directChatId: number
+}
+
+export type TGroupTypingEmitPayload = {
+  groupChatId: number
+  isTyping: boolean
 }
 
 export type TFriendRequestPayload = {
@@ -47,6 +54,13 @@ export type TPinMessageEventData = {
   directChatId: number
   isPinned: boolean
   userId: any
+}
+
+export type TPinGroupMessageEventData = {
+  messageId: number
+  groupChatId: number
+  isPinned: boolean
+  userId: number
 }
 
 export type TPinDirectChatEventData = {
@@ -70,4 +84,8 @@ export type TCheckUserOnlineStatusRes = TSuccess & {
 
 export type TJoinDirectChatRoomEmitPayload = {
   directChatId: number
+}
+
+export type TJoinGroupChatRoomEmitPayload = {
+  groupChatId: number
 }

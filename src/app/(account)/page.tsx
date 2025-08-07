@@ -160,35 +160,24 @@ const AccountPage = ({
           className="ring-2 ring-[#3A3B3C] shadow-lg rounded-full text-[30px] font-bold"
           fallback={userProfile.Profile.fullName[0]}
         />
-        <div
-          className="mt-3 text-xl font-bold text-white truncate max-w-full"
-          style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-        >
+        <div className="mt-3 text-xl font-bold text-white truncate max-w-full">
           {userProfile.Profile.fullName}
         </div>
-        <div
-          className="mt-2 text-sm text-[#CFCFCF] truncate max-w-full"
-          style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-        >
+        <div className="mt-2 text-sm text-[#CFCFCF] truncate max-w-full">
           {userProfile.Profile.about}
         </div>
       </div>
 
       {/* Info list */}
       <div className="flex flex-col gap-1 px-6">
-        <div className="flex items-start gap-3 py-2 text-white ">
+        <div className="flex items-center gap-3 py-2 text-white ">
           <AtSign size={18} className="mt-0.5 text-[#CFCFCF]" />
           <div className="min-w-0 flex-1">
-            <div
-              className="font-bold text-white truncate max-w-full"
-              style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-            >
-              {userProfile.Profile.fullName || "Username"}
-            </div>
-            <div className="text-xs text-[#CFCFCF]">Username</div>
+            <div className="font-bold text-white truncate max-w-full">{userProfile.email}</div>
+            <div className="text-xs text-[#CFCFCF]">Email</div>
           </div>
         </div>
-        <div className="flex items-start gap-3 py-2 text-white">
+        <div className="flex items-center gap-3 py-2 text-white">
           <Calendar size={18} className="mt-0.5 text-[#CFCFCF]" />
           <div>
             <div className="font-bold text-white">
@@ -199,16 +188,15 @@ const AccountPage = ({
             <div className="text-xs text-[#CFCFCF]">Birthday</div>
           </div>
         </div>
-        <div className="flex items-start gap-3 py-2 text-white">
+        <div className="flex items-center gap-3 py-2 text-white">
           <Info size={18} className="mt-0.5 text-[#CFCFCF]" />
           <div className="min-w-0 flex-1">
-            <div
-              className="font-bold text-white truncate max-w-full"
-              style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-            >
-              {userProfile.Profile.about || "About"}
+            <div className="font-bold text-white truncate max-w-full">
+              {userProfile.Profile.about || (
+                <span className="text-regular-placeholder-cl italic leading-snug">Nothing...</span>
+              )}
             </div>
-            <div className="text-xs text-[#CFCFCF]">Bio</div>
+            <div className="text-xs text-[#CFCFCF]">About</div>
           </div>
         </div>
         <div className="flex flex-col gap-4 mt-5">

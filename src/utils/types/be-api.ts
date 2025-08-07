@@ -267,7 +267,7 @@ export type TUploadGroupAvatarData = {
 }
 
 export type TGetGroupMsgsParams = {
-  msgOffset: number
+  msgOffset?: number
   groupChatId: number
   limit: number
   sortType: ESortTypes
@@ -276,7 +276,7 @@ export type TGetGroupMsgsParams = {
 
 export type TGetGroupMessagesData = {
   hasMoreMessages: boolean
-  groupMessages: TMessage[]
+  groupMessages: TGetMessagesMessage[]
 }
 
 export type TGroupChatData = TGroupChat & {

@@ -1,37 +1,66 @@
 import {
+  deleteDeleteGroupAvatar,
   getFetchGroupChat,
   getFetchGroupChats,
-  getFindConversationWithOtherUser,
+  putUpdateGroupChat,
+  postCreateGroupChat,
+  postUploadGroupAvatar,
   getGroupMessageContext,
   getNewerGroupMessages,
-  checkCanSendGroupMessage,
   deleteGroupMessage,
 } from "@/apis/group-chat"
-import { GroupChatError } from "@/utils/custom-errors"
+import type {
+  TGroupChat,
+  TGroupChatData,
+  TUpdateGroupChatParams,
+  TUploadGroupAvatarData,
+  TUserWithProfile,
+} from "@/utils/types/be-api"
+import type { TConversationCard, TSuccess } from "@/utils/types/global"
 import { convertToGroupChatsUIData } from "@/utils/data-convertors/conversations-convertor"
-import { EGroupChatErrMsgs } from "@/utils/enums"
-import type { TGroupChat, TGroupChatData, TUser } from "@/utils/types/be-api"
-import type { TConversationCard } from "@/utils/types/global"
+import { GroupChatError } from "@/utils/custom-errors"
 
 class GroupChatService {
-  async fetchGroupChat(groupChatId: number, signal?: AbortSignal): Promise<TGroupChatData> {
-    const { data } = await getFetchGroupChat(groupChatId, signal)
-    if (!data) {
-      throw new GroupChatError(EGroupChatErrMsgs.CONV_NOT_FOUND)
-    }
+  async uploadGroupAvatar(avatar: File): Promise<TUploadGroupAvatarData> {
+    const formData = new FormData()
+    formData.append("avatar", avatar)
+    const { data } = await postUploadGroupAvatar(formData)
     return data
   }
 
-  async fetchGroupChats(limit: number, user: TUser, lastId?: number): Promise<TConversationCard[]> {
+  async deleteGroupAvatar(avatarUrl: string): Promise<TSuccess> {
+    const { data } = await deleteDeleteGroupAvatar(avatarUrl)
+    return data
+  }
+
+  async createGroupChat(
+    groupName: string,
+    memberIds: number[],
+    avatarUrl?: string
+  ): Promise<TGroupChat> {
+    const { data } = await postCreateGroupChat(groupName, memberIds, avatarUrl)
+    return data
+  }
+
+  async fetchGroupChat(groupChatId: number, signal?: AbortSignal): Promise<TGroupChatData> {
+    const { data } = await getFetchGroupChat(groupChatId, signal)
+    return data
+  }
+
+  async fetchGroupChats(
+    limit: number,
+    user: TUserWithProfile,
+    lastId?: number
+  ): Promise<TConversationCard[]> {
     const { data } = await getFetchGroupChats(limit, lastId)
-    if (!data) {
-      throw new GroupChatError(EGroupChatErrMsgs.CONVS_NOT_FOUND)
-    }
     return convertToGroupChatsUIData(data, user)
   }
 
-  async findConversationWithOtherUser(otherUserId: number): Promise<TGroupChat | null> {
-    const { data } = await getFindConversationWithOtherUser(otherUserId)
+  async updateGroupChat(
+    groupChatId: number,
+    updates: Partial<TUpdateGroupChatParams>
+  ): Promise<TSuccess> {
+    const { data } = await putUpdateGroupChat(groupChatId, updates)
     return data
   }
 
@@ -41,18 +70,13 @@ class GroupChatService {
     return data
   }
 
-  async getNewerMessages(groupChatId: number, msgOffset: number, limit?: number) {
-    const { data } = await getNewerGroupMessages(groupChatId, msgOffset, limit)
+  async getNewerMessages(directChatId: number, msgOffset: number, limit?: number) {
+    const { data } = await getNewerGroupMessages(directChatId, msgOffset, limit)
     if (!data) throw new GroupChatError("Không tìm thấy messages mới hơn")
     return data
   }
 
-  async checkCanSendMessage(receiverId: number): Promise<boolean> {
-    const { data } = await checkCanSendGroupMessage(receiverId)
-    return !!data?.canSend
-  }
-
-  // Xoá/thu hồi tin nhắn group chat
+  // Xoá/thu hồi tin nhắn direct chat
   async deleteMessage(messageId: number) {
     const { data } = await deleteGroupMessage(messageId)
     return data

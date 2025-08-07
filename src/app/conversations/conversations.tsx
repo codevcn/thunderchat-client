@@ -522,12 +522,17 @@ const GlobalSearchBar = ({
   )
 }
 
-const convertSubtitleTypeToText = (subtitleType: EMessageTypes): string => {
+const convertSubtitleTypeToText = (
+  subtitleType: EMessageTypes,
+  subtitleContent: string
+): string => {
   switch (subtitleType) {
     case EMessageTypes.STICKER:
       return "Sticker"
     case EMessageTypes.MEDIA:
       return "Media"
+    case EMessageTypes.PIN_NOTICE:
+      return subtitleContent
     default:
       return "Unknown"
   }
@@ -549,7 +554,6 @@ const getPinIndexClass = (pinIndex: number): string => {
 type TConversationCardProps = {
   onNavToConversation: (id: number, type: EChatType) => void
   isPinned: boolean
-  onPinToggle: (id: number) => void
   pinLoading: boolean
   conversationData: TConversationCard
   onTogglePin: (id: number) => void
@@ -558,7 +562,6 @@ type TConversationCardProps = {
 const ConversationCard = ({
   onNavToConversation,
   isPinned,
-  onPinToggle,
   pinLoading,
   conversationData,
   onTogglePin,
@@ -566,6 +569,7 @@ const ConversationCard = ({
   const { id, type, avatar, title, lastMessageTime, subtitle, pinIndex, unreadMessageCount } =
     conversationData
   const subtitleType = subtitle.type
+  const subtitleContent = subtitle.content
   const pinIndexClass = getPinIndexClass(pinIndex)
   return (
     <div
@@ -592,13 +596,13 @@ const ConversationCard = ({
           {subtitleType !== EMessageTypes.TEXT ? (
             <p className="truncate text-regular-placeholder-cl text-sm">
               <span className="text-regular-icon-cl italic">
-                {convertSubtitleTypeToText(subtitleType)}
+                {convertSubtitleTypeToText(subtitleType, subtitleContent)}
               </span>
             </p>
           ) : (
             <p
               dangerouslySetInnerHTML={{
-                __html: santizeMsgContent(subtitle.content),
+                __html: santizeMsgContent(subtitleContent),
               }}
               className="truncate opacity-60 text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
             ></p>
@@ -927,7 +931,7 @@ const ConversationCards = () => {
     return () => {
       clientSocket.socket.off(ESocketEvents.pin_direct_chat, handlePinDirectChat)
     }
-  }, [fetchPinnedDirectChats])
+  }, [])
 
   // Auto-sort conversations when pinned status changes
   useEffect(() => {
@@ -969,7 +973,7 @@ const ConversationCards = () => {
         dispatch(setConversations(sortedChats))
       }
     }
-  }, [pinnedDirectChats, conversations, isDirectChatPinned, getPinnedDirectChat, dispatch])
+  }, [pinnedDirectChats, conversations, isDirectChatPinned])
 
   useEffect(() => {
     if (!conversations || conversations.length === 0) {
@@ -999,7 +1003,6 @@ const ConversationCards = () => {
             key={conversation.id}
             onNavToConversation={navToDirectChat}
             isPinned={isPinned}
-            onPinToggle={handlePinToggle}
             pinLoading={pinLoading}
             conversationData={conversation}
             onTogglePin={handlePinToggle}

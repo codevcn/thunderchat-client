@@ -28,7 +28,6 @@ export const renderMessageContent = (message: TStateMessage) => {
   const mediaType = Media?.type
   const mediaFileName = Media?.fileName
   const mediaFileSize = Media?.fileSize
-  const mediaUrl = Media?.url
   const stickerUrl = Sticker?.imageUrl
 
   // Helper function to get file icon
@@ -91,22 +90,8 @@ export const renderMessageContent = (message: TStateMessage) => {
   if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.VIDEO) {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center relative">
-          {mediaUrl ? (
-            <>
-              <video
-                src={mediaUrl}
-                className="w-full h-full object-cover"
-                muted
-                preload="metadata"
-              />
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <FileVideo className="w-3 h-3 text-white" />
-              </div>
-            </>
-          ) : (
-            <FileVideo className="w-4 h-4 text-red-400" />
-          )}
+        <div className="rounded overflow-hidden flex-shrink-0 bg-regular-dark-gray-cl">
+          <FileVideo className="text-red-400" size={24} />
         </div>
         <span className="text-xs text-gray-300">{Media?.fileName || "Video"}</span>
       </div>
@@ -117,11 +102,11 @@ export const renderMessageContent = (message: TStateMessage) => {
   if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT) {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
-          {getFileIcon(mediaFileName || "document")}
+        <div className="rounded overflow-hidden flex-shrink-0 bg-regular-dark-gray-cl">
+          {mediaFileName && getFileIcon(mediaFileName)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-gray-300 truncate">{mediaFileName || "Tệp tin"}</div>
+          <div className="text-xs text-gray-300 truncate">{mediaFileName}</div>
           {mediaFileSize && (
             <div className="text-xs text-gray-400">{formatBytes(mediaFileSize)}</div>
           )}
@@ -134,10 +119,10 @@ export const renderMessageContent = (message: TStateMessage) => {
   if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.AUDIO) {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
-          <Mic className="w-4 h-4 text-green-400" />
+        <div className="rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+          <Mic className="text-regular-violet-cl" size={24} />
         </div>
-        <span className="text-xs text-gray-300">Tin nhắn thoại</span>
+        <span className="text-xs text-gray-300">Voice message</span>
       </div>
     )
   }
@@ -146,20 +131,14 @@ export const renderMessageContent = (message: TStateMessage) => {
   if (type === EMessageTypes.STICKER && stickerUrl) {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0">
-          {stickerUrl ? (
-            <Image
-              src={stickerUrl}
-              alt="Sticker"
-              width={24}
-              height={24}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-              <span className="text-xs">😊</span>
-            </div>
-          )}
+        <div className="rounded overflow-hidden flex-shrink-0">
+          <Image
+            src={stickerUrl}
+            alt="Sticker"
+            width={28}
+            height={28}
+            className="w-full h-full object-cover"
+          />
         </div>
         <span className="text-xs text-gray-300">Sticker</span>
       </div>
@@ -174,7 +153,7 @@ export const renderMessageContent = (message: TStateMessage) => {
     if (hasEmojiImage) {
       return (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
+          <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
             <span className="text-xs">😊</span>
           </div>
           <span className="text-xs text-gray-300">Emoji</span>
@@ -218,7 +197,7 @@ export const PinMessageModal = ({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b-2 border-[#734fd1] bg-[#8661e9] rounded-t-lg">
           <span className="font-semibold text-base text-white">
-            Danh sách ghim ({pinnedMessages.length})
+            Danh sách ghim (<span>{pinnedMessages.length}</span>)
           </span>
           <button className="text-sm text-white font-bold hover:underline" onClick={onClose}>
             Thu gọn
@@ -244,11 +223,14 @@ export const PinMessageModal = ({
                 </span>
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-white font-bold mb-1">Tin nhắn</div>
-                  <div className="text-xs text-gray-300 mb-1">
-                    {msg.Author?.Profile?.fullName || "Người gửi"}
+                  <div className="font-semibold text-sm text-white mb-1">Tin nhắn</div>
+                  <div className="flex items-center gap-1">
+                    <div className="text-xs text-gray-300">
+                      <span>{msg.Author?.Profile?.fullName}</span>
+                      <span>:</span>
+                    </div>
+                    <div>{renderMessageContent(msg)}</div>
                   </div>
-                  {renderMessageContent(msg)}
                 </div>
                 {/* More button */}
                 <div className="relative flex-shrink-0">

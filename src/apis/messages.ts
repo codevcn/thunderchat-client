@@ -9,13 +9,13 @@ import type {
 import { ESortTypes } from "@/utils/enums"
 
 export const getFetchDirectMessages = (params: TGetDirectMsgsParams) =>
-  clientAxios.get<TGetDirectMessagesData>("message/get-direct-messages/", {
+  clientAxios.get<TGetDirectMessagesData>("message/get-messages/", {
     ...requestConfig,
     params,
   })
 
 export const getFetchGroupMessages = (params: TGetGroupMsgsParams) =>
-  clientAxios.get<TGetGroupMessagesData>("message/get-group-messages/", {
+  clientAxios.get<TGetGroupMessagesData>("message/get-messages/", {
     ...requestConfig,
     params,
   })

@@ -398,7 +398,10 @@ export const DirectChatbox = () => {
     directChatService
       .fetchDirectChat(directChatId, fetchDirectChatAbortController.signal)
       .then((directChat) => {
-        dispatch(setDirectChat(directChat))
+        dispatch(resetAllChatData())
+        requestAnimationFrame(() => {
+          dispatch(setDirectChat(directChat))
+        })
       })
       .catch((err) => {
         if (!(err instanceof CanceledError)) {

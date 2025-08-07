@@ -21,6 +21,9 @@ import type {
   TCheckUserOnlineStatusRes,
   TCheckUserOnlineEmitPayload,
   TJoinDirectChatRoomEmitPayload,
+  TJoinGroupChatRoomEmitPayload,
+  TPinGroupMessageEventData,
+  TGroupTypingEmitPayload,
 } from "../types/socket"
 import { EChatType } from "../enums"
 import { EOnlineStatus } from "./enums"
@@ -36,9 +39,16 @@ export interface IListenSocketEvents {
   ) => void
   [ESocketEvents.recovered_connection]: (messages: TMessageFullInfo[]) => void
   [ESocketEvents.message_seen_direct]: (payload: TMsgSeenListenPayload) => void
+  [ESocketEvents.message_seen_group]: (payload: TMsgSeenListenPayload) => void
   [ESocketEvents.typing_direct]: (isTyping: boolean, directChatId: number) => void
+  [ESocketEvents.typing_group]: (
+    isTyping: boolean,
+    groupChatId: number,
+    user: TUserWithProfile
+  ) => void
   [ESocketEvents.friend_request_action]: (payload: TFriendRequestPayload) => void
   [ESocketEvents.pin_message]: (data: TPinMessageEventData) => void
+  [ESocketEvents.pin_group_message]: (data: TPinGroupMessageEventData) => void
   [ESocketEvents.pin_direct_chat]: (data: TPinDirectChatEventData) => void
   [ESocketEvents.new_conversation]: (
     directChat: TDirectChat | null,
@@ -59,13 +69,19 @@ export interface IEmitSocketEvents {
     cb: (data: TSendDirectMessageErrorRes | TSendDirectMessageRes) => void
   ) => void
   [ESocketEvents.message_seen_direct]: (payload: TMsgSeenEmitPayload) => void
+  [ESocketEvents.message_seen_group]: (payload: TMsgSeenEmitPayload) => void
   [ESocketEvents.typing_direct]: (payload: TTypingEmitPayload) => void
+  [ESocketEvents.typing_group]: (payload: TGroupTypingEmitPayload) => void
   [ESocketEvents.check_user_online_status]: (
     payload: TCheckUserOnlineEmitPayload,
     cb: (data: TCheckUserOnlineStatusRes) => void
   ) => void
   [ESocketEvents.join_direct_chat_room]: (
     payload: TJoinDirectChatRoomEmitPayload,
+    cb: (data: TSuccess) => void
+  ) => void
+  [ESocketEvents.join_group_chat_room]: (
+    payload: TJoinGroupChatRoomEmitPayload,
     cb: (data: TSuccess) => void
   ) => void
 }

@@ -31,6 +31,8 @@ class PinService {
     return response.data
   }
 
+  async togglePinGroupMessage() {}
+
   // Lấy danh sách tin nhắn đã ghim
   async getPinnedMessages(directChatId: number): Promise<TStateMessage[]> {
     const response = await getPinnedMessages(directChatId)

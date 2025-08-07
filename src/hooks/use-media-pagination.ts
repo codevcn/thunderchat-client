@@ -184,20 +184,7 @@ export const useMediaPagination = ({
               }
             } else if (filters.type) {
               // Nếu có single type filter, kiểm tra message type
-              const expectedType = (() => {
-                switch (filters.type) {
-                  case "image":
-                    return EMessageMediaTypes.IMAGE
-                  case "video":
-                    return EMessageMediaTypes.VIDEO
-                  case "file":
-                    return EMessageMediaTypes.DOCUMENT
-                  case "voice":
-                    return EMessageMediaTypes.AUDIO
-                  default:
-                    return null
-                }
-              })()
+              const expectedType = filters.type
 
               if (updatedMessage.Media?.type !== expectedType) {
                 return false

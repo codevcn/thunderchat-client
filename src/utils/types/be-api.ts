@@ -403,8 +403,8 @@ export type TGetMediaMessagesResponse = {
 }
 
 export type TMediaFilters = {
-  type?: "image" | "video" | "file" | "voice"
-  types?: ("image" | "video" | "file" | "voice")[]
+  type?: EMessageMediaTypes
+  types?: EMessageMediaTypes[]
   senderId?: number
   fromDate?: string
   toDate?: string
@@ -412,8 +412,8 @@ export type TMediaFilters = {
 
 export type TGetMediaMessagesParams = {
   directChatId: number
-  type?: "image" | "video" | "file" | "voice"
-  types?: ("image" | "video" | "file" | "voice")[]
+  type?: EMessageMediaTypes
+  types?: EMessageMediaTypes[]
   senderId?: number
   fromDate?: string
   toDate?: string

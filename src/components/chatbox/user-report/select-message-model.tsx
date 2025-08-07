@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { X, ChevronLeft } from "lucide-react"
 import { IconButton } from "@/components/materials/icon-button"
 import { SelectMessageContent } from "@/components/chatbox/user-report/select-message-content"
-import type { TStateDirectMessage } from "@/utils/types/global"
+import type { TStateMessage } from "@/utils/types/global"
 
 type TSelectMessageModalProps = {
   isOpen: boolean
@@ -13,8 +13,8 @@ type TSelectMessageModalProps = {
   asOverlay?: boolean
   matchReportSize?: boolean
   // New props to persist selected messages
-  initialMessages?: TStateDirectMessage[]
-  onMessagesUpdate?: (messages: TStateDirectMessage[]) => void
+  initialMessages?: TStateMessage[]
+  onMessagesUpdate?: (messages: TStateMessage[]) => void
   // New props for conversation data
   conversationId?: number
   conversationType?: "direct" | "group"
@@ -38,7 +38,7 @@ export const SelectMessageModal = ({
   conversationType = "direct",
   isMessageSelected,
 }: TSelectMessageModalProps) => {
-  const [messages, setMessages] = useState<TStateDirectMessage[]>([])
+  const [messages, setMessages] = useState<TStateMessage[]>([])
   const [isClosing, setIsClosing] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
@@ -118,7 +118,7 @@ export const SelectMessageModal = ({
   }, [])
 
   const handleSelectedMessagesChange = useCallback(
-    (selectedMessages: TStateDirectMessage[]) => {
+    (selectedMessages: TStateMessage[]) => {
       setMessages(selectedMessages)
       onMessagesChange(selectedMessages.length)
       // Luôn gọi onMessagesUpdate để cập nhật session

@@ -6,7 +6,7 @@ import {
   getMediaMessages,
   getMediaStatistics,
 } from "@/apis/messages"
-import { ESortTypes } from "@/utils/enums"
+import { ESortTypes, EMessageMediaTypes } from "@/utils/enums"
 import type {
   TGetDirectMessagesData,
   TGetDirectMsgsParams,
@@ -100,8 +100,8 @@ class MessageService {
   async getMediaMessagesWithFilters(
     directChatId: number,
     filters: {
-      type?: "image" | "video" | "file" | "voice"
-      types?: ("image" | "video" | "file" | "voice")[]
+      type?: EMessageMediaTypes
+      types?: EMessageMediaTypes[]
       senderId?: number
       fromDate?: string
       toDate?: string
@@ -124,7 +124,7 @@ class MessageService {
    */
   async getMediaMessagesWithMultipleTypes(
     directChatId: number,
-    types: ("image" | "video" | "file" | "voice")[],
+    types: EMessageMediaTypes[],
     filters: {
       senderId?: number
       fromDate?: string

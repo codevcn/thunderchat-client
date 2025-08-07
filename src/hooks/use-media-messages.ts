@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAppSelector } from "./redux"
 import { messageService } from "@/services/message.service"
-import { EMessageTypes, ESortTypes } from "@/utils/enums"
+import { EMessageTypes, ESortTypes, EMessageMediaTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import type { TMessage, TMessageFullInfo, TMsgWithMediaSticker } from "@/utils/types/be-api"
@@ -94,7 +94,7 @@ export const useMediaMessages = () => {
       // Fetch images/videos (6 items)
       const imagesVideosResponse = await messageService.getMediaMessagesWithMultipleTypes(
         directChat.id,
-        ["image", "video"],
+        [EMessageMediaTypes.IMAGE, EMessageMediaTypes.VIDEO],
         {},
         1, // page
         6, // limit
@@ -104,7 +104,7 @@ export const useMediaMessages = () => {
       // Fetch files (3 items)
       const filesResponse = await messageService.getMediaMessagesWithFilters(
         directChat.id,
-        { type: "file" },
+        { type: EMessageMediaTypes.DOCUMENT },
         1, // page
         3, // limit
         "desc" // sort
@@ -113,7 +113,7 @@ export const useMediaMessages = () => {
       // Fetch voices (3 items)
       const voicesResponse = await messageService.getMediaMessagesWithFilters(
         directChat.id,
-        { type: "voice" },
+        { type: EMessageMediaTypes.AUDIO },
         1, // page
         3, // limit
         "desc" // sort

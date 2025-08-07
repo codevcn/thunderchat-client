@@ -379,7 +379,7 @@ export const ReportModal = ({
   }, [])
 
   const handleMessagesUpdate = useCallback(
-    (messages: TStateDirectMessage[]) => {
+    (messages: TStateMessage[]) => {
       setSelectedMessages(messages.length)
       // Cập nhật report session
       updateReportSession(messages)

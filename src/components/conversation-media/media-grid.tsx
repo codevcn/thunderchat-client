@@ -111,11 +111,13 @@ export const MediaGrid = React.memo(
     mixedMedia,
     setSelectedMediaIndex,
     setIsMediaViewerOpen,
+    isFilterOpen = false,
   }: {
     items: TMessageFullInfo[]
     mixedMedia: TMessageFullInfo[]
     setSelectedMediaIndex: (idx: number) => void
     setIsMediaViewerOpen: (open: boolean) => void
+    isFilterOpen?: boolean
   }) => {
     const currentUser = useUser()
 
@@ -154,7 +156,7 @@ export const MediaGrid = React.memo(
             onClick={() => openMediaViewer(item)}
           >
             {/* Action icons on hover, top-right */}
-            <div className="absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
               <ActionIcons
                 onDownload={() => handleDownload(item)}
                 onShare={() => {}}
@@ -215,7 +217,7 @@ export const MediaGrid = React.memo(
     }
 
     return (
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid grid-cols-3 gap-2 ${isFilterOpen ? "pointer-events-none" : ""}`}>
         {items.map((item) => (
           <MediaCell
             key={item.id}
@@ -443,6 +445,7 @@ type TMediaGridContentProps = {
   onLoadMore?: () => Promise<void>
   hasMore?: boolean
   loading?: boolean
+  isFilterOpen?: boolean
 }
 
 // Tối ưu MediaGridContent với React.memo
@@ -456,6 +459,7 @@ export const MediaGridContent = React.memo(
     onLoadMore,
     hasMore,
     loading,
+    isFilterOpen = false,
   }: TMediaGridContentProps) => {
     // Infinite scroll observer
     const observerRef = React.useRef<IntersectionObserver | null>(null)
@@ -499,6 +503,7 @@ export const MediaGridContent = React.memo(
                 mixedMedia={mixedMedia}
                 setSelectedMediaIndex={setSelectedMediaIndex}
                 setIsMediaViewerOpen={setIsMediaViewerOpen}
+                isFilterOpen={isFilterOpen}
               />
             ) : tab === "files" ? (
               <FilesList items={items} />

@@ -45,6 +45,19 @@ export const SelectMessageContent = ({
   const tempFlagUseEffectRef = useRef(true)
   const hasScrolledToBottomRef = useRef(false)
 
+  // Local state để preserve selected messages data
+  const [stableSelectedMessages, setStableSelectedMessages] = useState<TStateMessage[]>([])
+
+  // Sync stableSelectedMessages với selectedMessages prop
+  useEffect(() => {
+    if (selectedMessages.length === 0) {
+      setStableSelectedMessages([])
+    } else if (selectedMessages.length !== stableSelectedMessages.length) {
+      // Update stableSelectedMessages khi selectedMessages thay đổi từ bên ngoài
+      setStableSelectedMessages(selectedMessages.map((msg) => JSON.parse(JSON.stringify(msg))))
+    }
+  }, [selectedMessages, stableSelectedMessages.length])
+
   // Filter messages for report selection
   const filteredMessages = useMemo(() => {
     const filtered = messages.filter((message: TStateMessage) => {
@@ -89,19 +102,24 @@ export const SelectMessageContent = ({
         return
       }
 
+      // Deep clone message to prevent data loss
+      const clonedMessage = JSON.parse(JSON.stringify(message))
+
       if (isSelected) {
         // Add message to selection
-        if (selectedMessages.length < maxMessages) {
-          const newSelectedMessages = [...selectedMessages, message]
+        if (stableSelectedMessages.length < maxMessages) {
+          const newSelectedMessages = [...stableSelectedMessages, clonedMessage]
+          setStableSelectedMessages(newSelectedMessages)
           onSelectedMessagesChange(newSelectedMessages)
         }
       } else {
         // Remove message from selection
-        const newSelectedMessages = selectedMessages.filter((msg) => msg.id !== message.id)
+        const newSelectedMessages = stableSelectedMessages.filter((msg) => msg.id !== message.id)
+        setStableSelectedMessages(newSelectedMessages)
         onSelectedMessagesChange(newSelectedMessages)
       }
     },
-    [selectedMessages, maxMessages, onSelectedMessagesChange, user?.id]
+    [stableSelectedMessages, maxMessages, onSelectedMessagesChange, user?.id]
   )
 
   // Check if message is selected - use prop if provided, otherwise use local logic

@@ -101,8 +101,6 @@ export const useMediaMessages = () => {
       )
 
       if (response.success) {
-        console.log("Media messages response:", response.data.items)
-
         // Lọc ra tin nhắn chưa bị xóa và sắp xếp theo thời gian
         const nonDeletedMessages = response.data.items
           .filter((msg: TMessage) => !msg.isDeleted)

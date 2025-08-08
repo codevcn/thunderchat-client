@@ -54,22 +54,30 @@ export const ReportModal = ({
   const convertMessageToReported = useCallback(
     (message: TStateMessage): TReportedMessageFE => {
       let messageContent = ""
+      let messageType: string = message.type
 
-      // Xác định content dựa trên type
+      // Xác định content và convert messageType dựa trên type
       if (message.type === EMessageTypes.TEXT) {
-        messageContent = message.content || ""
+        messageContent = message.content
       } else if (message.type === EMessageTypes.STICKER) {
         messageContent = message.Sticker?.imageUrl || ""
       } else if (message.type === EMessageTypes.MEDIA) {
         messageContent = message.Media?.url || ""
+        // Convert MEDIA thành loại cụ thể dựa trên mediaType
+        if (message.Media?.type) {
+          messageType = message.Media.type
+        }
       }
 
       return {
         messageId: message.id,
-        messageType: message.type,
+        messageType,
         messageContent,
         conversationId: conversationId || 0,
         conversationType,
+        senderName: message.Author?.Profile?.fullName || message.Author?.email || "Unknown",
+        senderAvatar: message.Author?.Profile?.avatar || "",
+        senderId: message.authorId,
       }
     },
     [conversationId, conversationType]
@@ -132,6 +140,7 @@ export const ReportModal = ({
 
       // Cập nhật hoặc tạo session mới
       const reportedMessages = messages.map(convertMessageToReported)
+
       const newSession: TReportSession = {
         conversationId,
         conversationType,

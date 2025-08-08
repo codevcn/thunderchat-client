@@ -1,23 +1,20 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import {
   Search,
-  Filter,
   Eye,
   CheckCircle,
   XCircle,
   Clock,
   AlertTriangle,
-  BarChart3,
-  Users,
   FileText,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react"
-import { toast } from "sonner"
-import { ViolationDetailModal } from "./violation-detail-model"
+import { ViolationDetailModal } from "./violation-detail-modal"
 import { useAdminViolationReports } from "@/hooks/use-admin-violation-reports"
 import type {
   TAdminViolationReport,
@@ -188,24 +185,108 @@ export const AdminViolationManagement = () => {
   } = useAdminViolationReports()
 
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<TViolationReportStatus | "ALL">("ALL")
   const [categoryFilter, setCategoryFilter] = useState<TViolationReportCategory | "ALL">("ALL")
   const [selectedViolation, setSelectedViolation] = useState<TAdminViolationReport | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+
+  // Auto-refresh states
+  const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastRefreshTimeRef = useRef<Date>(new Date())
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load initial data
   useEffect(() => {
     fetchReports()
   }, [fetchReports])
 
-  // Filter violations
+  // Debounce search term
+  useEffect(() => {
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // Set new timeout (500ms delay)
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500)
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchTerm])
+
+  // Filter violations with debounced search
   useEffect(() => {
     fetchReports({
-      search: searchTerm,
+      search: debouncedSearchTerm,
       status: statusFilter,
       category: categoryFilter,
     })
-  }, [searchTerm, statusFilter, categoryFilter, fetchReports])
+  }, [debouncedSearchTerm, statusFilter, categoryFilter, fetchReports])
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (isAutoRefreshEnabled) {
+      // Clear existing interval
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current)
+      }
+
+      // Set up new interval (refresh every 30 seconds)
+      autoRefreshIntervalRef.current = setInterval(() => {
+        if (!loading && !isDetailModalOpen) {
+          fetchReports({
+            search: debouncedSearchTerm,
+            status: statusFilter,
+            category: categoryFilter,
+            page: pagination.currentPage,
+          })
+          lastRefreshTimeRef.current = new Date()
+        }
+      }, 30000) // 30 seconds
+
+      return () => {
+        if (autoRefreshIntervalRef.current) {
+          clearInterval(autoRefreshIntervalRef.current)
+        }
+      }
+    } else {
+      // Clear interval when auto-refresh is disabled
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current)
+        autoRefreshIntervalRef.current = null
+      }
+    }
+  }, [
+    isAutoRefreshEnabled,
+    loading,
+    isDetailModalOpen,
+    debouncedSearchTerm,
+    statusFilter,
+    categoryFilter,
+    pagination.currentPage,
+    fetchReports,
+  ])
+
+  // Cleanup intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current)
+      }
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleViewDetails = (violation: TAdminViolationReport) => {
     setSelectedViolation(violation)
@@ -239,10 +320,44 @@ export const AdminViolationManagement = () => {
   const handlePageChange = (page: number) => {
     fetchReports({
       page,
-      search: searchTerm,
+      search: debouncedSearchTerm,
       status: statusFilter,
       category: categoryFilter,
     })
+  }
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await fetchReports({
+        search: debouncedSearchTerm,
+        status: statusFilter,
+        category: categoryFilter,
+        page: pagination.currentPage,
+      })
+      lastRefreshTimeRef.current = new Date()
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const toggleAutoRefresh = () => {
+    setIsAutoRefreshEnabled(!isAutoRefreshEnabled)
+  }
+
+  const formatLastRefreshTime = () => {
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - lastRefreshTimeRef.current.getTime()) / 1000)
+
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds}s ago`
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60)
+      return `${minutes}m ago`
+    } else {
+      const hours = Math.floor(diffInSeconds / 3600)
+      return `${hours}h ago`
+    }
   }
 
   if (error) {
@@ -284,7 +399,7 @@ export const AdminViolationManagement = () => {
         />
       </div>
 
-      {/* Filters */}
+      {/* Filters and Refresh Controls */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Search */}
@@ -326,8 +441,44 @@ export const AdminViolationManagement = () => {
           </select>
         </div>
 
-        <div className="text-regular-text-secondary-cl text-sm">
-          {reports.length} of {pagination.totalItems} reports
+        <div className="flex items-center gap-4">
+          {/* Refresh Controls */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing || loading}
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-regular-hover-card-cl rounded-lg text-regular-text-secondary-cl hover:text-regular-white-cl hover:bg-regular-hover-card-cl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Refresh data"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+
+            <button
+              onClick={toggleAutoRefresh}
+              className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-lg transition-colors ${
+                isAutoRefreshEnabled
+                  ? "border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/20"
+                  : "border-regular-hover-card-cl text-regular-text-secondary-cl hover:text-regular-white-cl hover:bg-regular-hover-card-cl"
+              }`}
+              title={isAutoRefreshEnabled ? "Auto-refresh enabled (30s)" : "Auto-refresh disabled"}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${isAutoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-gray-400"}`}
+              />
+              Auto
+            </button>
+          </div>
+
+          {/* Last Refresh Time */}
+          <div className="text-regular-text-secondary-cl text-xs">
+            Last: {formatLastRefreshTime()}
+          </div>
+
+          {/* Reports Count */}
+          <div className="text-regular-text-secondary-cl text-sm">
+            {reports.length} of {pagination.totalItems} reports
+          </div>
         </div>
       </div>
 

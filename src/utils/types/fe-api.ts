@@ -63,6 +63,9 @@ export type TReportedMessageFE = {
   messageContent: string
   conversationId: number
   conversationType: "direct" | "group"
+  senderName: string
+  senderAvatar: string
+  senderId: number
 }
 
 export type TReportSession = {

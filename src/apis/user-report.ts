@@ -52,6 +52,11 @@ export const userReportAPI = {
         })
       }
 
+      console.log("🔍 [DEBUG] FormData entries:")
+      for (const [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`)
+      }
+
       const response = await clientAxios.post<TCreateViolationReportResponse>(
         "/user-report/create-violation-report",
         formData,

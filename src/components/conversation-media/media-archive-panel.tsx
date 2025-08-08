@@ -97,6 +97,7 @@ const MediaArchivePanel = React.memo(
     const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false)
     const [selectedMediaIndex, setSelectedMediaIndex] = useState(0)
     const [isDatePopupOpen, setIsDatePopupOpen] = useState(false)
+    const [isSenderPopupOpen, setIsSenderPopupOpen] = useState(false)
     const [fromDate, setFromDate] = useState("")
     const [toDate, setToDate] = useState("")
     const [dateFilterApplied, setDateFilterApplied] = useState(false)
@@ -316,6 +317,8 @@ const MediaArchivePanel = React.memo(
           setDateSort={setDateSort}
           isDatePopupOpen={isDatePopupOpen}
           setIsDatePopupOpen={setIsDatePopupOpen}
+          isSenderPopupOpen={isSenderPopupOpen}
+          setIsSenderPopupOpen={setIsSenderPopupOpen}
           fromDate={fromDate}
           setFromDate={setFromDate}
           toDate={toDate}
@@ -353,6 +356,7 @@ const MediaArchivePanel = React.memo(
               onLoadMore={loadMore}
               hasMore={hasMore}
               loading={loading}
+              isFilterOpen={isDatePopupOpen || isSenderPopupOpen}
             />
           )}
         </div>

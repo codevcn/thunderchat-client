@@ -89,6 +89,8 @@ type TFilterUser = {
   setDateSort: (dateSort: string) => void
   isDatePopupOpen: boolean
   setIsDatePopupOpen: (v: boolean) => void
+  isSenderPopupOpen: boolean
+  setIsSenderPopupOpen: (v: boolean) => void
   fromDate: string
   setFromDate: (v: string) => void
   toDate: string
@@ -102,6 +104,8 @@ const Filters = ({
   setSenderFilter,
   isDatePopupOpen,
   setIsDatePopupOpen,
+  isSenderPopupOpen,
+  setIsSenderPopupOpen,
   fromDate,
   setFromDate,
   toDate,
@@ -110,7 +114,6 @@ const Filters = ({
   applyDateFilter,
 }: TFilterUser) => {
   const [isSuggestionOpen, setIsSuggestionOpen] = useState(false)
-  const [isSenderPopupOpen, setIsSenderPopupOpen] = useState(false)
   const [senderSearch, setSenderSearch] = useState("")
   const [dateFilterApplied, setDateFilterApplied] = useState(false)
   const suggestionRef = useRef<HTMLDivElement>(null)

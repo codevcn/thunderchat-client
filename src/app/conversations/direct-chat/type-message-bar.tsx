@@ -653,9 +653,12 @@ export const TypeMessageBar = memo(
     }
 
     function renderReplyPreview(msg: TStateMessage) {
-      // Nếu tin nhắn đã bị thu hồi, hiển thị thông báo thu hồi
+      // Nếu tin nhắn đã bị thu hồi hoặc vi phạm, hiển thị thông báo tương ứng
       if (msg.isDeleted) {
-        return <span className="text-sm text-gray-400 italic">This message has been deleted</span>
+        const messageText = msg.isViolated
+          ? "This message has been recalled due to violation"
+          : "This message has been deleted"
+        return <span className="text-sm text-gray-400 italic">{messageText}</span>
       }
 
       const type = msg.type.toUpperCase()
@@ -863,7 +866,7 @@ export const TypeMessageBar = memo(
       <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border relative">
         <div className="flex flex-col grow">
           {/* Reply Preview */}
-          {replyMessage && !replyMessage.isDeleted && (
+          {replyMessage && !replyMessage.isDeleted && !replyMessage.isViolated && (
             <div
               id="STYLE-message-reply-preview"
               className="flex items-center w-type-message-bar gap-2 bg-regular-dark-gray-cl border-l-2 border-red-600 rounded-lg px-2 py-2 mb-1 text-xs"

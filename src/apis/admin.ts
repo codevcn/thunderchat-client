@@ -66,11 +66,13 @@ export const banReportedUser = (
   reportId: number,
   banType: EBanType,
   reason: string,
-  banDuration?: number
+  banDuration?: number,
+  bannedUntil?: string,
+  messageIds?: number[]
 ) =>
   clientAxios.post<TAdminBanUserResponse>(
     `/admin/violation-reports/${reportId}/ban-user`,
-    { banType, reason, banDuration },
+    { banType, reason, banDuration, bannedUntil, messageIds },
     requestConfig
   )
 

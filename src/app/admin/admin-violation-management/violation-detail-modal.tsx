@@ -26,7 +26,9 @@ interface ViolationDetailModalProps {
     reportId: number,
     banType: EBanType,
     reason: string,
-    banDuration?: number
+    banDuration?: number,
+    bannedUntil?: string,
+    messageIds?: number[]
   ) => Promise<void>
 }
 
@@ -77,6 +79,13 @@ export const ViolationDetailModal = ({
   const { report: detailedReport, loading: detailLoading } = useViolationReportDetail(
     violation?.id || null
   )
+
+  // Auto-set hasReviewed to true if user is already banned
+  useEffect(() => {
+    if (detailedReport?.violationAction) {
+      setHasReviewed(true)
+    }
+  }, [detailedReport?.violationAction])
 
   if (!isOpen || !violation) return null
 
@@ -162,9 +171,9 @@ export const ViolationDetailModal = ({
     setShowWarningModal(true)
   }
 
-  const handleWarningConfirm = async (reason: string) => {
+  const handleWarningConfirm = async (reason: string, messageIds?: number[]) => {
     if (onBanUser) {
-      await onBanUser(violation.id, EBanType.WARNING, reason)
+      await onBanUser(violation.id, EBanType.WARNING, reason, undefined, undefined, messageIds)
     }
   }
 
@@ -176,9 +185,15 @@ export const ViolationDetailModal = ({
     setShowBanModal(true)
   }
 
-  const handleBanUserConfirm = async (banType: EBanType, reason: string, banDuration?: number) => {
+  const handleBanUserConfirm = async (
+    banType: EBanType,
+    reason: string,
+    banDuration?: number,
+    bannedUntil?: string,
+    messageIds?: number[]
+  ) => {
     if (onBanUser) {
-      await onBanUser(violation.id, banType, reason, banDuration)
+      await onBanUser(violation.id, banType, reason, banDuration, bannedUntil, messageIds)
     }
   }
 
@@ -249,32 +264,182 @@ export const ViolationDetailModal = ({
                 onImageClick={handleImageClick}
               />
 
-              {/* Review Confirmation - Only show for pending reports */}
+              {/* Review Confirmation or Ban Information */}
               {violation.status === EViolationReportStatus.PENDING && (
-                <div className="bg-regular-hover-card-cl p-4 rounded-lg border border-regular-violet-cl/20">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      id="review-confirmation"
-                      checked={hasReviewed}
-                      onChange={(e) => setHasReviewed(e.target.checked)}
-                      className="mt-1 w-4 h-4 text-regular-violet-cl bg-regular-black-cl border-regular-violet-cl rounded focus:ring-regular-violet-cl focus:ring-2"
-                    />
-                    <div>
-                      <label
-                        htmlFor="review-confirmation"
-                        className="text-regular-white-cl font-medium cursor-pointer"
-                      >
-                        Review Confirmation
-                      </label>
-                      <p className="text-regular-text-secondary-cl text-sm mt-1">
-                        I have carefully reviewed this violation report and all associated evidence.
-                        I understand the implications of my decision and confirm that I am ready to
-                        take appropriate action.
-                      </p>
+                <>
+                  {/* Show action taken for this specific report if any */}
+                  {detailedReport?.violationAction && (
+                    <div className="bg-regular-hover-card-cl p-4 rounded-lg border border-blue-500/20 mb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1">
+                          <CheckCircle className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-regular-white-cl font-medium mb-2">
+                            Action Taken for This Report
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-regular-text-secondary-cl">Action Type:</span>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  detailedReport.violationAction.actionType ===
+                                  EBanType.PERMANENT_BAN
+                                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                    : detailedReport.violationAction.actionType ===
+                                        EBanType.TEMPORARY_BAN
+                                      ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                      : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                                }`}
+                              >
+                                {detailedReport.violationAction.actionType ===
+                                EBanType.PERMANENT_BAN
+                                  ? "Permanent Ban"
+                                  : detailedReport.violationAction.actionType ===
+                                      EBanType.TEMPORARY_BAN
+                                    ? "Temporary Ban"
+                                    : "Warning"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-regular-text-secondary-cl">Reason:</span>
+                              <p className="text-regular-white-cl mt-1">
+                                {detailedReport.violationAction.actionReason}
+                              </p>
+                            </div>
+                            {detailedReport.violationAction.bannedUntil && (
+                              <div>
+                                <span className="text-regular-text-secondary-cl">
+                                  Banned Until:
+                                </span>
+                                <p className="text-regular-white-cl mt-1">
+                                  {new Date(
+                                    detailedReport.violationAction.bannedUntil
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-regular-text-secondary-cl">Action Date:</span>
+                              <p className="text-regular-white-cl mt-1">
+                                {new Date(
+                                  detailedReport.violationAction.createdAt
+                                ).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+
+                  {/* Show current ban information of reported user if any */}
+                  {detailedReport?.latestBanAction && (
+                    <div className="bg-regular-hover-card-cl p-4 rounded-lg border border-red-500/20">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="mt-1">
+                            <Ban className="h-4 w-4 text-red-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-regular-white-cl font-medium mb-2">
+                              Current Ban Information
+                            </h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-regular-text-secondary-cl">Action Type:</span>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    detailedReport.latestBanAction.actionType ===
+                                    EBanType.PERMANENT_BAN
+                                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                      : detailedReport.latestBanAction.actionType ===
+                                          EBanType.TEMPORARY_BAN
+                                        ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                        : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                                  }`}
+                                >
+                                  {detailedReport.latestBanAction.actionType ===
+                                  EBanType.PERMANENT_BAN
+                                    ? "Permanent Ban"
+                                    : detailedReport.latestBanAction.actionType ===
+                                        EBanType.TEMPORARY_BAN
+                                      ? "Temporary Ban"
+                                      : "Warning"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-regular-text-secondary-cl">Reason:</span>
+                                <p className="text-regular-white-cl mt-1">
+                                  {detailedReport.latestBanAction.actionReason}
+                                </p>
+                              </div>
+                              {detailedReport.latestBanAction.bannedUntil && (
+                                <div>
+                                  <span className="text-regular-text-secondary-cl">
+                                    Banned Until:
+                                  </span>
+                                  <p className="text-regular-white-cl mt-1">
+                                    {new Date(
+                                      detailedReport.latestBanAction.bannedUntil
+                                    ).toLocaleString()}
+                                  </p>
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-regular-text-secondary-cl">Action Date:</span>
+                                <p className="text-regular-white-cl mt-1">
+                                  {new Date(
+                                    detailedReport.latestBanAction.createdAt
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {!detailedReport?.violationAction && (
+                            <button
+                              onClick={handleBanUserClick}
+                              className="px-3 py-1.5 bg-regular-violet-cl hover:bg-regular-violet-cl/80 text-regular-white-cl text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                            >
+                              <Ban className="h-4 w-4" />
+                              Cập nhật ban
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show review confirmation if no action has been taken for this report yet */}
+                  {!detailedReport?.violationAction && (
+                    <div className="bg-regular-hover-card-cl p-4 rounded-lg border border-regular-violet-cl/20">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          id="review-confirmation"
+                          checked={hasReviewed}
+                          onChange={(e) => setHasReviewed(e.target.checked)}
+                          className="mt-1 w-4 h-4 text-regular-violet-cl bg-regular-black-cl border-regular-violet-cl rounded focus:ring-regular-violet-cl focus:ring-2"
+                        />
+                        <div>
+                          <label
+                            htmlFor="review-confirmation"
+                            className="text-regular-white-cl font-medium cursor-pointer"
+                          >
+                            Review Confirmation
+                          </label>
+                          <p className="text-regular-text-secondary-cl text-sm mt-1">
+                            I have carefully reviewed this violation report and all associated
+                            evidence. I understand the implications of my decision and confirm that
+                            I am ready to take appropriate action.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Resolution Information - Show for resolved/dismissed reports */}
@@ -302,53 +467,137 @@ export const ViolationDetailModal = ({
                   </div>
                 </div>
               )}
+
+              {/* Show ban info for resolved/dismissed reports based on current latestBanAction */}
+              {(violation.status === EViolationReportStatus.RESOLVED ||
+                violation.status === EViolationReportStatus.DISMISSED) &&
+                detailedReport?.latestBanAction && (
+                  <div className="bg-regular-hover-card-cl p-4 rounded-lg border border-red-500/20">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        <Ban className="h-4 w-4 text-red-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-regular-white-cl font-medium mb-2">
+                          User Ban Information
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-regular-text-secondary-cl">Action Type:</span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                detailedReport.latestBanAction.actionType === EBanType.PERMANENT_BAN
+                                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                  : detailedReport.latestBanAction.actionType ===
+                                      EBanType.TEMPORARY_BAN
+                                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                    : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                              }`}
+                            >
+                              {detailedReport.latestBanAction.actionType === EBanType.PERMANENT_BAN
+                                ? "Permanent Ban"
+                                : detailedReport.latestBanAction.actionType ===
+                                    EBanType.TEMPORARY_BAN
+                                  ? "Temporary Ban"
+                                  : "Warning"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-regular-text-secondary-cl">Reason:</span>
+                            <p className="text-regular-white-cl mt-1">
+                              {detailedReport.latestBanAction.actionReason}
+                            </p>
+                          </div>
+                          {detailedReport.latestBanAction.bannedUntil && (
+                            <div>
+                              <span className="text-regular-text-secondary-cl">Banned Until:</span>
+                              <p className="text-regular-white-cl mt-1">
+                                {new Date(
+                                  detailedReport.latestBanAction.bannedUntil
+                                ).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-regular-text-secondary-cl">Action Date:</span>
+                            <p className="text-regular-white-cl mt-1">
+                              {new Date(detailedReport.latestBanAction.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
 
-          {/* Action Buttons - Only show for pending reports */}
-          {violation.status === EViolationReportStatus.PENDING && hasReviewed && (
-            <div className="p-6 border-t border-regular-hover-card-cl flex-shrink-0">
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={handleDismissClick}
-                  className="bg-gray-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-gray-600 flex items-center gap-2 transition-colors"
-                >
-                  <XCircleIcon className="h-4 w-4" />
-                  Dismiss Report
-                </button>
-                <button
-                  onClick={handleWarningClick}
-                  className="bg-yellow-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-yellow-600 flex items-center gap-2 transition-colors"
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  Warning Reported User
-                </button>
-                <button
-                  onClick={handleBanUserClick}
-                  className="bg-red-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-red-600 flex items-center gap-2 transition-colors"
-                >
-                  <Ban className="h-4 w-4" />
-                  Ban Reported User
-                </button>
+          {/* Action Buttons - Only show for pending reports that haven't been acted upon yet */}
+          {violation.status === EViolationReportStatus.PENDING &&
+            hasReviewed &&
+            !detailedReport?.violationAction && (
+              <div className="p-6 border-t border-regular-hover-card-cl flex-shrink-0">
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={handleDismissClick}
+                    className="bg-gray-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-gray-600 flex items-center gap-2 transition-colors"
+                  >
+                    <XCircleIcon className="h-4 w-4" />
+                    Dismiss Report
+                  </button>
+                  <button
+                    onClick={handleWarningClick}
+                    className="bg-yellow-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-yellow-600 flex items-center gap-2 transition-colors"
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    Warning Reported User
+                  </button>
+                  <button
+                    onClick={handleBanUserClick}
+                    className="bg-red-500 text-regular-white-cl py-2 px-4 rounded-lg hover:bg-red-600 flex items-center gap-2 transition-colors"
+                  >
+                    <Ban className="h-4 w-4" />
+                    Ban Reported User
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* View Only Footer - Show for resolved/dismissed reports */}
+          {/* View Only Footer - Show for resolved/dismissed reports or when user is banned */}
           {(violation.status === EViolationReportStatus.RESOLVED ||
-            violation.status === EViolationReportStatus.DISMISSED) && (
+            violation.status === EViolationReportStatus.DISMISSED ||
+            (violation.status === EViolationReportStatus.PENDING &&
+              detailedReport?.violationAction)) && (
             <div className="p-6 border-t border-regular-hover-card-cl flex-shrink-0">
               <div className="flex justify-end">
                 <div className="flex items-center gap-2 text-regular-text-secondary-cl">
                   <span className="text-sm">
                     {violation.status === EViolationReportStatus.RESOLVED
-                      ? "Report has been resolved"
-                      : "Report has been dismissed"}
+                      ? detailedReport?.violationAction
+                        ? `Report has been resolved - ${detailedReport.violationAction.actionType === "WARNING" ? "Warning issued" : detailedReport.violationAction.actionType === "TEMPORARY_BAN" ? "Temporary ban applied" : "Permanent ban applied"}`
+                        : "Report has been resolved"
+                      : violation.status === EViolationReportStatus.DISMISSED
+                        ? detailedReport?.violationAction
+                          ? `Report has been dismissed - ${detailedReport.violationAction.actionType === "WARNING" ? "Warning issued" : detailedReport.violationAction.actionType === "TEMPORARY_BAN" ? "Temporary ban applied" : "Permanent ban applied"}`
+                          : "Report has been dismissed"
+                        : detailedReport?.violationAction
+                          ? `${detailedReport.violationAction.actionType === "WARNING" ? "Warning issued" : detailedReport.violationAction.actionType === "TEMPORARY_BAN" ? "Temporary ban applied" : "Permanent ban applied"} for this report`
+                          : "No action taken yet"}
                   </span>
                   {violation.status === EViolationReportStatus.RESOLVED ? (
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    detailedReport?.violationAction ? (
+                      <Ban className="h-4 w-4 text-red-400" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 text-green-400" />
+                    )
+                  ) : violation.status === EViolationReportStatus.DISMISSED ? (
+                    detailedReport?.violationAction ? (
+                      <Ban className="h-4 w-4 text-red-400" />
+                    ) : (
+                      <XCircleIcon className="h-4 w-4 text-red-400" />
+                    )
                   ) : (
-                    <XCircleIcon className="h-4 w-4 text-red-400" />
+                    <Ban className="h-4 w-4 text-red-400" />
                   )}
                 </div>
               </div>
@@ -374,6 +623,7 @@ export const ViolationDetailModal = ({
         onClose={handleWarningModalClose}
         onConfirm={handleWarningConfirm}
         reportedUserName={violation.reportedUserName}
+        reportedMessages={detailedReport?.reportedMessages || []}
       />
 
       {/* Ban User Modal */}
@@ -382,6 +632,7 @@ export const ViolationDetailModal = ({
         onClose={handleBanModalClose}
         onConfirm={handleBanUserConfirm}
         reportedUserName={violation.reportedUserName}
+        reportedMessages={detailedReport?.reportedMessages || []}
       />
 
       {/* User Report History Modal */}

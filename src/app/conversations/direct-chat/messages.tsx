@@ -341,8 +341,13 @@ export const Messages = memo(
         dispatch(updateMessages([{ msgId: id, msgUpdates: newMessage }]))
       } else {
         // Nếu không tìm thấy tin nhắn trong state
-        if (newMessage.isDeleted || newMessage.ReplyTo?.isDeleted) {
-          // Force update cho tin nhắn đã thu hồi hoặc tin nhắn reply đến tin nhắn đã thu hồi
+        if (
+          newMessage.isDeleted ||
+          newMessage.isViolated ||
+          newMessage.ReplyTo?.isDeleted ||
+          newMessage.ReplyTo?.isViolated
+        ) {
+          // Force update cho tin nhắn đã thu hồi/vi phạm hoặc tin nhắn reply đến tin nhắn đã thu hồi/vi phạm
           dispatch(updateMessages([{ msgId: id, msgUpdates: newMessage }]))
         } else {
           // Chỉ thêm tin nhắn mới thực sự

@@ -1,10 +1,14 @@
 import { useState } from "react"
+import { MessageSquare } from "lucide-react"
+import { MessageSelectionModal } from "./message-selection-section"
+import type { TReportedMessageFE } from "@/utils/types/fe-api"
 
 interface WarningUserModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (reason: string) => void
+  onConfirm: (reason: string, messageIds?: number[]) => void
   reportedUserName: string
+  reportedMessages?: TReportedMessageFE[] // Messages to select from
 }
 
 export const WarningUserModal = ({
@@ -12,16 +16,19 @@ export const WarningUserModal = ({
   onClose,
   onConfirm,
   reportedUserName,
+  reportedMessages = [],
 }: WarningUserModalProps) => {
   const [reason, setReason] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([])
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false)
 
   const handleConfirm = async () => {
     if (!reason.trim()) return
 
     setIsLoading(true)
     try {
-      await onConfirm(reason.trim())
+      await onConfirm(reason.trim(), selectedMessageIds)
       onClose()
     } catch (error) {
       console.error("Error warning user:", error)
@@ -43,6 +50,29 @@ export const WarningUserModal = ({
             <p className="text-regular-text-secondary-cl text-sm mb-1">User to warn:</p>
             <p className="text-regular-white-cl font-medium">{reportedUserName}</p>
           </div>
+
+          {/* Message Selection */}
+          {reportedMessages.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-regular-text-secondary-cl text-sm">Select Messages to Delete:</p>
+                <button
+                  type="button"
+                  onClick={() => setIsMessageModalOpen(true)}
+                  className="px-3 py-1.5 bg-regular-violet-cl hover:bg-regular-violet-cl/80 text-regular-white-cl text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Select Messages ({selectedMessageIds.length})
+                </button>
+              </div>
+              {selectedMessageIds.length > 0 && (
+                <p className="text-regular-text-secondary-cl text-xs">
+                  {selectedMessageIds.length} message{selectedMessageIds.length > 1 ? "s" : ""}{" "}
+                  selected for deletion
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Reason */}
           <div>
@@ -77,6 +107,18 @@ export const WarningUserModal = ({
           </button>
         </div>
       </div>
+
+      {/* Message Selection Modal */}
+      <MessageSelectionModal
+        reportedMessages={reportedMessages}
+        onSelectionChange={setSelectedMessageIds}
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
+        onConfirm={() => {
+          // Selection is already updated via onSelectionChange
+          // Just close the modal
+        }}
+      />
     </div>
   )
 }

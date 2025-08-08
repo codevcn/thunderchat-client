@@ -80,9 +80,23 @@ export const useAdminViolationReports = () => {
   )
 
   const banUser = useCallback(
-    async (reportId: number, banType: EBanType, reason: string, banDuration?: number) => {
+    async (
+      reportId: number,
+      banType: EBanType,
+      reason: string,
+      banDuration?: number,
+      bannedUntil?: string,
+      messageIds?: number[]
+    ) => {
       try {
-        const response = await adminService.banReportedUser(reportId, banType, reason, banDuration)
+        const response = await adminService.banReportedUser(
+          reportId,
+          banType,
+          reason,
+          banDuration,
+          bannedUntil,
+          messageIds
+        )
 
         if (response.success) {
           toast.success(response.message)

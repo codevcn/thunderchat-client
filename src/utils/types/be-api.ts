@@ -11,6 +11,7 @@ import type {
   EAppRole,
   EReportCategory,
   EViolationReportStatus,
+  EBanType,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 import { TReportedMessageFE } from "./fe-api"
@@ -58,6 +59,7 @@ export type TMessage = {
   mediaId?: number
   type: EMessageTypes
   isDeleted: boolean
+  isViolated: boolean
 }
 
 export type TMessageMedia = {
@@ -506,6 +508,14 @@ export type TAdminViolationReport = {
   updatedAt: string
 }
 
+export type TViolationAction = {
+  id: number
+  actionType: EBanType
+  actionReason: string
+  bannedUntil: string | null
+  createdAt: string
+}
+
 export type TAdminViolationReportDetail = {
   id: number
   reporterId: number
@@ -527,6 +537,8 @@ export type TAdminViolationReportDetail = {
     createdAt: string
   }>
   reportedMessages: TReportedMessageFE[]
+  violationAction: TViolationAction | null
+  latestBanAction: TViolationAction | null
   createdAt: string
   updatedAt: string
 }

@@ -309,9 +309,11 @@ export const AdminViolationManagement = () => {
     reportId: number,
     banType: EBanType,
     reason: string,
-    banDuration?: number
+    banDuration?: number,
+    bannedUntil?: string,
+    messageIds?: number[]
   ) => {
-    const success = await banUser(reportId, banType, reason, banDuration)
+    const success = await banUser(reportId, banType, reason, banDuration, bannedUntil, messageIds)
     if (success) {
       handleCloseModal()
     }

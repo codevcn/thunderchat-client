@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react"
 import { EBanType } from "@/utils/enums"
+import { MessageSquare } from "lucide-react"
+import { MessageSelectionModal } from "./message-selection-section"
+import type { TReportedMessageFE } from "@/utils/types/fe-api"
 
 interface BanUserModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (banType: EBanType, reason: string, banDuration?: number) => void
+  onConfirm: (
+    banType: EBanType,
+    reason: string,
+    banDuration?: number,
+    bannedUntil?: string,
+    messageIds?: number[]
+  ) => void
   reportedUserName: string
+  reportedMessages?: TReportedMessageFE[] // Messages to select from
 }
 
 export const BanUserModal = ({
@@ -13,6 +23,7 @@ export const BanUserModal = ({
   onClose,
   onConfirm,
   reportedUserName,
+  reportedMessages = [],
 }: BanUserModalProps) => {
   const [banType, setBanType] = useState<EBanType>(EBanType.TEMPORARY_BAN)
   const [banDuration, setBanDuration] = useState<number>(7)
@@ -20,6 +31,8 @@ export const BanUserModal = ({
   const [customBanUntil, setCustomBanUntil] = useState<string>("")
   const [reason, setReason] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([])
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false)
 
   const durationOptions = [
     { value: 7, label: "7 days" },
@@ -49,20 +62,24 @@ export const BanUserModal = ({
     setIsLoading(true)
     try {
       let finalBanDuration: number | undefined
+      let finalBannedUntil: string | undefined
 
       if (banType === EBanType.TEMPORARY_BAN) {
         if (useCustomDate) {
-          // Calculate duration in days from custom date
-          const customDate = new Date(customBanUntil)
-          const now = new Date()
-          const diffTime = customDate.getTime() - now.getTime()
-          finalBanDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) // Convert to days
+          // Pass exact datetime as ISO string
+          finalBannedUntil = new Date(customBanUntil).toISOString()
         } else {
           finalBanDuration = banDuration
         }
       }
 
-      await onConfirm(banType, reason.trim(), finalBanDuration)
+      await onConfirm(
+        banType,
+        reason.trim(),
+        finalBanDuration,
+        finalBannedUntil,
+        selectedMessageIds
+      )
       onClose()
     } catch (error) {
       console.error("Error banning user:", error)
@@ -172,6 +189,29 @@ export const BanUserModal = ({
             </div>
           )}
 
+          {/* Message Selection */}
+          {reportedMessages.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-regular-text-secondary-cl text-sm">Select Messages to Delete:</p>
+                <button
+                  type="button"
+                  onClick={() => setIsMessageModalOpen(true)}
+                  className="px-3 py-1.5 bg-regular-violet-cl hover:bg-regular-violet-cl/80 text-regular-white-cl text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Select Messages ({selectedMessageIds.length})
+                </button>
+              </div>
+              {selectedMessageIds.length > 0 && (
+                <p className="text-regular-text-secondary-cl text-xs">
+                  {selectedMessageIds.length} message{selectedMessageIds.length > 1 ? "s" : ""}{" "}
+                  selected for deletion
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Reason */}
           <div>
             <p className="text-regular-text-secondary-cl text-sm mb-2">Reason:</p>
@@ -205,6 +245,18 @@ export const BanUserModal = ({
           </button>
         </div>
       </div>
+
+      {/* Message Selection Modal */}
+      <MessageSelectionModal
+        reportedMessages={reportedMessages}
+        onSelectionChange={setSelectedMessageIds}
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
+        onConfirm={() => {
+          // Selection is already updated via onSelectionChange
+          // Just close the modal
+        }}
+      />
     </div>
   )
 }

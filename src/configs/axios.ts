@@ -11,7 +11,8 @@ clientAxios.interceptors.response.use(
   (error) => {
     if (
       error.response?.status === HttpStatusCode.Unauthorized &&
-      getCurrentPathOnBrowserURL() !== "/"
+      getCurrentPathOnBrowserURL() !== "/" &&
+      !getCurrentPathOnBrowserURL().startsWith("/admin")
     ) {
       pureNavigator("/")
     }

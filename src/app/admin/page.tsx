@@ -83,13 +83,6 @@ const AdminPage = () => {
               />
             </div>
           </div>
-
-          {/* Back to User Login */}
-          <div className="mt-4">
-            <a href="/" className="text-gray-400 hover:text-white underline">
-              ← Back to User Login
-            </a>
-          </div>
         </>
       )}
     </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 export const useAdminRedirect = () => {
   const router = useRouter()
   return () => {
-    router.push("/admin/dashboard")
+    router.push("/admin/admin-dashboard-management")
   }
 }
 

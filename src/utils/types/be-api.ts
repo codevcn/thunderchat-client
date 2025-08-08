@@ -618,6 +618,16 @@ export type TAdminOverviewCharts = {
   userGrowth?: TAdminOverviewChartData[]
   messageActivity?: TAdminOverviewChartData[]
   groupChatActivity?: TAdminOverviewChartData[]
+  // Bar chart: Số tin nhắn theo loại chính (TEXT, STICKER, MEDIA)
+  messageTypeDistribution?: Array<{
+    type: "TEXT" | "STICKER" | "MEDIA"
+    count: number
+  }>
+  // Stacked bar: Tin nhắn media theo loại (IMAGE, VIDEO, AUDIO, DOCUMENT)
+  mediaMessageDistribution?: Array<{
+    type: "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT"
+    count: number
+  }>
 }
 
 export type TAdminOverviewData = {
@@ -627,14 +637,45 @@ export type TAdminOverviewData = {
   totalGroupMessages: number
   activeGroupChats: number
   totalUsers: number
-  newUsersThisPeriod: number
-  messagesThisPeriod: number
-  groupChatsThisPeriod: number
   totalViolationReports: number
   resolvedViolationReports: number
   pendingViolationReports: number
+  dismissedViolationReports: number
   timeRange: TAdminOverviewTimeRange
   charts?: TAdminOverviewCharts
+}
+
+export type TSystemOverviewData = {
+  activeUsers: number
+  totalMessages: number
+  totalDirectMessages: number
+  totalGroupMessages: number
+  activeGroupChats: number
+  totalUsers: number
+  totalViolationReports: number
+  resolvedViolationReports: number
+  pendingViolationReports: number
+  dismissedViolationReports: number
+  timeRange: {
+    startDate: string
+    endDate: string
+    period: "day" | "week" | "month" | "year" | "custom"
+  }
+  charts?: {
+    userGrowth?: Array<{ date: string; count: number }>
+    messageActivity?: Array<{ date: string; count: number }>
+    groupChatActivity?: Array<{ date: string; count: number }>
+    // Bar chart: Số tin nhắn theo loại chính (TEXT, STICKER, MEDIA)
+    messageTypeDistribution?: Array<{
+      type: "TEXT" | "STICKER" | "MEDIA"
+      count: number
+    }>
+    // Stacked bar: Tin nhắn media theo loại (IMAGE, VIDEO, AUDIO, DOCUMENT)
+    mediaMessageDistribution?: Array<{
+      type: "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT"
+      count: number
+    }>
+  }
 }
 
 // Admin User Message Statistics Types

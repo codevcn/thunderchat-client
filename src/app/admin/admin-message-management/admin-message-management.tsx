@@ -245,7 +245,7 @@ export const AdminMessageManagement = () => {
                   <thead className="bg-regular-black-cl">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider">
-                        User
+                        <div>User</div>
                       </th>
                       <th
                         className="px-6 py-3 text-left text-xs font-medium text-regular-text-secondary-cl uppercase tracking-wider cursor-pointer hover:bg-regular-hover-card-cl"

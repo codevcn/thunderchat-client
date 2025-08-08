@@ -463,8 +463,7 @@ export const AdminDashboardManagement = () => {
                               stroke={item.color}
                               strokeWidth="16"
                               strokeDasharray={strokeDasharray}
-                              strokeDashoffset={strokeDashoffset}
-                              className="transition-all duration-300"
+                              strokeDashoffset={strokeDashoffset || 0}
                             />
                           )
                         })}
@@ -509,7 +508,10 @@ export const AdminDashboardManagement = () => {
                             ></div>
                             <span className="text-sm text-gray-300">{item.name}</span>
                             <span className="text-sm font-medium text-white">
-                              {formatNumber(item.value)} ({((item.value / total) * 100).toFixed(1)}
+                              <span>{formatNumber(item.value)}</span> (
+                              <span>
+                                {total > 0 ? ((item.value / total) * 100).toFixed(1) : "0.0"}
+                              </span>
                               %)
                             </span>
                           </div>

@@ -300,18 +300,19 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
   const mediaUrl = Media?.url
   const fileName = Media?.fileName
   const stickerUrl = Sticker?.imageUrl
+  const mediaType = Media?.type
 
   // Nếu tin nhắn gốc đã bị thu hồi, hiển thị thông báo thu hồi
   if (isDeleted) {
     return (
-      <span className="text-xs rounded mt-0.5 inline-block text-gray-400 italic">
+      <span className="text-xs rounded mt-0.5 inline-block text-gray-400">
         This message has been deleted
       </span>
     )
   }
 
   // Nếu là ảnh
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.IMAGE && mediaUrl) {
     return (
       <div className="flex items-center gap-2 rounded p-0.5 mt-0.5">
         <img src={mediaUrl} alt="img" className="object-cover h-8" />
@@ -319,7 +320,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     )
   }
   // Nếu là audio
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.AUDIO && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <Mic size={16} />
@@ -328,7 +329,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     )
   }
   // Nếu là video
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.VIDEO && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <FileVideo size={16} />
@@ -337,7 +338,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     )
   }
   // Nếu là file tài liệu
-  if (type === EMessageTypes.MEDIA && Media?.url) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <Paperclip size={16} />
@@ -382,8 +383,19 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
     { message, user, stickyTime, onReply, isPinned, onPinChange, pinnedCount, onReplyPreviewClick },
     ref
   ) => {
-    const { authorId, content, createdAt, isNewMsg, id, status, Media, Sticker, type, ReplyTo } =
-      message
+    const {
+      authorId,
+      content,
+      createdAt,
+      isNewMsg,
+      id,
+      status,
+      Media,
+      Sticker,
+      type,
+      ReplyTo,
+      isDeleted,
+    } = message
 
     const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
 
@@ -523,13 +535,14 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               <div
                 className={
                   `${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
-                  `${Sticker ? "" : message.isDeleted ? "bg-regular-violet-cl opacity-60 text-white italic" : "bg-regular-violet-cl"} ` +
+                  `${Sticker ? "" : isDeleted ? "bg-regular-violet-cl opacity-60 text-white" : "bg-regular-violet-cl"} ` +
                   "group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1"
                 }
               >
                 <div
                   className={
-                    (showDropdown ? "flex" : "group-hover:flex hidden") +
+                    (showDropdown ? "flex" : "hidden") +
+                    (isDeleted ? "" : " group-hover:flex") +
                     " items-end h-full absolute top-0 right-[calc(100%-5px)] pr-[20px]"
                   }
                 >
@@ -559,9 +572,6 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                         open={showShareModal}
                         onClose={() => setShowShareModal(false)}
                         messageToShare={message}
-                        onSelectConversation={async (conversation: any) => {
-                          // Logic đã được xử lý trong ShareMessageModal
-                        }}
                       />,
                       document.body
                     )}
@@ -597,7 +607,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && !message.isDeleted && (
+                {ReplyTo && !isDeleted && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -652,13 +662,14 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               <div
                 className={
                   `group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
-                  `${Sticker ? "" : message.isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white italic" : "w-max bg-regular-dark-gray-cl"} ` +
+                  `${Sticker ? "" : message.isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white" : "w-max bg-regular-dark-gray-cl"} ` +
                   "max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative"
                 }
               >
                 <div
                   className={
-                    (showDropdown ? "flex" : "group-hover:flex hidden") +
+                    (showDropdown ? "flex" : "hidden") +
+                    (isDeleted ? "" : " group-hover:flex") +
                     " items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]"
                   }
                 >
@@ -688,9 +699,6 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                         open={showShareModal}
                         onClose={() => setShowShareModal(false)}
                         messageToShare={message}
-                        onSelectConversation={async (conversation: any) => {
-                          // Logic đã được xử lý trong ShareMessageModal
-                        }}
                       />,
                       document.body
                     )}

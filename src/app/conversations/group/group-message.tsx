@@ -302,7 +302,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
   // Nếu tin nhắn gốc đã bị thu hồi, hiển thị thông báo thu hồi
   if (isDeleted) {
     return (
-      <span className="text-xs rounded mt-0.5 inline-block text-gray-400 italic">
+      <span className="text-xs rounded mt-0.5 inline-block text-gray-400">
         This message has been deleted
       </span>
     )

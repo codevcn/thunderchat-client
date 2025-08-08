@@ -1,11 +1,8 @@
-import { dev_test_values } from "../../../../temp/test"
-
-import { X, Info, AtSign, Mail, AlertTriangle } from "lucide-react"
+import { X, Info, Mail, AlertTriangle } from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
 import { ProgressiveImage } from "@/components/materials/progressive-image"
-import { setLastSeen } from "@/utils/helpers"
 import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import MediaPanel from "../../../components/conversation-media/media-panel"
@@ -17,7 +14,7 @@ type TAvatarProps = {
 }
 
 const Avatar = ({ recipient }: TAvatarProps) => {
-  const { Profile } = recipient
+  const { Profile, email } = recipient
   const { fullName, avatar } = Profile
 
   return (
@@ -41,7 +38,7 @@ const Avatar = ({ recipient }: TAvatarProps) => {
       <div className="flex justify-end flex-col absolute bottom-0 left-0 bg-modal-text-bgimg min-h-[100px] w-full px-6 pb-2">
         <p className="text-xl font-bold">{fullName || "Unnamed"}</p>
         <span className="text-sm opacity-60">
-          {"Last seen " + setLastSeen(dev_test_values.user_1.lastOnline)}
+          Email: <span>{email}</span>
         </span>
       </div>
     </div>

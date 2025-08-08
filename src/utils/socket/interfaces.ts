@@ -24,6 +24,7 @@ import type {
   TJoinGroupChatRoomEmitPayload,
   TPinGroupMessageEventData,
   TGroupTypingEmitPayload,
+  TChattingPayloadForGroup,
 } from "../types/socket"
 import { EChatType } from "../enums"
 import { EOnlineStatus } from "./enums"
@@ -33,6 +34,7 @@ export interface IListenSocketEvents {
   [ESocketInitEvents.connect_error]: (payload: unknown) => void
   [ESocketEvents.error]: (error: TWsErrorResponse) => void
   [ESocketEvents.send_message_direct]: (newMessage: TMessageFullInfo) => void
+  [ESocketEvents.send_message_group]: (newMessage: TMessageFullInfo) => void
   [ESocketEvents.send_friend_request]: (
     sender: TUserWithProfile,
     requestData: TGetFriendRequestsData
@@ -66,6 +68,10 @@ export interface IListenSocketEvents {
 export interface IEmitSocketEvents {
   [ESocketEvents.send_message_direct]: (
     message: TChattingPayload,
+    cb: (data: TSendDirectMessageErrorRes | TSendDirectMessageRes) => void
+  ) => void
+  [ESocketEvents.send_message_group]: (
+    message: TChattingPayloadForGroup,
     cb: (data: TSendDirectMessageErrorRes | TSendDirectMessageRes) => void
   ) => void
   [ESocketEvents.message_seen_direct]: (payload: TMsgSeenEmitPayload) => void

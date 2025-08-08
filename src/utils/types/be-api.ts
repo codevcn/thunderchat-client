@@ -281,6 +281,11 @@ export type TGetGroupMessagesData = {
 
 export type TGroupChatData = TGroupChat & {
   Creator: TUserWithProfile
+  Members: TGroupChatMemberWithUser[]
+}
+
+export type TGroupChatState = TGroupChat & {
+  Creator: TUserWithProfile
 }
 
 export type TFetchGroupChatsData = TGroupChat & {
@@ -662,4 +667,8 @@ export type TAdminUserMessageStatsData = {
     hasNextPage: boolean
     hasPrevPage: boolean
   }
+}
+
+export type TAddMembersToGroupChatRes = {
+  addedMembers: TGroupChatMemberWithUser[]
 }

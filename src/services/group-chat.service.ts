@@ -6,10 +6,11 @@ import {
   postCreateGroupChat,
   postUploadGroupAvatar,
   getGroupMessageContext,
-  getNewerGroupMessages,
   deleteGroupMessage,
+  postAddMembersToGroupChat,
 } from "@/apis/group-chat"
 import type {
+  TAddMembersToGroupChatRes,
   TGroupChat,
   TGroupChatData,
   TUpdateGroupChatParams,
@@ -19,6 +20,7 @@ import type {
 import type { TConversationCard, TSuccess } from "@/utils/types/global"
 import { convertToGroupChatsUIData } from "@/utils/data-convertors/conversations-convertor"
 import { GroupChatError } from "@/utils/custom-errors"
+import { getNewerGroupMessages } from "@/apis/direct-chat"
 
 class GroupChatService {
   async uploadGroupAvatar(avatar: File): Promise<TUploadGroupAvatarData> {
@@ -70,8 +72,8 @@ class GroupChatService {
     return data
   }
 
-  async getNewerMessages(directChatId: number, msgOffset: number, limit?: number) {
-    const { data } = await getNewerGroupMessages(directChatId, msgOffset, limit)
+  async getNewerMessages(groupChatId: number, msgOffset: number, limit?: number) {
+    const { data } = await getNewerGroupMessages(groupChatId, msgOffset, limit)
     if (!data) throw new GroupChatError("Không tìm thấy messages mới hơn")
     return data
   }
@@ -79,6 +81,14 @@ class GroupChatService {
   // Xoá/thu hồi tin nhắn direct chat
   async deleteMessage(messageId: number) {
     const { data } = await deleteGroupMessage(messageId)
+    return data
+  }
+
+  async addMembersToGroupChat(
+    groupChatId: number,
+    memberIds: number[]
+  ): Promise<TAddMembersToGroupChatRes> {
+    const { data } = await postAddMembersToGroupChat(groupChatId, memberIds)
     return data
   }
 }

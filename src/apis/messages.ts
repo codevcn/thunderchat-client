@@ -15,7 +15,7 @@ export const getFetchDirectMessages = (params: TGetDirectMsgsParams) =>
   })
 
 export const getFetchGroupMessages = (params: TGetGroupMsgsParams) =>
-  clientAxios.get<TGetGroupMessagesData>("message/get-messages/", {
+  clientAxios.get<TGetGroupMessagesData>("message/get-group-messages/", {
     ...requestConfig,
     params,
   })
@@ -39,6 +39,18 @@ export const getFetchVoiceMessages = (
   sortType?: ESortTypes
 ) =>
   clientAxios.get<TGetDirectMessagesData>("message/direct-message/voices/" + directChatId, {
+    ...requestConfig,
+    params: { limit, offset, sortType },
+  })
+
+// API mới để lấy chỉ voice messages
+export const getFetchGroupVoiceMessages = (
+  groupChatId: number,
+  limit?: number,
+  offset?: number,
+  sortType?: ESortTypes
+) =>
+  clientAxios.get<TGetGroupMessagesData>("message/group-message/voices/" + groupChatId, {
     ...requestConfig,
     params: { limit, offset, sortType },
   })

@@ -37,7 +37,7 @@ import {
   unescapeHtml,
   converToMessageTypeAllTypes,
 } from "@/utils/helpers"
-import { TChattingPayload } from "@/utils/types/socket"
+import { TChattingPayloadForGroup } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
@@ -80,7 +80,7 @@ const ExpressionPicker = ({
   }
 
   const handleSelectSticker = (sticker: TSticker) => {
-    chattingService.sendMessage(
+    chattingService.sendGroupMessage(
       EMessageTypeAllTypes.STICKER,
       {
         content: `${sticker.id}`,
@@ -334,7 +334,7 @@ const MessageTextField = ({
       return
     }
 
-    const payload: TChattingPayload["msgPayload"] = {
+    const payload: TChattingPayloadForGroup["msgPayload"] = {
       content: msgToSend,
       groupChatId,
       token: chattingService.getMessageToken(),
@@ -345,7 +345,7 @@ const MessageTextField = ({
       payload.replyToId = replyMessage.id
     }
 
-    chattingService.sendMessage(EMessageTypeAllTypes.TEXT, payload, (data) => {
+    chattingService.sendGroupMessage(EMessageTypeAllTypes.TEXT, payload, (data) => {
       if ("success" in data && data.success) {
         chattingService.setAcknowledgmentFlag(true)
         chattingService.recursiveSendingQueueMessages()
@@ -595,13 +595,13 @@ export const TypeMessageBar = memo(
             mediaType = EMessageMediaTypes.DOCUMENT
           }
 
-          const msgPayload: TChattingPayload["msgPayload"] = {
+          const msgPayload: TChattingPayloadForGroup["msgPayload"] = {
             content: `${id}`, // hoặc caption nếu có
             groupChatId,
             token: chattingService.getMessageToken(),
             timestamp: new Date(),
           }
-          chattingService.sendMessage(
+          chattingService.sendGroupMessage(
             converToMessageTypeAllTypes(messageType, mediaType),
             msgPayload,
             (data) => {
@@ -774,14 +774,14 @@ export const TypeMessageBar = memo(
 
         // Gửi message (BE sẽ nhận type là AUDIO, mediaUrl là link S3 .webm)
         const { id: groupChatId } = groupChat
-        const msgPayload: TChattingPayload["msgPayload"] = {
+        const msgPayload: TChattingPayloadForGroup["msgPayload"] = {
           content: `${id}`, // hoặc chú thích
           groupChatId,
           token: chattingService.getMessageToken(),
           timestamp: new Date(),
         }
 
-        chattingService.sendMessage(EMessageTypeAllTypes.AUDIO, msgPayload, (data) => {
+        chattingService.sendGroupMessage(EMessageTypeAllTypes.AUDIO, msgPayload, (data) => {
           if ("success" in data && data.success) {
             chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()

@@ -32,6 +32,12 @@ export const getNewerDirectMessages = (directChatId: number, msgOffset: number, 
     params: { directChatId, msgOffset, ...(limit ? { limit } : {}) },
   })
 
+export const getNewerGroupMessages = (groupChatId: number, msgOffset: number, limit?: number) =>
+  clientAxios.get(`/message/get-newer-group-messages`, {
+    ...requestConfig,
+    params: { groupChatId, msgOffset, ...(limit ? { limit } : {}) },
+  })
+
 export const checkCanSendDirectMessage = (receiverId: number) =>
   clientAxios.get<{ canSend: boolean }>(`/message/can-send-message`, {
     ...requestConfig,

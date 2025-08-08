@@ -1,6 +1,7 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
 import type { TSuccess } from "@/utils/types/global"
 import type {
+  TAddMembersToGroupChatRes,
   TFetchGroupChatsData,
   TGroupChat,
   TGroupChatData,
@@ -49,12 +50,13 @@ export const getGroupMessageContext = (messageId: number) => {
   return clientAxios.get(url, requestConfig)
 }
 
-export const getNewerGroupMessages = (directChatId: number, msgOffset: number, limit?: number) =>
-  clientAxios.get(`/message/get-newer-messages`, {
-    ...requestConfig,
-    params: { directChatId, msgOffset, ...(limit ? { limit } : {}) },
-  })
-
 // API xoá/thu hồi tin nhắn direct chat
 export const deleteGroupMessage = (messageId: number) =>
   clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)
+
+export const postAddMembersToGroupChat = (groupChatId: number, memberIds: number[]) =>
+  clientAxios.post<TAddMembersToGroupChatRes>(
+    `/group-chat/add-members`,
+    { groupChatId, memberIds },
+    requestConfig
+  )

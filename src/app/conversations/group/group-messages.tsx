@@ -65,7 +65,7 @@ const NoMessagesYet = ({ groupChat }: TNoMessagesYetProps) => {
 
   const sendGreetingSticker = () => {
     if (greetingSticker) {
-      chattingService.sendMessage(
+      chattingService.sendGroupMessage(
         EMessageTypeAllTypes.STICKER,
         {
           groupChatId: groupChat.id,
@@ -253,6 +253,7 @@ export const Messages = memo(
           isFirstTime,
         })
         .then((result) => {
+          console.log(">>> result:", result)
           hasMoreMessages.current = result.hasMoreMessages
           dispatch(mergeMessages(result.groupMessages))
           dispatch(setFetchedMsgs(true))

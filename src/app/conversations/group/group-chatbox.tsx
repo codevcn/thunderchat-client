@@ -88,7 +88,6 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
   const { avatarUrl, id: groupChatId, name: groupChatName } = groupChat
   const [typingUsers, setTypingUsers] = useState<TTypingUsers>(initialTypingUsers)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const { groupChatMembers } = useAppSelector(({ messages }) => messages)
 
   const handleTypingMessage = (typing: boolean, groupChatId: number, user: TUserWithProfile) => {
     if (groupChatId !== groupChatId) return
@@ -146,9 +145,9 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
           {typingUsers.isTyping ? (
             <TypingIndicator users={typingUsers.typingUsers} />
           ) : (
-            groupChatMembers && (
+            groupChat.Members && (
               <div className="text-xs text-regular-text-secondary-cl">
-                <span>{groupChatMembers.length}</span> members
+                <span>{groupChat.Members.length}</span> members
               </div>
             )
           )}
@@ -386,7 +385,6 @@ export const GroupChatbox = () => {
     groupChatService
       .fetchGroupChat(groupChatId, fetchGroupChatAbortController.signal)
       .then((groupChat) => {
-        console.log(">>> fetched group chat:", groupChat)
         dispatch(resetAllChatData())
         requestAnimationFrame(() => {
           dispatch(setGroupChat(groupChat))

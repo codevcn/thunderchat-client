@@ -5,6 +5,7 @@ export enum ESocketInitEvents {
 
 export enum ESocketEvents {
   send_message_direct = "send_message:direct",
+  send_message_group = "send_message:group",
   error = "error",
   send_friend_request = "friend_request:send",
   recovered_connection = "recovered_connection",

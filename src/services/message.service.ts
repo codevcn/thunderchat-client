@@ -2,6 +2,7 @@ import {
   getFetchDirectMedia,
   getFetchDirectMessages,
   getFetchGroupMessages,
+  getFetchGroupVoiceMessages,
   getFetchVoiceMessages,
   getMediaMessages,
   getMediaStatistics,
@@ -46,6 +47,16 @@ class MessageService {
     sortType: ESortTypes
   ): Promise<TGetDirectMessagesData> {
     const { data } = await getFetchVoiceMessages(directChatId, limit, offset, sortType)
+    return data
+  }
+
+  async fetchGroupVoiceMessages(
+    groupChatId: number,
+    limit = 100,
+    offset = 0,
+    sortType: ESortTypes
+  ): Promise<TGetGroupMessagesData> {
+    const { data } = await getFetchGroupVoiceMessages(groupChatId, limit, offset, sortType)
     return data
   }
 

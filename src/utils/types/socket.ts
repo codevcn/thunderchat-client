@@ -14,7 +14,17 @@ export type TChattingPayload = {
   type: EMessageTypeAllTypes
   msgPayload: {
     receiverId?: number
-    groupChatId?: number
+    content: string
+    token: string
+    timestamp: Date
+    replyToId?: number
+  }
+}
+
+export type TChattingPayloadForGroup = {
+  type: EMessageTypeAllTypes
+  msgPayload: {
+    groupChatId: number
     content: string
     token: string
     timestamp: Date

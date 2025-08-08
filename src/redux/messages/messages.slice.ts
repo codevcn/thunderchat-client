@@ -17,7 +17,6 @@ import { EChatType } from "@/utils/enums"
 type TMessagesState = {
   directChat: TDirectChatData | null
   groupChat: TGroupChatData | null
-  groupChatMembers: TGroupChatMemberWithUser[] | null
   directMessages: TStateMessage[] | null
   groupMessages: TStateMessage[] | null
   fetchedMsgs: boolean
@@ -26,7 +25,6 @@ type TMessagesState = {
 const initialState: TMessagesState = {
   directChat: null,
   groupChat: null,
-  groupChatMembers: null,
   directMessages: null,
   groupMessages: null,
   fetchedMsgs: false,
@@ -76,9 +74,22 @@ export const messagesSlice = createSlice({
     },
     removeGroupChatMember: (state, action: PayloadAction<TRemoveGroupChatMemberState>) => {
       const { memberId } = action.payload
-      const groupChatMembers = state.groupChatMembers
-      if (groupChatMembers) {
-        state.groupChatMembers = groupChatMembers.filter((member) => member.id !== memberId)
+      const groupChat = state.groupChat
+      if (groupChat) {
+        state.groupChat = {
+          ...groupChat,
+          Members: groupChat.Members.filter((member) => member.User.id !== memberId),
+        }
+      }
+    },
+    addGroupChatMembers: (state, action: PayloadAction<TGroupChatMemberWithUser[]>) => {
+      const members = action.payload
+      const groupChat = state.groupChat
+      if (groupChat) {
+        state.groupChat = {
+          ...groupChat,
+          Members: [...(groupChat.Members || []), ...members],
+        }
       }
     },
     setDirectChat: (state, action: PayloadAction<TDirectChatData>) => {
@@ -113,7 +124,6 @@ export const messagesSlice = createSlice({
       // set all data to null
       state.directChat = null
       state.groupChat = null
-      state.groupChatMembers = null
       state.directMessages = null
       state.groupMessages = null
       state.fetchedMsgs = false
@@ -126,9 +136,6 @@ export const messagesSlice = createSlice({
     },
     setGroupChat: (state, action: PayloadAction<TGroupChatData>) => {
       state.groupChat = action.payload
-    },
-    setGroupChatMembers: (state, action: PayloadAction<TGroupChatMemberWithUser[]>) => {
-      state.groupChatMembers = action.payload
     },
   },
 })
@@ -147,5 +154,5 @@ export const {
   resetDirectMessages,
   resetGroupMessages,
   setGroupChat,
-  setGroupChatMembers,
+  addGroupChatMembers,
 } = messagesSlice.actions

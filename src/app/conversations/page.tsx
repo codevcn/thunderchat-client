@@ -37,9 +37,15 @@ const ConversationPage = () => {
     eventEmitter.emit(EInternalEvents.SEND_MESSAGE_DIRECT, newMessage)
   }
 
+  const listenSendGroupMessage = (newMessage: TGetMessagesMessage) => {
+    console.log(">>> listen send group message:", newMessage)
+    eventEmitter.emit(EInternalEvents.SEND_MESSAGE_GROUP, newMessage)
+  }
+
   useEffect(() => {
     document.body.addEventListener("click", handleClickOnLayout)
     clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
+    clientSocket.socket.on(ESocketEvents.send_message_group, listenSendGroupMessage)
     return () => {
       document.body.removeEventListener("click", handleClickOnLayout)
       clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)

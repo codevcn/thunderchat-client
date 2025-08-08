@@ -9,9 +9,10 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { toaster } from "@/utils/toaster"
 import type { TGroupChatMemberWithUser } from "@/utils/types/be-api"
-import { ArrowLeft, UserX } from "lucide-react"
+import { ArrowLeft, UserPlus, UserX } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useUser } from "@/hooks/user"
+import { AddMembersStep } from "./add-member"
 
 type TManageMembersPopoverProps = {
   member: TGroupChatMemberWithUser
@@ -27,7 +28,7 @@ const ManageMemberPopover = ({
   activePopover,
 }: TManageMembersPopoverProps) => {
   const {
-    User: { Profile, id },
+    User: { Profile, id, email },
   } = member
   return (
     <CustomPopover
@@ -51,7 +52,7 @@ const ManageMemberPopover = ({
               {Profile.fullName}
             </h3>
             <p className={`${activePopover === id ? "text-black" : "text-gray-400"} text-[13px]`}>
-              Last seen Jan 20, 2025 at 16:23
+              Email: <span>{email}</span>
             </p>
           </div>
         </div>
@@ -74,7 +75,8 @@ const ManageMemberPopover = ({
 
 export const ManageMembers = () => {
   const [open, setOpen] = useState<boolean>(false)
-  const { groupChat, groupChatMembers } = useAppSelector(({ messages }) => messages)
+  const { groupChat } = useAppSelector(({ messages }) => messages)
+  const groupChatMembers = groupChat?.Members
   const [searchResults, setSearchResults] = useState<TGroupChatMemberWithUser[]>(
     groupChatMembers || []
   )
@@ -84,6 +86,7 @@ export const ManageMembers = () => {
   const [activePopover, setActivePopover] = useState<number>()
   const [selectedMember, setSelectedMember] = useState<TGroupChatMemberWithUser>()
   const dispatch = useAppDispatch()
+  const [openAddMember, setOpenAddMember] = useState(false)
   const user = useUser()!
 
   const openManageMembers = () => {
@@ -152,6 +155,14 @@ export const ManageMembers = () => {
     }
   }
 
+  const handleGroupChatMembersChange = () => {
+    setSearchResults(groupChatMembers || [])
+  }
+
+  useEffect(() => {
+    handleGroupChatMembersChange()
+  }, [groupChatMembers])
+
   useEffect(() => {
     eventEmitter.on(EInternalEvents.OPEN_MANAGE_MEMBERS, openManageMembers)
     return () => {
@@ -161,7 +172,7 @@ export const ManageMembers = () => {
 
   return (
     <div
-      className={`${open ? "left-0" : "left-full"} absolute z-[80] top-0 transition-[left] duration-200 bg-black w-full h-full overflow-hidden`}
+      className={`${open ? "left-0" : "left-full"} translate-x-0 translate-y-0 absolute z-[80] top-0 transition-[left] duration-200 bg-black w-full h-screen overflow-hidden`}
     >
       <div className="flex flex-col gap-2 w-full h-full">
         <div className="p-4 bg-regular-dark-gray-cl w-full">
@@ -236,6 +247,19 @@ export const ManageMembers = () => {
           </button>
         }
       />
+
+      <div id="QUERY-add-member-button" className="bottom-6 right-4 absolute z-[80]">
+        <button
+          onClick={() => setOpenAddMember(true)}
+          className="flex justify-center items-center w-[50px] h-[50px] rounded-full bg-regular-violet-cl hover:scale-110 transition duration-200"
+        >
+          <UserPlus className="text-white" size={24} />
+        </button>
+      </div>
+
+      {groupChat && (
+        <AddMembersStep open={openAddMember} onOpen={setOpenAddMember} groupChatId={groupChat.id} />
+      )}
     </div>
   )
 }

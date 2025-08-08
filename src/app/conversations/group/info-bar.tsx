@@ -21,6 +21,7 @@ import { EGroupChatRole } from "@/utils/enums"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { ManageMembers } from "./manage-members"
+import { useUser } from "@/hooks/user"
 
 type TMembersProps = {
   members: TGroupChatMemberWithUser[]
@@ -28,7 +29,7 @@ type TMembersProps = {
 
 export const MembersList = ({ members }: TMembersProps) => {
   return (
-    <div className="w-full h-full pb-4 pt-6 pl-2 pr-0">
+    <div className="w-full h-full pb-4 pt-6 pl-2 pr-0 relative overflow-hidden">
       <h2 className="text-base font-bold pl-2">
         <span>Members</span>
         <span className="text-zinc-400 pl-2">({members.length})</span>
@@ -41,6 +42,7 @@ export const MembersList = ({ members }: TMembersProps) => {
               ({
                 User: {
                   Profile: { fullName, avatar },
+                  email,
                 },
                 role,
                 id,
@@ -61,7 +63,7 @@ export const MembersList = ({ members }: TMembersProps) => {
                     <h3 title={fullName} className="font-medium text-base text-white truncate">
                       {fullName}
                     </h3>
-                    <p className="text-[13px] text-gray-400">Last seen Jan 20, 2025 at 16:23</p>
+                    <p className="text-[13px] text-gray-400">{email}</p>
                   </div>
 
                   <div className="absolute top-1 right-2 text-xs text-regular-text-secondary-cl">
@@ -336,6 +338,7 @@ const EditGroup = ({ open, onClose, groupChat, members }: TEditGroupProps) => {
         </button>
       </div>
 
+      {/* Save Updates */}
       <div
         className={`${updateFields.length > 0 ? "bottom-8" : "-bottom-14"} right-8 absolute z-[90] transition-[right,bottom] duration-200`}
       >
@@ -358,10 +361,11 @@ const EditGroup = ({ open, onClose, groupChat, members }: TEditGroupProps) => {
 
 export const InfoBar = () => {
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
-  const { groupChat, groupChatMembers } = useAppSelector(({ messages }) => messages)
-  console.log(">>> info bar state:", { groupChat, groupChatMembers })
+  const { groupChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
   const [editGroupOpen, setEditGroupOpen] = useState(false)
+  const groupChatMembers = groupChat?.Members
+  const user = useUser()!
 
   const handleOpenInfoBar = (open: boolean) => {
     dispatch(openInfoBar(open))
@@ -383,14 +387,16 @@ export const InfoBar = () => {
             <h2 className="text-lg pl-2">Group Info</h2>
           </div>
 
-          <div className="pr-4">
-            <IconButton
-              className="flex justify-center items-center h-10 w-10 text-regular-icon-cl"
-              onClick={() => setEditGroupOpen(true)}
-            >
-              <Pencil size={20} />
-            </IconButton>
-          </div>
+          {user.id === groupChat?.creatorId && (
+            <div className="pr-4">
+              <IconButton
+                className="flex justify-center items-center h-10 w-10 text-regular-icon-cl"
+                onClick={() => setEditGroupOpen(true)}
+              >
+                <Pencil size={20} />
+              </IconButton>
+            </div>
+          )}
         </div>
 
         {groupChat && groupChatMembers && (

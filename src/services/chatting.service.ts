@@ -2,7 +2,7 @@ import { ObjectQueue } from "@/utils/algorithms/queue"
 import { EMessageTypeAllTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TChattingPayload } from "@/utils/types/socket"
+import type { TChattingPayload, TChattingPayloadForGroup } from "@/utils/types/socket"
 import type { TSendMessageCallback } from "@/utils/types/global"
 
 type TOfflineMessage = TChattingPayload
@@ -29,6 +29,42 @@ class ChattingService {
         this.setAcknowledgmentFlag(false)
         clientSocket.socket.timeout(this.MAX_TIMEOUT_MESSAGING).emit(
           ESocketEvents.send_message_direct,
+          {
+            type,
+            msgPayload: message,
+          },
+          (error, data) => {
+            if (error) {
+              console.error(">>> error when sending message & save offline message:", error)
+              this.saveOfflineMessage({ type, msgPayload: message })
+            } else {
+              if (data) {
+                if ("isError" in data) {
+                  console.error(">>> error when sending message & callback:", data)
+                }
+              }
+              callback(data)
+            }
+          }
+        )
+      } else {
+        this.messagesQueue.enqueue({ type, msgPayload: message })
+      }
+    } else {
+      this.saveOfflineMessage({ type, msgPayload: message })
+    }
+  }
+
+  async sendGroupMessage(
+    type: EMessageTypeAllTypes,
+    message: TChattingPayloadForGroup["msgPayload"],
+    callback: TSendMessageCallback
+  ): Promise<void> {
+    if (clientSocket.socket.connected) {
+      if (this.getAcknowledgmentFlag()) {
+        this.setAcknowledgmentFlag(false)
+        clientSocket.socket.timeout(this.MAX_TIMEOUT_MESSAGING).emit(
+          ESocketEvents.send_message_group,
           {
             type,
             msgPayload: message,

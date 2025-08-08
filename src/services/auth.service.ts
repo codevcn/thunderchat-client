@@ -5,6 +5,7 @@ import {
   getAdminCheckAuth,
   checkEmailIsAdmin,
   postLogoutUser,
+  postAdminLogout,
 } from "@/apis/auth"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import type { TSuccess } from "@/utils/types/global"
@@ -32,6 +33,11 @@ class AuthService {
 
   async loginAdmin(email: string, password: string, keepSigned: boolean): Promise<TSuccess> {
     const { data } = await postAdminLogin({ email, password, keepSigned })
+    return data
+  }
+
+  async logoutAdmin(): Promise<TSuccess> {
+    const { data } = await postAdminLogout()
     return data
   }
 

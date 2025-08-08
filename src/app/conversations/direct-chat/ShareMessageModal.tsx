@@ -99,12 +99,12 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
-      <h2 className="text-lg font-bold text-white mb-4">Chia sẻ tin nhắn cho cuộc trò chuyện</h2>
-      {/* Ô tìm kiếm */}
+      <h2 className="text-lg font-bold text-white mb-4">Share message to conversation</h2>
+      {/* Search input */}
       <input
         type="text"
         className="w-full p-2 mb-4 rounded bg-[#23232a] text-white placeholder-gray-400 outline-none"
-        placeholder="Tìm kiếm cuộc trò chuyện..."
+        placeholder="Search conversations..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -113,13 +113,11 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
         {isSearching ? (
           <div className="text-gray-400 text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto mb-2"></div>
-            Đang tìm kiếm...
+            Searching...
           </div>
         ) : searchResultsFiltered.length === 0 && conversationsFromRedux.length === 0 ? (
           <div className="text-gray-400 text-center py-8">
-            {search.trim() !== ""
-              ? "Không tìm thấy cuộc trò chuyện nào."
-              : "Không có cuộc trò chuyện nào."}
+            {search.trim() !== "" ? "No conversations found." : "No conversations available."}
           </div>
         ) : (
           <>
@@ -139,12 +137,12 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                   className="flex items-center w-full gap-3 p-2 rounded-lg bg-[#23232a] hover:bg-[#35363a] transition-colors text-left"
                   onClick={async () => {
                     if (!messageToShare) {
-                      toast.error("Không có tin nhắn để chia sẻ!")
+                      toast.error("No message to share!")
                       return
                     }
 
                     try {
-                      // Đóng modal
+                      // Close modal
                       onClose()
 
                       // Chỉ xử lý direct chat
@@ -217,25 +215,25 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                                 if ("success" in res && res.success) {
                                   chattingService.setAcknowledgmentFlag(true)
                                   chattingService.recursiveSendingQueueMessages()
-                                  toast.success("Đã chia sẻ tin nhắn!")
+                                  toast.success("Message shared successfully!")
                                 } else if ("isError" in res && res.isError) {
-                                  toast.error(res?.message || "Chia sẻ thất bại!")
+                                  toast.error(res?.message || "Share failed!")
                                 }
                               } else {
-                                // Trường hợp response rỗng hoặc không hợp lệ
-                                toast.error("Không nhận được phản hồi từ server")
+                                // Case of empty or invalid response
+                                toast.error("No response received from server")
                               }
                             }
                           )
                         } catch (error) {
-                          toast.error("Không thể lấy thông tin cuộc trò chuyện")
+                          toast.error("Unable to get conversation information")
                         }
                       }
 
-                      // Gọi callback nếu có
+                      // Call callback if available
                       onSelectConversation?.(conversation as TConversationCard)
                     } catch (error) {
-                      toast.error("Không thể chia sẻ tin nhắn!")
+                      toast.error("Unable to share message!")
                     }
                   }}
                 >
@@ -253,7 +251,7 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
               )
             })}
 
-            {/* Hiển thị conversations từ Redux */}
+            {/* Display conversations from Redux */}
             {conversationsFromRedux.map((conversation) => {
               const {
                 id,
@@ -269,12 +267,12 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                   className="flex items-center w-full gap-3 p-2 rounded-lg bg-[#23232a] hover:bg-[#35363a] transition-colors text-left"
                   onClick={async () => {
                     if (!messageToShare) {
-                      toast.error("Không có tin nhắn để chia sẻ!")
+                      toast.error("No message to share!")
                       return
                     }
 
                     try {
-                      // Đóng modal
+                      // Close modal
                       onClose()
 
                       // Chỉ xử lý direct chat
@@ -347,25 +345,25 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                                 if ("success" in res && res.success) {
                                   chattingService.setAcknowledgmentFlag(true)
                                   chattingService.recursiveSendingQueueMessages()
-                                  toast.success("Đã chia sẻ tin nhắn!")
+                                  toast.success("Message shared successfully!")
                                 } else if ("isError" in res && res.isError) {
-                                  toast.error(res?.message || "Chia sẻ thất bại!")
+                                  toast.error(res?.message || "Share failed!")
                                 }
                               } else {
-                                // Trường hợp response rỗng hoặc không hợp lệ
-                                toast.error("Không nhận được phản hồi từ server")
+                                // Case of empty or invalid response
+                                toast.error("No response received from server")
                               }
                             }
                           )
                         } catch (error) {
-                          toast.error("Không thể lấy thông tin cuộc trò chuyện")
+                          toast.error("Unable to get conversation information")
                         }
                       }
 
-                      // Gọi callback nếu có
+                      // Call callback if available
                       onSelectConversation?.(conversation)
                     } catch (error) {
-                      toast.error("Không thể chia sẻ tin nhắn!")
+                      toast.error("Unable to share message!")
                     }
                   }}
                 >

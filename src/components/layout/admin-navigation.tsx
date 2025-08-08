@@ -11,9 +11,13 @@ import {
   MessageSquare,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
+import { useAppDispatch } from "@/hooks/redux"
+import { resetAdminAuthStatus } from "@/redux/auth/admin-auth.slice"
+import { authService } from "@/services/auth.service"
+import { EAdminAuthStatus } from "@/utils/enums"
 
 type TAdminNav = {
   label: string
@@ -29,31 +33,47 @@ type AdminNavigationProps = {
 
 export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigationProps) => {
   const pathname = usePathname()
+  const router = useRouter()
+  const dispatch = useAppDispatch()
 
   // Determine active tab based on pathname
   const getActiveTab = () => {
-    if (pathname === "/admin" || pathname === "/admin/dashboard") return "dashboard"
+    if (pathname === "/admin/admin-dashboard-management") return "dashboard-management"
+    if (pathname === "/admin/admin-message-management") return "message-management"
     if (pathname === "/admin/admin-user-management") return "users"
     if (pathname === "/admin/admin-violation-management") return "violations"
-    if (pathname === "/admin/message-stats") return "message-stats"
     return "dashboard"
   }
 
   const currentActiveTab = activeTab || getActiveTab()
 
+  const handleAdminLogout = async () => {
+    try {
+      await authService.logoutAdmin()
+      dispatch(resetAdminAuthStatus())
+      router.push("/")
+    } catch (error) {
+      console.error("Admin logout failed:", error)
+      // Even if logout fails, redirect to main app
+      dispatch(resetAdminAuthStatus())
+      router.push("/")
+    }
+  }
+
   const adminNavs: TAdminNav[] = [
     {
-      label: "Dashboard",
-      href: "/admin/dashboard",
+      label: "Dashboard Management",
+      href: "/admin/admin-dashboard-management",
       icon: <Home size={20} className="text-regular-white-cl" />,
-      active: currentActiveTab === "dashboard",
+      active: currentActiveTab === "dashboard-management",
     },
     {
-      label: "Message Stats",
-      href: "/admin/message-stats",
-      icon: <MessageSquare size={20} className="text-foreground" />,
-      active: currentActiveTab === "message-stats",
+      label: "Message Management",
+      href: "/admin/admin-message-management",
+      icon: <MessageSquare size={20} className="text-regular-white-cl" />,
+      active: currentActiveTab === "message-management",
     },
+
     {
       label: "User Management",
       href: "/admin/admin-user-management",
@@ -131,16 +151,24 @@ export const AdminNavigation = memo(({ activeTab, onTabChange }: AdminNavigation
             </Link>
           </CustomTooltip>
 
-          {/* Back to Main App */}
-          <CustomTooltip placement="right" title="Back to Main App">
-            <Link
-              href="/"
+          {/* Admin Logout */}
+          <CustomTooltip placement="right" title="Logout from Admin Panel">
+            <div
+              onClick={handleAdminLogout}
               className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  handleAdminLogout()
+                }
+              }}
             >
               <div className="m-auto">
                 <LogOut size={20} className="text-regular-white-cl" />
               </div>
-            </Link>
+            </div>
           </CustomTooltip>
         </div>
       </div>

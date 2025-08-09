@@ -23,7 +23,7 @@ const Avatar = ({ recipient }: TAvatarProps) => {
         {avatar ? (
           <ProgressiveImage
             src={avatar}
-            className="w-full h-full"
+            className="w-full h-full bg-regular-black-cl"
             prgssClassName="w-full h-full bg-regular-black-cl"
           />
         ) : (

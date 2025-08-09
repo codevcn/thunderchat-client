@@ -15,39 +15,45 @@ import {
   type TPinDirectChatResponse,
   type TUnpinDirectChatResponse,
   type TPinnedDirectChat,
+  getPinnedChatsByUser,
+  postTogglePinConversation,
 } from "@/apis/pin"
 import { EAppRole, EMessageTypes } from "@/utils/enums"
 import { EMessageStatus } from "@/utils/socket/enums"
+import type { TPinnedChat } from "@/utils/types/be-api"
 import type { TStateMessage } from "@/utils/types/global"
 
 class PinService {
   // Ghim hoặc bỏ ghim tin nhắn
   async togglePinMessage(
     messageId: number,
-    directChatId: number,
-    isPinned: boolean
+    directChatId: number | undefined,
+    isPinned: boolean,
+    groupChatId?: number
   ): Promise<TPinMessageResponse | TUnpinMessageResponse> {
-    const response = await pinMessage({ messageId, directChatId, isPinned })
+    const response = await pinMessage({ messageId, directChatId, isPinned, groupChatId })
     return response.data
   }
 
-  async togglePinGroupMessage() {}
-
   // Lấy danh sách tin nhắn đã ghim
-  async getPinnedMessages(directChatId: number): Promise<TStateMessage[]> {
-    const response = await getPinnedMessages(directChatId)
+  async getPinnedMessages(directChatId?: number, groupChatId?: number): Promise<TStateMessage[]> {
+    const response = await getPinnedMessages(directChatId, groupChatId)
     return response.data.map(this.convertPinnedMessageToStateMessage)
   }
 
   // Lấy số lượng tin nhắn đã ghim
-  async getPinnedCount(directChatId: number): Promise<number> {
-    const response = await getPinnedCount(directChatId)
+  async getPinnedCount(directChatId?: number, groupChatId?: number): Promise<number> {
+    const response = await getPinnedCount(directChatId, groupChatId)
     return response.data
   }
 
   // Kiểm tra tin nhắn đã được ghim chưa
-  async isMessagePinned(messageId: number, directChatId: number): Promise<boolean> {
-    const response = await isMessagePinned(messageId, directChatId)
+  async isMessagePinned(
+    messageId: number,
+    directChatId?: number,
+    groupChatId?: number
+  ): Promise<boolean> {
+    const response = await isMessagePinned(messageId, directChatId, groupChatId)
     return response.data
   }
 
@@ -127,6 +133,16 @@ class PinService {
       Sticker,
       isViolated: message.isViolated,
     }
+  }
+
+  async getPinnedChatsByUser(): Promise<TPinnedChat[]> {
+    const { data } = await getPinnedChatsByUser()
+    return data
+  }
+
+  async togglePinConversation(directChatId?: number, groupChatId?: number): Promise<TPinnedChat> {
+    const { data } = await postTogglePinConversation(directChatId, groupChatId)
+    return data
   }
 }
 

@@ -253,7 +253,6 @@ export const Messages = memo(
           isFirstTime,
         })
         .then((result) => {
-          console.log(">>> result:", result)
           hasMoreMessages.current = result.hasMoreMessages
           dispatch(mergeGroupMessages(result.groupMessages))
           dispatch(setFetchedMsgs(true))
@@ -707,7 +706,7 @@ export const Messages = memo(
               user={user}
               stickyTime={stickyTime}
               onReply={handleReply}
-              isPinned={!!pinnedMessages.find((m: TStateMessage) => m.id === message.id)}
+              isPinned={pinnedMessages.some((m) => m.id === message.id)}
               onPinChange={(newState) => {
                 if (newState) setPinnedMessages([...pinnedMessages, message])
                 else

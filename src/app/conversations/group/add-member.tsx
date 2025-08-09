@@ -9,9 +9,9 @@ import { ArrowLeft, Check } from "lucide-react"
 import { X } from "lucide-react"
 import { CustomAvatar } from "@/components/materials/avatar"
 import { Checkbox, IconButton, Skeleton, Spinner } from "@/components/materials"
-import { groupChatService } from "@/services/group-chat.service"
 import { useAppDispatch } from "@/hooks/redux"
 import { addGroupChatMembers } from "@/redux/messages/messages.slice"
+import { groupMemberService } from "@/services/group-member.service"
 
 type TAddMembersBoardProps = {
   open: boolean
@@ -74,7 +74,7 @@ export const AddMembersStep = ({ open, onOpen, groupChatId }: TAddMembersBoardPr
       return
     }
     setLoading(true)
-    groupChatService
+    groupMemberService
       .addMembersToGroupChat(
         groupChatId,
         pickedUsers.map(({ id }) => id)

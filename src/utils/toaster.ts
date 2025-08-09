@@ -21,6 +21,13 @@ class CustomToaster {
       position: "bottom-right",
     })
   }
+
+  warning(message: string) {
+    toast.warning(message, {
+      duration: 3000,
+      position: "bottom-right",
+    })
+  }
 }
 
 export const toaster = new CustomToaster()

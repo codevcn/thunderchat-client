@@ -1,5 +1,11 @@
 import type { AxiosError, HttpStatusCode } from "axios"
-import type { TMessage, TDirectChat, TMessageFullInfo, TDirectChatData } from "@/utils/types/be-api"
+import type {
+  TMessage,
+  TDirectChat,
+  TMessageFullInfo,
+  TDirectChatData,
+  TPinnedChat,
+} from "@/utils/types/be-api"
 import type { EChatType, EMessageMediaTypes, EMessageTypes } from "../enums"
 import type { Socket } from "socket.io-client"
 
@@ -96,7 +102,7 @@ export type TPlacement = "top" | "right" | "bottom" | "left"
 export type TAlign = "center" | "start" | "end"
 
 export type TRemoveGroupChatMemberState = {
-  memberId: number
+  memberIds: number[]
 }
 
 export type THighlightOffsets = {
@@ -155,3 +161,12 @@ export type TConversationSearchResult = {
 }
 
 export type TSocketId = Socket["id"]
+
+export type TUsePinChats = {
+  pinChats: TPinnedChat[]
+  setPinChats: (pinChats: TPinnedChat[]) => void
+  loading: boolean
+  fetchPinChatsByUserId: () => Promise<void>
+  isChatPinned: (chatId: number, chatType: EChatType) => boolean
+  getPinnedChat: (chatId: number, chatType: EChatType) => TPinnedChat | undefined
+}

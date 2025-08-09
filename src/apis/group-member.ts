@@ -1,5 +1,5 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
-import type { TGroupChatMemberWithUser } from "@/utils/types/be-api"
+import type { TAddMembersToGroupChatRes, TGroupChatMemberWithUser } from "@/utils/types/be-api"
 import type { TSuccess } from "@/utils/types/global"
 
 export const getSearchGroupChatMembers = (groupChatId: number, keyword: string) =>
@@ -19,3 +19,10 @@ export const removeGroupChatMember = (groupChatId: number, memberId: number) =>
     ...requestConfig,
     params: { groupChatId, memberId },
   })
+
+export const postAddMembersToGroupChat = (groupChatId: number, memberIds: number[]) =>
+  clientAxios.post<TAddMembersToGroupChatRes>(
+    `/group-member/add-members`,
+    { groupChatId, memberIds },
+    requestConfig
+  )

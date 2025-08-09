@@ -8,7 +8,7 @@ import { AppNavigation } from "@/components/layout/app-navigation"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { SwitchChatbox } from "./switch-chatbox"
-import type { TGetMessagesMessage } from "@/utils/types/be-api"
+import type { TGetMessagesMessage, TUserWithProfile, TGroupChat } from "@/utils/types/be-api"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 
@@ -38,16 +38,28 @@ const ConversationPage = () => {
   }
 
   const listenSendGroupMessage = (newMessage: TGetMessagesMessage) => {
-    console.log(">>> listen send group message:", newMessage)
     eventEmitter.emit(EInternalEvents.SEND_MESSAGE_GROUP, newMessage)
+  }
+
+  const listenRemoveGroupChatMembers = (
+    memberIds: number[],
+    groupChat: TGroupChat,
+    executor: TUserWithProfile
+  ) => {
+    eventEmitter.emit(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, memberIds, groupChat, executor)
   }
 
   useEffect(() => {
     document.body.addEventListener("click", handleClickOnLayout)
+    clientSocket.socket.on(ESocketEvents.remove_group_chat_members, listenRemoveGroupChatMembers)
     clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
     clientSocket.socket.on(ESocketEvents.send_message_group, listenSendGroupMessage)
     return () => {
       document.body.removeEventListener("click", handleClickOnLayout)
+      clientSocket.socket.removeListener(
+        ESocketEvents.remove_group_chat_members,
+        listenRemoveGroupChatMembers
+      )
       clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)
     }
   }, [])

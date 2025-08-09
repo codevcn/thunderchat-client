@@ -59,15 +59,14 @@ import {
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
 import { useNavToConversation } from "@/hooks/navigation"
 import { resetAllChatData, updateDirectChat } from "@/redux/messages/messages.slice"
-import { usePinDirectChats } from "@/hooks/pin-messages"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TPinDirectChatEventData } from "@/utils/types/socket"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { localStorageManager } from "@/utils/local-storage"
+import { pinService } from "@/services/pin.service"
+import { usePinChats } from "@/hooks/pin-chats"
 
-const MAX_NUMBER_OF_PINNED_CONVERSATIONS: number = 3
 const SEARCH_LIMIT: number = 10
 const MAX_UNREAD_MESSAGES_COUNT: number = 9
 
@@ -556,7 +555,7 @@ type TConversationCardProps = {
   isPinned: boolean
   pinLoading: boolean
   conversationData: TConversationCard
-  onTogglePin: (id: number) => void
+  onTogglePin: (directChatId?: number, groupChatId?: number) => void
 }
 
 const ConversationCard = ({
@@ -571,6 +570,15 @@ const ConversationCard = ({
   const subtitleType = subtitle.type
   const subtitleContent = subtitle.content
   const pinIndexClass = getPinIndexClass(pinIndex)
+
+  const handleExecuteTogglePin = () => {
+    if (type === EChatType.DIRECT) {
+      onTogglePin(id)
+    } else {
+      onTogglePin(undefined, id)
+    }
+  }
+
   return (
     <div
       className={`group flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${pinIndexClass} group`}
@@ -623,7 +631,7 @@ const ConversationCard = ({
               >
                 <PinButton
                   isPinned={isPinned}
-                  onToggle={() => onTogglePin(id)}
+                  onToggle={handleExecuteTogglePin}
                   loading={pinLoading}
                   size={16}
                 />
@@ -644,17 +652,13 @@ const ConversationCards = () => {
   const navToConversation = useNavToConversation()
   const [loading, setLoading] = useState<boolean>(false)
   const user = useUser()!
-
-  // Pin functionality
   const {
-    pinnedDirectChats,
-    pinnedCount,
-    togglePinDirectChat,
-    isDirectChatPinned,
-    getPinnedDirectChat,
+    pinChats,
     loading: pinLoading,
-    fetchPinnedDirectChats,
-  } = usePinDirectChats()
+    fetchPinChatsByUserId,
+    isChatPinned,
+    getPinnedChat,
+  } = usePinChats()
 
   const setLastId = () => {
     if (conversations && conversations.length > 0) {
@@ -710,25 +714,7 @@ const ConversationCards = () => {
 
     // Sort using pinnedAt order from API
     const sortedChats = allChats.sort((a, b) => {
-      const aIsPinned = a.type === EChatType.DIRECT ? isDirectChatPinned(a.id) : false
-      const bIsPinned = b.type === EChatType.DIRECT ? isDirectChatPinned(b.id) : false
-
-      // Pinned chats always go first
-      if (aIsPinned && !bIsPinned) return -1
-      if (!aIsPinned && bIsPinned) return 1
-
-      // For pinned chats, use pinnedAt order from API
-      if (aIsPinned && bIsPinned) {
-        const aPinnedChat = getPinnedDirectChat(a.id)
-        const bPinnedChat = getPinnedDirectChat(b.id)
-
-        if (aPinnedChat && bPinnedChat) {
-          // pinnedAt is already sorted desc from API, so newer pinnedAt comes first
-          return new Date(bPinnedChat.pinnedAt).getTime() - new Date(aPinnedChat.pinnedAt).getTime()
-        }
-      }
-
-      // For unpinned chats, sort by message time
+      // sort by message time
       const getTimestamp = (chat: TConversationCard) => {
         const timeToUse = chat.lastMessageTime || chat.createdAt
         return new Date(timeToUse).getTime()
@@ -743,20 +729,11 @@ const ConversationCards = () => {
     navToConversation(id, type)
   }
 
-  const handlePinToggle = (directChatId: number) => {
-    const isCurrentlyPinned = isDirectChatPinned(directChatId)
-    const currentPinnedCount = pinnedDirectChats.length
-
-    // Check if trying to pin and already at limit
-    if (!isCurrentlyPinned && currentPinnedCount >= MAX_NUMBER_OF_PINNED_CONVERSATIONS) {
-      toast.error(
-        `Bạn chỉ có thể ghim tối đa ${MAX_NUMBER_OF_PINNED_CONVERSATIONS} cuộc trò chuyện`
-      )
-      return
-    }
-
-    togglePinDirectChat(directChatId, !isCurrentlyPinned).catch((error) => {
-      console.error("Error toggling pin:", error)
+  const handlePinToggle = (directChatId?: number, groupChatId?: number) => {
+    pinService.togglePinConversation(directChatId, groupChatId).then((pinnedChat) => {
+      if (pinnedChat) {
+        fetchPinChatsByUserId()
+      }
     })
   }
 
@@ -909,6 +886,7 @@ const ConversationCards = () => {
   }
 
   useEffect(() => {
+    fetchPinChatsByUserId()
     clientSocket.socket.on(ESocketEvents.new_conversation, listenNewConversation)
     eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
@@ -919,26 +897,12 @@ const ConversationCards = () => {
     }
   }, [])
 
-  // WebSocket listener for direct chat pin events
-  useEffect(() => {
-    const handlePinDirectChat = (data: TPinDirectChatEventData) => {
-      // Refresh pinned chats when pin status changes
-      fetchPinnedDirectChats()
-    }
-
-    clientSocket.socket.on(ESocketEvents.pin_direct_chat, handlePinDirectChat)
-
-    return () => {
-      clientSocket.socket.off(ESocketEvents.pin_direct_chat, handlePinDirectChat)
-    }
-  }, [])
-
   // Auto-sort conversations when pinned status changes
   useEffect(() => {
     if (conversations && conversations.length > 0) {
       const sortedChats = [...conversations].sort((a, b) => {
-        const aIsPinned = a.type === EChatType.DIRECT ? isDirectChatPinned(a.id) : false
-        const bIsPinned = b.type === EChatType.DIRECT ? isDirectChatPinned(b.id) : false
+        const aIsPinned = isChatPinned(a.id, a.type)
+        const bIsPinned = isChatPinned(b.id, b.type)
 
         // Pinned chats always go first
         if (aIsPinned && !bIsPinned) return -1
@@ -946,8 +910,8 @@ const ConversationCards = () => {
 
         // For pinned chats, use pinnedAt order from API
         if (aIsPinned && bIsPinned) {
-          const aPinnedChat = getPinnedDirectChat(a.id)
-          const bPinnedChat = getPinnedDirectChat(b.id)
+          const aPinnedChat = getPinnedChat(a.id, a.type)
+          const bPinnedChat = getPinnedChat(b.id, b.type)
 
           if (aPinnedChat && bPinnedChat) {
             // pinnedAt is already sorted desc from API, so newer pinnedAt comes first
@@ -973,7 +937,7 @@ const ConversationCards = () => {
         dispatch(setConversations(sortedChats))
       }
     }
-  }, [pinnedDirectChats, conversations, isDirectChatPinned])
+  }, [pinChats, conversations])
 
   useEffect(() => {
     if (!conversations || conversations.length === 0) {
@@ -996,13 +960,11 @@ const ConversationCards = () => {
   ) : conversations && conversations.length > 0 ? (
     <div className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar pr-1 pb-4">
       {conversations.map((conversation) => {
-        const isPinned =
-          conversation.type === EChatType.DIRECT ? isDirectChatPinned(conversation.id) : false
         return (
           <ConversationCard
-            key={conversation.id}
+            key={`${conversation.id}-${conversation.type}`}
             onNavToConversation={navToDirectChat}
-            isPinned={isPinned}
+            isPinned={isChatPinned(conversation.id, conversation.type)}
             pinLoading={pinLoading}
             conversationData={conversation}
             onTogglePin={handlePinToggle}

@@ -39,6 +39,8 @@ import {
 } from "@/utils/helpers"
 import { TChattingPayloadForGroup } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
+import { useAppDispatch } from "@/hooks/redux"
+import { removeGroupChatMember } from "@/redux/messages/messages.slice"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -460,8 +462,8 @@ type TTypeMessageBarProps = {
 }
 
 export const TypeMessageBar = memo(
-  ({ groupChat, replyMessage, setReplyMessage, canSend }: TTypeMessageBarProps) => {
-    const user = useUser()
+  ({ groupChat, replyMessage, setReplyMessage, canSend = true }: TTypeMessageBarProps) => {
+    const user = useUser()!
     const textFieldRef = useRef<HTMLDivElement | null>(null)
     const [hasContent, setHasContent] = useState<boolean>(false)
     const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
@@ -474,6 +476,8 @@ export const TypeMessageBar = memo(
     const [fileMode, setFileMode] = useState<string>("")
     const [fileInputKey, setFileInputKey] = useState<number>(0)
     const [uploadProgress, setUploadProgress] = useState<number>(0)
+    const [isGroupMember, setIsGroupMember] = useState<boolean>(true)
+    const dispatch = useAppDispatch()
 
     const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
       const textField = textFieldRef.current
@@ -815,6 +819,13 @@ export const TypeMessageBar = memo(
         .padStart(2, "0")},${msPart.toString().padStart(2, "0")}`
     }
 
+    const handleRemoveGroupChatMembers = (memberIds: number[], fromGroupChat: TGroupChat) => {
+      dispatch(removeGroupChatMember({ memberIds }))
+      if (memberIds.includes(user.id) && fromGroupChat.id === groupChat.id) {
+        setIsGroupMember(false)
+      }
+    }
+
     useEffect(() => {
       if (isRecording) {
         timerRef.current = setInterval(() => {
@@ -829,6 +840,7 @@ export const TypeMessageBar = memo(
         if (timerRef.current) clearInterval(timerRef.current)
       }
     }, [isRecording])
+
     useEffect(() => {
       if (audioUrl && !isRecording) {
         // Không chạy khi đang ghi, chỉ chạy khi vừa dừng ghi và có file
@@ -837,10 +849,21 @@ export const TypeMessageBar = memo(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl, isRecording])
 
-    {
-      /* Hiển thị thông báo khi không thể gửi tin nhắn */
+    useEffect(() => {
+      eventEmitter.on(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, handleRemoveGroupChatMembers)
+    }, [])
+
+    if (!isGroupMember) {
+      return (
+        <div className="flex-1 flex items-center justify-center w-full py-10">
+          <div className="system-message text-center text-gray-500 py-4 w-full">
+            You are not a member of this group.
+          </div>
+        </div>
+      )
     }
-    if (canSend === false) {
+
+    if (!canSend) {
       return (
         <div className="flex-1 flex items-center justify-center w-full py-10">
           <div className="system-message text-center text-gray-500 py-4 w-full">

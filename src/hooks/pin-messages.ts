@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { pinService } from "@/services/pin.service"
 import type { TStateMessage } from "@/utils/types/global"
-import type { TPinnedDirectChat } from "@/apis/pin"
 import { toast } from "sonner"
 
 export const usePinMessages = (directChatId: number) => {
@@ -77,88 +76,5 @@ export const usePinMessages = (directChatId: number) => {
     isMessagePinned,
     getPinnedCount,
     fetchPinnedMessages,
-  }
-}
-
-// Hook for direct chat pinning
-export const usePinDirectChats = () => {
-  const [pinnedDirectChats, setPinnedDirectChats] = useState<TPinnedDirectChat[]>([])
-  const [pinnedCount, setPinnedCount] = useState(0)
-  const [loading, setLoading] = useState(false)
-
-  // Fetch pinned direct chats
-  const fetchPinnedDirectChats = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [chats, count] = await Promise.all([
-        pinService.getPinnedDirectChats(),
-        pinService.getPinnedDirectChatsCount(),
-      ])
-      setPinnedDirectChats(chats)
-      setPinnedCount(count)
-    } catch (error) {
-      console.error("Error fetching pinned direct chats:", error)
-      setPinnedDirectChats([])
-      setPinnedCount(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Toggle pin direct chat
-  const togglePinDirectChat = useCallback(
-    async (directChatId: number, isPinned: boolean) => {
-      try {
-        const response = await pinService.togglePinDirectChat(directChatId, isPinned)
-
-        // Always refresh from backend to ensure accuracy
-        await fetchPinnedDirectChats()
-
-        if ("success" in response) {
-          toast.success("Đã bỏ ghim cuộc trò chuyện")
-          return false
-        } else {
-          toast.success("Đã ghim cuộc trò chuyện")
-          return true
-        }
-      } catch (error: any) {
-        const errorMessage =
-          error?.response?.data?.message || "Lỗi khi ghim/bỏ ghim cuộc trò chuyện"
-        toast.error(errorMessage)
-        throw error
-      }
-    },
-    [fetchPinnedDirectChats]
-  )
-
-  // Check if direct chat is pinned
-  const isDirectChatPinned = useCallback(
-    (directChatId: number) => {
-      return pinnedDirectChats.some((chat) => chat.directChatId === directChatId)
-    },
-    [pinnedDirectChats]
-  )
-
-  // Get pinned direct chat by ID
-  const getPinnedDirectChat = useCallback(
-    (directChatId: number) => {
-      return pinnedDirectChats.find((chat) => chat.directChatId === directChatId)
-    },
-    [pinnedDirectChats]
-  )
-
-  // Auto fetch on mount
-  useEffect(() => {
-    fetchPinnedDirectChats()
-  }, [fetchPinnedDirectChats])
-
-  return {
-    pinnedDirectChats,
-    pinnedCount,
-    loading,
-    togglePinDirectChat,
-    isDirectChatPinned,
-    getPinnedDirectChat,
-    fetchPinnedDirectChats,
   }
 }

@@ -50,7 +50,7 @@ export interface IListenSocketEvents {
   ) => void
   [ESocketEvents.friend_request_action]: (payload: TFriendRequestPayload) => void
   [ESocketEvents.pin_message]: (data: TPinMessageEventData) => void
-  [ESocketEvents.pin_group_message]: (data: TPinGroupMessageEventData) => void
+  [ESocketEvents.pin_message_group]: (data: TPinGroupMessageEventData) => void
   [ESocketEvents.pin_direct_chat]: (data: TPinDirectChatEventData) => void
   [ESocketEvents.new_conversation]: (
     directChat: TDirectChat | null,
@@ -62,6 +62,11 @@ export interface IListenSocketEvents {
   [ESocketEvents.broadcast_user_online_status]: (
     userId: number,
     onlineStatus: EOnlineStatus
+  ) => void
+  [ESocketEvents.remove_group_chat_members]: (
+    memberIds: number[],
+    groupChat: TGroupChat,
+    executor: TUserWithProfile
   ) => void
 }
 

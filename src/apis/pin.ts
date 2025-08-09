@@ -1,12 +1,13 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
 import { EAppRole } from "@/utils/enums"
-import { TMessageMedia, TSticker } from "@/utils/types/be-api"
+import { TMessageMedia, TPinnedChat, TSticker } from "@/utils/types/be-api"
 
 // Types for pin API responses
 export type TPinMessageResponse = {
   id: number
   messageId: number
   directChatId: number
+  groupChatId?: number
   pinnedBy: number
   pinnedAt: string
   DirectMessage: {
@@ -97,26 +98,36 @@ export type TPinnedMessage = {
   }
 }
 
-export const pinMessage = (body: { messageId: number; directChatId: number; isPinned: boolean }) =>
+type TPinMessageParams = {
+  messageId: number
+  directChatId?: number
+  groupChatId?: number
+  isPinned: boolean
+}
+
+export const pinMessage = (body: TPinMessageParams) =>
   clientAxios.post<TPinMessageResponse | TUnpinMessageResponse>(
     "/pin/pin-message",
     body,
     requestConfig
   )
 
-export const getPinnedMessages = (directChatId: number) =>
+export const getPinnedMessages = (directChatId?: number, groupChatId?: number) =>
   clientAxios.get<TPinnedMessage[]>("/pin/pinned-messages", {
     ...requestConfig,
-    params: { directChatId },
+    params: { directChatId, groupChatId },
   })
 
-export const getPinnedCount = (directChatId: number) =>
-  clientAxios.get<number>("/pin/pinned-count", { ...requestConfig, params: { directChatId } })
+export const getPinnedCount = (directChatId?: number, groupChatId?: number) =>
+  clientAxios.get<number>("/pin/pinned-count", {
+    ...requestConfig,
+    params: { directChatId, groupChatId },
+  })
 
-export const isMessagePinned = (messageId: number, directChatId: number) =>
+export const isMessagePinned = (messageId: number, directChatId?: number, groupChatId?: number) =>
   clientAxios.get<boolean>("/pin/is-pinned", {
     ...requestConfig,
-    params: { messageId, directChatId },
+    params: { messageId, directChatId, groupChatId },
   })
 
 // Direct Chat Pin APIs
@@ -231,3 +242,15 @@ export const getPinnedDirectChatDetail = (directChatId: number) =>
     ...requestConfig,
     params: { directChatId },
   })
+
+export const getPinnedChatsByUser = () =>
+  clientAxios.get<TPinnedChat[]>("/pin-conversation/get-pinned-chats-by-user", {
+    ...requestConfig,
+  })
+
+export const postTogglePinConversation = (directChatId?: number, groupChatId?: number) =>
+  clientAxios.post<TPinnedChat>(
+    "/pin-conversation/toggle-pin-conversation",
+    { directChatId, groupChatId },
+    { ...requestConfig }
+  )

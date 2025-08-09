@@ -725,3 +725,16 @@ export type TAdminUserMessageStatsData = {
 export type TAddMembersToGroupChatRes = {
   addedMembers: TGroupChatMemberWithUser[]
 }
+
+export type TTogglePinGroupChatRes = {
+  success: boolean
+  deletedCount: number
+}
+
+export type TPinnedChat = {
+  id: number
+  directChatId: number | null
+  groupChatId: number | null
+  pinnedBy: number
+  pinnedAt: Date
+}

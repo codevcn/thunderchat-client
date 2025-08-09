@@ -97,12 +97,12 @@ export const messagesSlice = createSlice({
       }
     },
     removeGroupChatMember: (state, action: PayloadAction<TRemoveGroupChatMemberState>) => {
-      const { memberId } = action.payload
+      const { memberIds } = action.payload
       const groupChat = state.groupChat
       if (groupChat) {
         state.groupChat = {
           ...groupChat,
-          Members: groupChat.Members.filter((member) => member.User.id !== memberId),
+          Members: groupChat.Members.filter((member) => !memberIds.includes(member.User.id)),
         }
       }
     },

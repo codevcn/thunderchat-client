@@ -140,8 +140,7 @@ export const ManageMembers = () => {
     groupMemberService
       .removeGroupChatMember(groupChat.id, memberId)
       .then(() => {
-        toaster.success("Member removed successfully")
-        dispatch(removeGroupChatMember({ memberId }))
+        dispatch(removeGroupChatMember({ memberIds: [memberId] }))
         handleHideRemoveMemberDialog(false)
       })
       .catch((err) => {

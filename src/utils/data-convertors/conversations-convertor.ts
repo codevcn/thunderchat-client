@@ -21,7 +21,7 @@ export const convertToDirectChatsUIData = (
     return {
       id: item.id,
       avatar: {
-        src: creatorProfile?.avatar,
+        src: user.id === creator.id ? recipientProfile?.avatar : creatorProfile?.avatar,
         fallback:
           user.id === creator.id ? recipientProfile.fullName[0] : creatorProfile.fullName[0],
       },

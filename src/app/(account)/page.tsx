@@ -94,7 +94,7 @@ const AccountPage = ({
     return <div className="text-white flex items-center justify-center h-full">No profile data</div>
 
   return (
-    <div className="w-full h-full bg-[#232526] flex flex-col">
+    <div className="w-full h-full bg-[#232526] flex flex-col overflow-y-auto STYLE-styled-scrollbar pb-4">
       {/* Header */}
       <div
         className="relative flex items-center px-4 py-3 border-b border-[#35363A] bg-[#232526] z-10"
@@ -135,17 +135,17 @@ const AccountPage = ({
       </div>
 
       {/* Avatar + Info */}
-      <div className="flex flex-col items-center py-6">
+      <div className="flex flex-col items-center py-6 px-4">
         <CustomAvatar
           src={userProfile.Profile.avatar}
           imgSize={90}
           className="ring-2 ring-[#3A3B3C] shadow-lg rounded-full text-[30px] font-bold"
           fallback={userProfile.Profile.fullName[0]}
         />
-        <div className="mt-3 text-xl font-bold text-white truncate max-w-full">
+        <div className="mt-3 text-xl font-bold text-white truncate max-w-full text-center">
           {userProfile.Profile.fullName}
         </div>
-        <div className="mt-2 text-sm text-[#CFCFCF] truncate max-w-full">
+        <div className="mt-2 text-sm text-[#CFCFCF] break-words max-w-full text-center">
           {userProfile.Profile.about}
         </div>
       </div>
@@ -156,29 +156,29 @@ const AccountPage = ({
           <AtSign size={18} className="mt-0.5 text-[#CFCFCF]" />
           <div className="min-w-0 flex-1">
             <div className="font-bold text-white truncate max-w-full">{userProfile.email}</div>
-            <div className="text-xs text-[#CFCFCF]">Email</div>
+            <div className="text-xs text-regular-placeholder-cl">Email</div>
           </div>
         </div>
         <div className="flex items-center gap-3 py-2 text-white">
-          <Calendar size={18} className="mt-0.5 text-[#CFCFCF]" />
+          <Calendar size={18} className="mt-0.5 text-regular-placeholder-cl" />
           <div>
             <div className="font-bold text-white">
               {userProfile.Profile.birthday
                 ? new Date(userProfile.Profile.birthday).toLocaleDateString("vi-VN")
                 : "01/01/2000"}
             </div>
-            <div className="text-xs text-[#CFCFCF]">Birthday</div>
+            <div className="text-xs text-regular-placeholder-cl">Birthday</div>
           </div>
         </div>
         <div className="flex items-center gap-3 py-2 text-white">
-          <Info size={18} className="mt-0.5 text-[#CFCFCF]" />
+          <Info size={18} className="mt-0.5 text-regular-placeholder-cl" />
           <div className="min-w-0 flex-1">
-            <div className="font-bold text-white truncate max-w-full">
+            <div className="text-xs text-white break-words max-w-full">
               {userProfile.Profile.about || (
                 <span className="text-regular-placeholder-cl italic leading-snug">Nothing...</span>
               )}
             </div>
-            <div className="text-xs text-[#CFCFCF]">About</div>
+            <div className="text-xs text-regular-placeholder-cl">About</div>
           </div>
         </div>
         <div className="flex flex-col gap-4 mt-5">

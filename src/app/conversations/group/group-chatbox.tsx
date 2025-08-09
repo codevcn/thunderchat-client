@@ -216,41 +216,37 @@ const Main = ({ groupChat }: TMainProps) => {
     clientSocket.socket.emit(ESocketEvents.join_group_chat_room, { groupChatId }, () => {})
   }
 
-  const handlePinMessage = (data: TPinGroupMessageEventData) => {
-    const currentChatId = groupChatIdRef.current
-    // Kiểm tra xem event có thuộc về chat hiện tại không
-    if (data.groupChatId === currentChatId) {
-      // Clear timeout cũ nếu có
-      if (fetchPinnedTimeoutRef.current) {
-        clearTimeout(fetchPinnedTimeoutRef.current)
-      }
-      // Debounce fetch để tránh fetch quá nhiều lần
-      fetchPinnedTimeoutRef.current = setTimeout(() => {
-        pinService
-          .getPinnedMessages(data.groupChatId)
-          .then((convertedMessages) => {
-            setPinnedMessages(removeDeletedMessagesFromPinnedMessages(convertedMessages))
-          })
-          .catch(() => {
-            setPinnedMessages([])
-          })
-      }, 300) // Delay 500ms
-    }
-  }
-
-  useEffect(() => {
-    groupChatIdRef.current = groupChatId
-    joinGroupChatRoom()
-  }, [groupChatId])
-
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
     // Remove toàn bộ listener cũ trước khi đăng ký mới
-    clientSocket.socket.off(ESocketEvents.pin_message)
-    clientSocket.socket.on(ESocketEvents.pin_group_message, handlePinMessage)
+    clientSocket.socket.off(ESocketEvents.pin_message_group)
+
+    const handlePinMessage = (data: TPinGroupMessageEventData) => {
+      const currentChatId = groupChatIdRef.current
+      // Kiểm tra xem event có thuộc về chat hiện tại không
+      if (data.groupChatId === currentChatId) {
+        // Clear timeout cũ nếu có
+        if (fetchPinnedTimeoutRef.current) {
+          clearTimeout(fetchPinnedTimeoutRef.current)
+        }
+        // Debounce fetch để tránh fetch quá nhiều lần
+        fetchPinnedTimeoutRef.current = setTimeout(() => {
+          pinService
+            .getPinnedMessages(undefined, data.groupChatId)
+            .then((convertedMessages) => {
+              setPinnedMessages(removeDeletedMessagesFromPinnedMessages(convertedMessages))
+            })
+            .catch(() => {
+              setPinnedMessages([])
+            })
+        }, 500) // Delay 500ms
+      }
+    }
+
+    clientSocket.socket.on(ESocketEvents.pin_message_group, handlePinMessage)
     return () => {
       resetAllChatDataHandler()
-      clientSocket.socket.off(ESocketEvents.pin_group_message, handlePinMessage)
+      clientSocket.socket.off(ESocketEvents.pin_message_group, handlePinMessage)
       // Cleanup timeout
       if (fetchPinnedTimeoutRef.current) {
         clearTimeout(fetchPinnedTimeoutRef.current)
@@ -260,9 +256,11 @@ const Main = ({ groupChat }: TMainProps) => {
 
   // Fetch pinned messages ban đầu khi vào phòng chat
   useEffect(() => {
+    groupChatIdRef.current = groupChatId
+    joinGroupChatRoom()
     if (groupChatId) {
       pinService
-        .getPinnedMessages(groupChatId)
+        .getPinnedMessages(undefined, groupChatId)
         .then((convertedMessages) => {
           setPinnedMessages(removeDeletedMessagesFromPinnedMessages(convertedMessages))
         })

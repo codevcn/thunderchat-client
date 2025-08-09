@@ -7,10 +7,8 @@ import {
   postUploadGroupAvatar,
   getGroupMessageContext,
   deleteGroupMessage,
-  postAddMembersToGroupChat,
 } from "@/apis/group-chat"
 import type {
-  TAddMembersToGroupChatRes,
   TGroupChat,
   TGroupChatData,
   TUpdateGroupChatParams,
@@ -81,14 +79,6 @@ class GroupChatService {
   // Xoá/thu hồi tin nhắn direct chat
   async deleteMessage(messageId: number) {
     const { data } = await deleteGroupMessage(messageId)
-    return data
-  }
-
-  async addMembersToGroupChat(
-    groupChatId: number,
-    memberIds: number[]
-  ): Promise<TAddMembersToGroupChatRes> {
-    const { data } = await postAddMembersToGroupChat(groupChatId, memberIds)
     return data
   }
 }

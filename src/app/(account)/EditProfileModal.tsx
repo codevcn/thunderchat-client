@@ -1,9 +1,8 @@
 import { useRef, useState, useEffect } from "react"
 import { CustomAvatar, toast } from "@/components/materials"
 import AvatarCropperModal from "@/components/materials/avatar-cropper-modal"
-import { Pencil } from "lucide-react"
+import { Camera, X } from "lucide-react"
 import { FileService } from "@/services/file.service"
-import { TProfile } from "@/utils/types/be-api"
 import { TUserWithProfileFE } from "@/utils/types/fe-api"
 
 function toDateInputValue(dateString: string) {
@@ -142,7 +141,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-[#232526] rounded-xl p-6 w-full max-w-md relative">
         <button className="absolute top-2 right-2 text-white" onClick={onClose}>
-          ✕
+          <X size={24} strokeWidth={3} />
         </button>
         <h2 className="text-xl font-bold text-white mb-4">Edit Personal Information</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -158,7 +157,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
                 fallback={userProfile.Profile.fullName[0]}
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                <Pencil size={28} color="#CFCFCF" />
+                <Camera size={28} color="#CFCFCF" />
               </div>
               <input
                 type="file"
@@ -192,7 +191,7 @@ const EditProfileModal = ({ open, onClose, userProfile, onSave }: EditProfileMod
           <div>
             <label className="block text-sm font-semibold mb-1 text-[#CFCFCF]">About Me</label>
             <textarea
-              className="w-full rounded-xl bg-[#2C2E31] border border-[#35363A] px-4 py-2 text-white resize-none min-h-[60px]"
+              className="w-full rounded-xl bg-[#2C2E31] border border-[#35363A] px-4 py-2 text-white resize-none min-h-[80px] leading-snug"
               value={about}
               onChange={(e) => setAbout(e.target.value)}
             />

@@ -28,6 +28,7 @@ import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react
 import { createPortal } from "react-dom"
 import { ShareMessageModal } from "./share-message-modal"
 import { FileService } from "@/services/file.service"
+import { pinService } from "@/services/pin.service"
 
 type TContentProps = {
   content: string
@@ -380,8 +381,19 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
     { message, user, stickyTime, onReply, isPinned, onPinChange, pinnedCount, onReplyPreviewClick },
     ref
   ) => {
-    const { authorId, content, createdAt, isNewMsg, id, status, Media, Sticker, type, ReplyTo } =
-      message
+    const {
+      authorId,
+      content,
+      createdAt,
+      isNewMsg,
+      id,
+      status,
+      Media,
+      Sticker,
+      type,
+      ReplyTo,
+      groupChatId,
+    } = message
 
     const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
 
@@ -392,17 +404,12 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       if (loadingPin) return
       setLoadingPin(true)
       try {
-        // const response = await pinService.togglePinGroupMessage()
-        // // Xử lý response dựa trên loại response
-        // if ("success" in response) {
-        //   // Bỏ ghim thành công
-        //   onPinChange(false)
-        //   toast.success("Đã bỏ ghim tin nhắn")
-        // } else {
-        //   // Ghim thành công
-        //   onPinChange(true)
-        //   toast.success("Đã ghim tin nhắn")
-        // }
+        const response = await pinService.togglePinMessage(id, undefined, !isPinned, groupChatId)
+        if ("success" in response) {
+          onPinChange(false)
+        } else {
+          onPinChange(true)
+        }
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"
         toast.error(errorMessage)

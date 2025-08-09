@@ -415,16 +415,13 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
           message.directChatId!,
           !isPinned
         )
-
         // Xử lý response dựa trên loại response
         if ("success" in response) {
           // Bỏ ghim thành công
           onPinChange(false)
-          toast.success("Đã bỏ ghim tin nhắn")
         } else {
           // Ghim thành công
           onPinChange(true)
-          toast.success("Đã ghim tin nhắn")
         }
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"

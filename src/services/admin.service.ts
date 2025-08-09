@@ -81,9 +81,18 @@ class AdminService {
     reportId: number,
     banType: EBanType,
     reason: string,
-    banDuration?: number
+    banDuration?: number,
+    bannedUntil?: string,
+    messageIds?: number[]
   ): Promise<TAdminBanUserResponse> {
-    const { data } = await banReportedUser(reportId, banType, reason, banDuration)
+    const { data } = await banReportedUser(
+      reportId,
+      banType,
+      reason,
+      banDuration,
+      bannedUntil,
+      messageIds
+    )
     return data
   }
 

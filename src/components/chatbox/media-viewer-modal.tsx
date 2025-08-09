@@ -14,12 +14,11 @@ import {
   ZoomOut,
   MessageSquare,
 } from "lucide-react"
-import Image from "next/image"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import type { TUserWithProfile } from "@/utils/types/be-api"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
+import { TUserWithProfileFE } from "@/utils/types/fe-api"
 
 type MediaItem = {
   id: number
@@ -29,6 +28,7 @@ type MediaItem = {
   thumbnailUrl?: string | null
   createdAt?: string
   authorId?: number
+  mediaType?: string
 }
 
 type MediaViewerModalProps = {
@@ -36,8 +36,8 @@ type MediaViewerModalProps = {
   onClose: () => void
   mediaItems: MediaItem[]
   initialIndex: number
-  creator: TUserWithProfile
-  recipient: TUserWithProfile
+  creator: TUserWithProfileFE
+  recipient: TUserWithProfileFE
   // New props to control button visibility
   showUserInfo?: boolean
   showActionButtons?: boolean
@@ -101,7 +101,7 @@ const MediaViewerModal = ({
           goToNext()
           break
         case " ":
-          if (currentMedia?.type === "VIDEO") {
+          if (currentMedia?.mediaType === "VIDEO" || currentMedia?.type === "VIDEO") {
             e.preventDefault()
             toggleVideoPlay()
           }
@@ -217,7 +217,10 @@ const MediaViewerModal = ({
 
   // Calculate available height for media area
   const headerH = HEADER_HEIGHT
-  const zoomH = showZoom && currentMedia.type === "IMAGE" ? ZOOM_HEIGHT : 0
+  const zoomH =
+    showZoom && (currentMedia.mediaType === "IMAGE" || currentMedia.type === "IMAGE")
+      ? ZOOM_HEIGHT
+      : 0
   const mediaAreaStyle = {
     top: headerH + zoomH,
     bottom: 0,
@@ -313,43 +316,45 @@ const MediaViewerModal = ({
       </div>
 
       {/* Zoom controls */}
-      {showZoom && showZoomControls && currentMedia.type === "IMAGE" && (
-        <div
-          className="flex items-center justify-center gap-4 px-4 py-3 bg-black/50 border-b border-gray-700"
-          style={{
-            position: "absolute",
-            top: HEADER_HEIGHT,
-            left: 0,
-            right: 0,
-            height: ZOOM_HEIGHT,
-            zIndex: 10,
-          }}
-        >
-          <button
-            onClick={handleZoomOut}
-            className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+      {showZoom &&
+        showZoomControls &&
+        (currentMedia.mediaType === "IMAGE" || currentMedia.type === "IMAGE") && (
+          <div
+            className="flex items-center justify-center gap-4 px-4 py-3 bg-black/50 border-b border-gray-700"
+            style={{
+              position: "absolute",
+              top: HEADER_HEIGHT,
+              left: 0,
+              right: 0,
+              height: ZOOM_HEIGHT,
+              zIndex: 10,
+            }}
           >
-            <ZoomOut className="w-4 h-4 text-gray-400" />
-          </button>
-          <div className="flex items-center gap-2 flex-1 max-w-xs">
-            <input
-              type="range"
-              min="25"
-              max="300"
-              value={zoomLevel}
-              onChange={handleZoomChange}
-              className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <span className="text-gray-400 text-sm min-w-[3rem]">{zoomLevel}%</span>
+            <button
+              onClick={handleZoomOut}
+              className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+            >
+              <ZoomOut className="w-4 h-4 text-gray-400" />
+            </button>
+            <div className="flex items-center gap-2 flex-1 max-w-xs">
+              <input
+                type="range"
+                min="25"
+                max="300"
+                value={zoomLevel}
+                onChange={handleZoomChange}
+                className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+              />
+              <span className="text-gray-400 text-sm min-w-[3rem]">{zoomLevel}%</span>
+            </div>
+            <button
+              onClick={handleZoomIn}
+              className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+            >
+              <ZoomIn className="w-4 h-4 text-gray-400" />
+            </button>
           </div>
-          <button
-            onClick={handleZoomIn}
-            className="p-2 hover:bg-gray-700 rounded-full transition-colors"
-          >
-            <ZoomIn className="w-4 h-4 text-gray-400" />
-          </button>
-        </div>
-      )}
+        )}
 
       {/* Media Content Area */}
       <div style={mediaAreaStyle}>
@@ -372,7 +377,7 @@ const MediaViewerModal = ({
         )}
         {/* Media content */}
         <div className="w-full h-full flex items-center justify-center">
-          {currentMedia.type === "IMAGE" ? (
+          {currentMedia.mediaType === "IMAGE" || currentMedia.type === "IMAGE" ? (
             showZoom ? (
               <div
                 ref={imgContainerRef}
@@ -418,10 +423,11 @@ const MediaViewerModal = ({
                   }}
                   draggable={false}
                   onLoad={() => setIsImgLoading(false)}
+                  onError={() => setIsImgLoading(false)}
                 />
               </div>
             )
-          ) : currentMedia.type === "VIDEO" ? (
+          ) : currentMedia.mediaType === "VIDEO" || currentMedia.type === "VIDEO" ? (
             <div className="relative w-full h-full flex items-center justify-center">
               {isVideoLoading && (
                 <div className="absolute inset-0 flex items-center justify-center z-10">
@@ -436,6 +442,7 @@ const MediaViewerModal = ({
                 controls
                 style={{ display: isVideoLoading ? "none" : "block" }}
                 onLoadedData={() => setIsVideoLoading(false)}
+                onError={() => setIsVideoLoading(false)}
               />
               {/* Custom play/pause button overlay */}
               <button
@@ -449,7 +456,30 @@ const MediaViewerModal = ({
                 )}
               </button>
             </div>
-          ) : null}
+          ) : currentMedia.type === "TEXT" ? (
+            // Handle TEXT messages (links)
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div className="text-center max-w-md mx-auto p-6">
+                <div className="text-blue-400 text-lg font-medium mb-4">Link</div>
+                <div className="text-white text-sm break-all mb-4">{currentMedia.mediaUrl}</div>
+                <a
+                  href={currentMedia.mediaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Open Link
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="text-white text-center">
+              <p>Không thể hiển thị media</p>
+              <p>Type: {currentMedia?.type}</p>
+              <p>MediaType: {currentMedia?.mediaType}</p>
+              <p>URL: {currentMedia?.mediaUrl}</p>
+            </div>
+          )}
         </div>
         {/* Counter */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-black/50 rounded-full">

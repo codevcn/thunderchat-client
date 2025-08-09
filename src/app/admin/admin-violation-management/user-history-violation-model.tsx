@@ -63,6 +63,7 @@ interface UserReportHistoryModalProps {
   userId: number
   userName: string
   userEmail: string
+  currentReportId?: number // ID của báo cáo hiện tại đang được xem
 }
 
 export const UserReportHistoryModal = ({
@@ -71,6 +72,7 @@ export const UserReportHistoryModal = ({
   userId,
   userName,
   userEmail,
+  currentReportId,
 }: UserReportHistoryModalProps) => {
   const [activeTab, setActiveTab] = useState<"reported" | "reportedBy">("reported")
   const [loading, setLoading] = useState(false)
@@ -106,9 +108,9 @@ export const UserReportHistoryModal = ({
       } else {
         setReportedByData(result)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching user report history:", error)
-      setError(error.response?.data?.message || "Failed to fetch report history")
+      setError(error instanceof Error ? error.message : "Failed to fetch report history")
     } finally {
       setLoading(false)
     }
@@ -123,7 +125,7 @@ export const UserReportHistoryModal = ({
       } else {
         setReportedByData(result)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching user report history for tab:", error)
     }
   }
@@ -230,6 +232,12 @@ export const UserReportHistoryModal = ({
                       <div className="flex items-center gap-2">
                         <CategoryBadge category={report.reportCategory} />
                         <StatusBadge status={report.status} />
+                        {/* Show "Current" indicator if this is the current report */}
+                        {currentReportId && report.id === currentReportId && (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-regular-violet-cl/20 text-regular-violet-cl border border-regular-violet-cl/30">
+                            Hiện tại
+                          </span>
+                        )}
                       </div>
                       <span className="text-regular-text-secondary-cl text-xs">
                         {new Date(report.createdAt).toLocaleDateString()}

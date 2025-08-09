@@ -5,11 +5,10 @@ import MediaViewerModal from "@/components/chatbox/media-viewer-modal"
 import LoadingSpinner from "@/components/materials/loading-spinner"
 import Filters from "./filter"
 import { MediaGridContent } from "./media-grid"
-import { useUser } from "@/hooks/user"
-import { useVoicePlayerActions } from "@/contexts/voice-player.context"
-import { EMessageTypes } from "@/utils/enums"
+import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
 import { useMediaPagination } from "@/hooks/use-media-pagination"
 import type { TMediaFilters, TMessageFullInfo } from "@/utils/types/be-api"
+import { TUserWithProfileFE } from "@/utils/types/fe-api"
 
 // Header component
 const Header = React.memo(({ onClose }: { onClose: () => void }) => (
@@ -81,27 +80,24 @@ Tabs.displayName = "Tabs"
 const MediaArchivePanel = React.memo(
   ({
     onClose,
-    mediaData,
     creator,
     recipient,
     initialTab = "Images/Video",
     directChatId,
   }: {
     onClose: () => void
-    mediaData: any
-    allMediaItems: any[]
-    creator: any
-    recipient: any
+    creator: TUserWithProfileFE
+    recipient: TUserWithProfileFE
     initialTab?: "Images/Video" | "files" | "voices" | "links"
     directChatId: number
   }) => {
     const [tab, setTab] = useState<"Images/Video" | "files" | "voices" | "links">(initialTab)
-    const [senderFilter, setSenderFilter] = useState("all")
+    const [senderFilter, setSenderFilter] = useState<number | "all">("all")
     const [dateSort, setDateSort] = useState("desc")
     const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false)
     const [selectedMediaIndex, setSelectedMediaIndex] = useState(0)
     const [isDatePopupOpen, setIsDatePopupOpen] = useState(false)
-    const datePopupRef = useRef<HTMLDivElement>(null)
+    const [isSenderPopupOpen, setIsSenderPopupOpen] = useState(false)
     const [fromDate, setFromDate] = useState("")
     const [toDate, setToDate] = useState("")
     const [dateFilterApplied, setDateFilterApplied] = useState(false)
@@ -113,13 +109,9 @@ const MediaArchivePanel = React.memo(
       error,
       hasMore,
       currentPage,
-      totalPages,
-      totalItems,
       loadMore,
-      refresh,
       setFilters,
       setSortOrder,
-      resetPagination,
     } = useMediaPagination({
       directChatId,
       initialLimit: 20,
@@ -128,13 +120,14 @@ const MediaArchivePanel = React.memo(
         // Set initial filters based on initialTab
         const filters: TMediaFilters = {}
         if (initialTab === "Images/Video") {
-          filters.types = ["image", "video"]
+          filters.types = [EMessageMediaTypes.IMAGE, EMessageMediaTypes.VIDEO]
         } else if (initialTab === "files") {
-          filters.type = "file"
+          filters.type = EMessageMediaTypes.DOCUMENT
         } else if (initialTab === "voices") {
-          filters.type = "voice"
+          filters.type = EMessageMediaTypes.AUDIO
+        } else if (initialTab === "links") {
+          filters.types = [] // Empty array to get only TEXT messages
         }
-        // Note: 'links' tab doesn't need initial filter as it filters on frontend
         return filters
       }, [initialTab]),
     })
@@ -156,17 +149,20 @@ const MediaArchivePanel = React.memo(
 
       // Type filter based on current tab
       if (tab === "Images/Video") {
-        filters.types = ["image", "video"]
+        filters.types = [EMessageMediaTypes.IMAGE, EMessageMediaTypes.VIDEO]
       } else if (tab === "files") {
-        filters.type = "file"
+        filters.type = EMessageMediaTypes.DOCUMENT
       } else if (tab === "voices") {
-        filters.type = "voice"
+        filters.type = EMessageMediaTypes.AUDIO
+      } else if (tab === "links") {
+        // For links tab, we need to add a special filter to get only TEXT messages
+        // This will be handled in the backend
+        filters.types = [] // Empty array to indicate we want TEXT messages only
       }
-      // Note: 'links' tab doesn't need type filter
 
       // Sender filter
       if (senderFilter !== "all") {
-        filters.senderId = parseInt(senderFilter)
+        filters.senderId = senderFilter
       }
 
       // Date filter
@@ -190,7 +186,7 @@ const MediaArchivePanel = React.memo(
 
     // Lọc dữ liệu theo filter (legacy - will be replaced by pagination)
     const filterItems = useMemo(
-      () => (items: any[]) => {
+      () => (items: TMessageFullInfo[]) => {
         return items.filter((item) => {
           // Lọc theo người gửi
           if (senderFilter !== "all" && item.authorId !== senderFilter) return false
@@ -231,38 +227,81 @@ const MediaArchivePanel = React.memo(
 
     // Filter items based on current tab
     if (tab === "Images/Video") {
-      // Backend already returns only IMAGE and VIDEO types
-      items = paginatedItems
-    } else if (tab === "files") {
-      // Backend already returns only DOCUMENT types
-      items = paginatedItems
-    } else if (tab === "voices") {
-      // Backend already returns only AUDIO types
-      items = paginatedItems
-    } else if (tab === "links") {
-      // For Links tab, filter TEXT messages that contain URLs
+      // Filter to ensure only IMAGE and VIDEO types are shown
       items = paginatedItems.filter(
         (item) =>
-          item.type === EMessageTypes.TEXT &&
-          item.content &&
-          (item.content.includes("http://") || item.content.includes("https://"))
+          item.type === EMessageTypes.MEDIA &&
+          item.Media?.type &&
+          (item.Media.type === EMessageMediaTypes.IMAGE ||
+            item.Media.type === EMessageMediaTypes.VIDEO)
+      )
+    } else if (tab === "files") {
+      // Filter to ensure only DOCUMENT types are shown
+      items = paginatedItems.filter(
+        (item) =>
+          item.type === EMessageTypes.MEDIA && item.Media?.type === EMessageMediaTypes.DOCUMENT
+      )
+    } else if (tab === "voices") {
+      // Filter to ensure only AUDIO types are shown
+      items = paginatedItems.filter(
+        (item) => item.type === EMessageTypes.MEDIA && item.Media?.type === EMessageMediaTypes.AUDIO
+      )
+    } else if (tab === "links") {
+      // Backend already returns only TEXT messages, just filter for URLs
+      items = paginatedItems.filter(
+        (item) =>
+          item.content && (item.content.includes("http://") || item.content.includes("https://"))
       )
     }
 
     const grouped = groupByDate(items)
 
-    // Filter items for MediaViewerModal (only items with mediaUrl)
+    // Filter items for MediaViewerModal (only items with mediaUrl or content for links)
     const mediaItemsForViewer = items
-      .filter((item) => item.Media?.url)
-      .map((item) => ({
-        id: item.id,
-        type: item.type,
-        mediaUrl: item.Media?.url!,
-        fileName: item.Media?.fileName,
-        thumbnailUrl: item.Media?.thumbnailUrl,
-        createdAt: item.createdAt,
-        authorId: item.authorId,
-      }))
+      .filter((item) => {
+        // For MEDIA messages, check if they have Media.url
+        if (item.type === EMessageTypes.MEDIA && item.Media?.url) {
+          return true
+        }
+        // For TEXT messages (links), check if they have content with URL
+        if (
+          item.type === EMessageTypes.TEXT &&
+          item.content &&
+          (item.content.includes("http://") || item.content.includes("https://"))
+        ) {
+          return true
+        }
+        return false
+      })
+      .map((item) => {
+        if (item.type === EMessageTypes.MEDIA && item.Media) {
+          // MEDIA messages
+          return {
+            id: item.id,
+            type: item.type,
+            mediaUrl: item.Media.url,
+            fileName: item.Media.fileName,
+            thumbnailUrl: item.Media.thumbnailUrl,
+            createdAt: item.createdAt,
+            authorId: item.authorId,
+            mediaType: item.Media.type,
+          }
+        } else if (item.type === EMessageTypes.TEXT) {
+          // TEXT messages (links)
+          return {
+            id: item.id,
+            type: item.type,
+            mediaUrl: item.content, // Use content as URL for links
+            fileName: item.content,
+            thumbnailUrl: null,
+            createdAt: item.createdAt,
+            authorId: item.authorId,
+            mediaType: EMessageMediaTypes.DOCUMENT, // Default type for links
+          }
+        }
+        return null
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
 
     return (
       <div className="flex flex-col h-full w-full bg-[#181A1B]">
@@ -278,13 +317,13 @@ const MediaArchivePanel = React.memo(
           setDateSort={setDateSort}
           isDatePopupOpen={isDatePopupOpen}
           setIsDatePopupOpen={setIsDatePopupOpen}
+          isSenderPopupOpen={isSenderPopupOpen}
+          setIsSenderPopupOpen={setIsSenderPopupOpen}
           fromDate={fromDate}
           setFromDate={setFromDate}
           toDate={toDate}
           setToDate={setToDate}
-          creator={creator}
-          recipient={recipient}
-          datePopupRef={datePopupRef as unknown as React.RefObject<HTMLDivElement>}
+          members={[creator, recipient]}
           applyDateFilter={applyDateFilter}
         />
         {/* Content */}
@@ -317,6 +356,7 @@ const MediaArchivePanel = React.memo(
               onLoadMore={loadMore}
               hasMore={hasMore}
               loading={loading}
+              isFilterOpen={isDatePopupOpen || isSenderPopupOpen}
             />
           )}
         </div>

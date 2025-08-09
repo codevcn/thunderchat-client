@@ -157,21 +157,21 @@ export const useMediaPagination = ({
           // Kiểm tra xem message có phù hợp với filters hiện tại không
           const messageMatchesCurrentFilters = () => {
             const { filters } = prev
-            const messageType = updatedMessage.type
+            const messageType = updatedMessage.Media?.type
 
             // Kiểm tra type filter
-            if ((filters as any).types && (filters as any).types.length > 0) {
+            if (filters.types && filters.types.length > 0) {
               // Nếu có types filter, kiểm tra message type có trong danh sách không
-              const allowedTypes = (filters as any).types
+              const allowedTypes = filters.types
                 .map((type: string) => {
                   switch (type) {
-                    case "image":
+                    case EMessageMediaTypes.IMAGE:
                       return EMessageMediaTypes.IMAGE
-                    case "video":
+                    case EMessageMediaTypes.VIDEO:
                       return EMessageMediaTypes.VIDEO
-                    case "file":
+                    case EMessageMediaTypes.DOCUMENT:
                       return EMessageMediaTypes.DOCUMENT
-                    case "voice":
+                    case EMessageMediaTypes.AUDIO:
                       return EMessageMediaTypes.AUDIO
                     default:
                       return null
@@ -179,25 +179,12 @@ export const useMediaPagination = ({
                 })
                 .filter(Boolean)
 
-              if (!allowedTypes.includes(messageType)) {
+              if (!allowedTypes.includes(messageType || null)) {
                 return false
               }
             } else if (filters.type) {
               // Nếu có single type filter, kiểm tra message type
-              const expectedType = (() => {
-                switch (filters.type) {
-                  case "image":
-                    return EMessageMediaTypes.IMAGE
-                  case "video":
-                    return EMessageMediaTypes.VIDEO
-                  case "file":
-                    return EMessageMediaTypes.DOCUMENT
-                  case "voice":
-                    return EMessageMediaTypes.AUDIO
-                  default:
-                    return null
-                }
-              })()
+              const expectedType = filters.type
 
               if (updatedMessage.Media?.type !== expectedType) {
                 return false
@@ -253,6 +240,16 @@ export const useMediaPagination = ({
   const fetchMediaMessages = useCallback(
     async (page: number, filters: TMediaFilters, sort: "asc" | "desc", append: boolean = false) => {
       try {
+        // Add validation for directChatId
+        if (!directChatId || directChatId <= 0) {
+          setState((prev) => ({
+            ...prev,
+            loading: false,
+            error: "Invalid direct chat ID",
+          }))
+          return
+        }
+
         setState((prev) => ({ ...prev, loading: true, error: null }))
 
         // Check cache first
@@ -313,7 +310,6 @@ export const useMediaPagination = ({
           throw new Error(response.message || "Failed to fetch media messages")
         }
       } catch (error) {
-        console.error("[useMediaPagination] Error fetching media messages:", error)
         setState((prev) => ({
           ...prev,
           loading: false,
@@ -326,7 +322,7 @@ export const useMediaPagination = ({
 
   // Load more items
   const loadMore = useCallback(async () => {
-    if (state.loading || !state.hasMore) return
+    if (state.loading || !state.hasMore || !directChatId || directChatId <= 0) return
 
     const nextPage = state.currentPage + 1
     await fetchMediaMessages(nextPage, state.filters, state.sortOrder, true)
@@ -337,13 +333,16 @@ export const useMediaPagination = ({
     state.filters,
     state.sortOrder,
     fetchMediaMessages,
+    directChatId,
   ])
 
   // Refresh data
   const refresh = useCallback(async () => {
+    if (!directChatId || directChatId <= 0) return
+
     clearCache()
     await fetchMediaMessages(1, state.filters, state.sortOrder, false)
-  }, [clearCache, fetchMediaMessages, state.filters, state.sortOrder])
+  }, [clearCache, fetchMediaMessages, state.filters, state.sortOrder, directChatId])
 
   // Set filters and reset pagination
   const setFilters = useCallback(
@@ -360,12 +359,14 @@ export const useMediaPagination = ({
         }
 
         // Fetch with new filters using current sort order
-        fetchMediaMessages(1, filters, newState.sortOrder, false)
+        if (directChatId && directChatId > 0) {
+          fetchMediaMessages(1, filters, newState.sortOrder, false)
+        }
 
         return newState
       })
     },
-    [fetchMediaMessages]
+    [fetchMediaMessages, directChatId]
   )
 
   // Set sort order and reset pagination
@@ -383,12 +384,14 @@ export const useMediaPagination = ({
         }
 
         // Fetch with new sort order using current filters
-        fetchMediaMessages(1, newState.filters, sort, false)
+        if (directChatId && directChatId > 0) {
+          fetchMediaMessages(1, newState.filters, sort, false)
+        }
 
         return newState
       })
     },
-    [fetchMediaMessages]
+    [fetchMediaMessages, directChatId]
   )
 
   // Reset pagination
@@ -405,13 +408,17 @@ export const useMediaPagination = ({
     }))
 
     // Fetch initial data
-    fetchMediaMessages(1, initialFilters, initialSort, false)
-  }, [initialFilters, initialSort, fetchMediaMessages])
+    if (directChatId && directChatId > 0) {
+      fetchMediaMessages(1, initialFilters, initialSort, false)
+    }
+  }, [initialFilters, initialSort, fetchMediaMessages, directChatId])
 
   // Initial load
   useEffect(() => {
-    fetchMediaMessages(1, initialFilters, initialSort, false)
-  }, [initialFilters, initialSort]) // Only depend on initial values
+    if (directChatId && directChatId > 0) {
+      fetchMediaMessages(1, initialFilters, initialSort, false)
+    }
+  }, [directChatId, initialFilters, initialSort, fetchMediaMessages]) // Add directChatId and fetchMediaMessages to dependencies
 
   // Effect để lắng nghe socket events
   useEffect(() => {

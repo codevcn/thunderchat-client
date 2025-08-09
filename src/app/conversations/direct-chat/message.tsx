@@ -142,10 +142,14 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
 
   if (message?.isDeleted) {
+    const messageText = message.isViolated
+      ? "This message has been recalled due to violation"
+      : "This message has been deleted"
+
     return (
       <div
         className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent("This message has been deleted") }}
+        dangerouslySetInnerHTML={{ __html: santizeMsgContent(messageText) }}
       ></div>
     )
   }
@@ -296,19 +300,18 @@ const StickyTime = ({ stickyTime }: TStickyTimeProps) => {
 }
 
 const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
-  const { type, Media, Sticker, content, isDeleted } = replyTo
+  const { type, Media, Sticker, content, isDeleted, isViolated } = replyTo
   const mediaUrl = Media?.url
   const fileName = Media?.fileName
   const stickerUrl = Sticker?.imageUrl
   const mediaType = Media?.type
 
-  // Nếu tin nhắn gốc đã bị thu hồi, hiển thị thông báo thu hồi
+  // Nếu tin nhắn gốc đã bị thu hồi hoặc vi phạm, hiển thị thông báo tương ứng
   if (isDeleted) {
-    return (
-      <span className="text-xs rounded mt-0.5 inline-block text-gray-400">
-        This message has been deleted
-      </span>
-    )
+    const messageText = isViolated
+      ? "This message has been recalled due to violation"
+      : "This message has been deleted"
+    return <span className="text-xs rounded mt-0.5 inline-block text-gray-400">{messageText}</span>
   }
 
   // Nếu là ảnh
@@ -395,6 +398,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       type,
       ReplyTo,
       isDeleted,
+      isViolated,
     } = message
 
     const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
@@ -447,10 +451,11 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               className="max-w-[300px] text-sm truncate"
               dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
             ></div>
-            {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi */}
+            {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi/vi phạm */}
             {message.ReplyTo &&
               typeof message.ReplyTo.id !== "undefined" &&
-              !message.ReplyTo.isDeleted && (
+              !message.ReplyTo.isDeleted &&
+              !message.ReplyTo.isViolated && (
                 <button
                   className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
                   onClick={() => {
@@ -607,7 +612,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && !isDeleted && (
+                {ReplyTo && !isDeleted && !isViolated && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -734,7 +739,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && !message.isDeleted && (
+                {ReplyTo && !message.isDeleted && !message.isViolated && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -780,7 +785,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               onClose={handleCloseDropdown}
               content={content}
               isTextMessage={type === "TEXT"}
-              canDelete={user.id === authorId && !message.isDeleted}
+              canDelete={user.id === authorId && !message.isDeleted && !message.isViolated}
               messageId={message.id}
             />
           </div>

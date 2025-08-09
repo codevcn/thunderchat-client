@@ -66,8 +66,8 @@ import type {
 /**
  * Get media messages with pagination and filters
  */
-export const getMediaMessages = (params: TGetMediaMessagesParams) =>
-  clientAxios.get<TGetMediaMessagesResponse>(`media-message/${params.directChatId}`, {
+export const getMediaMessages = (params: TGetMediaMessagesParams) => {
+  return clientAxios.get<TGetMediaMessagesResponse>(`media-message/${params.directChatId}`, {
     ...requestConfig,
     params: {
       type: params.type,
@@ -80,6 +80,7 @@ export const getMediaMessages = (params: TGetMediaMessagesParams) =>
       sort: params.sort,
     },
   })
+}
 
 /**
  * Get media statistics for a chat

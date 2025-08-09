@@ -80,9 +80,23 @@ export const useAdminViolationReports = () => {
   )
 
   const banUser = useCallback(
-    async (reportId: number, banType: EBanType, reason: string, banDuration?: number) => {
+    async (
+      reportId: number,
+      banType: EBanType,
+      reason: string,
+      banDuration?: number,
+      bannedUntil?: string,
+      messageIds?: number[]
+    ) => {
       try {
-        const response = await adminService.banReportedUser(reportId, banType, reason, banDuration)
+        const response = await adminService.banReportedUser(
+          reportId,
+          banType,
+          reason,
+          banDuration,
+          bannedUntil,
+          messageIds
+        )
 
         if (response.success) {
           toast.success(response.message)
@@ -127,6 +141,12 @@ export const useViolationReportDetail = (reportId: number | null) => {
       setError(null)
 
       const response = await adminService.getViolationReportDetail(reportId)
+
+      // Sort reported messages by messageId (ascending) to ensure chronological order
+      if (response.reportedMessages) {
+        response.reportedMessages.sort((a, b) => a.messageId - b.messageId)
+      }
+
       setReport(response)
     } catch (err: any) {
       console.error("Error fetching report detail:", err)

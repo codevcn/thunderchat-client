@@ -324,7 +324,29 @@ export const Messages = memo(
         return
       }
       if (newMessage.directChatId !== directChatId) return
-      dispatch(mergeMessages([newMessage]))
+
+      // Kiểm tra xem tin nhắn đã tồn tại chưa
+      const existingMessage = messages?.find((msg) => msg.id === id)
+
+      if (existingMessage) {
+        // Cập nhật tin nhắn cũ
+        dispatch(updateMessages([{ msgId: id, msgUpdates: newMessage }]))
+      } else {
+        // Nếu không tìm thấy tin nhắn trong state
+        if (
+          newMessage.isDeleted ||
+          newMessage.isViolated ||
+          newMessage.ReplyTo?.isDeleted ||
+          newMessage.ReplyTo?.isViolated
+        ) {
+          // Force update cho tin nhắn đã thu hồi/vi phạm hoặc tin nhắn reply đến tin nhắn đã thu hồi/vi phạm
+          dispatch(updateMessages([{ msgId: id, msgUpdates: newMessage }]))
+        } else {
+          // Chỉ thêm tin nhắn mới thực sự
+          dispatch(mergeMessages([newMessage]))
+        }
+      }
+
       dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.DIRECT }))
       clientSocket.setMessageOffset(id, directChatId)
     }
@@ -652,6 +674,7 @@ export const Messages = memo(
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
       eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
+      clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendMessage)
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
       clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
       return () => {
@@ -660,6 +683,7 @@ export const Messages = memo(
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
         eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
+        clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendMessage)
         clientSocket.socket.removeListener(
           ESocketEvents.recovered_connection,
           handleRecoverdConnection

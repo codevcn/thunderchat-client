@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { CustomAvatar, Spinner, toast } from "@/components/materials"
 import { useUserProfile } from "@/hooks/user-profile"
 import EditProfileModal from "./EditProfileModal"
 import { useAppDispatch } from "@/hooks/redux"
-import { updateProfileThunk, fetchProfile } from "@/redux/user/profile.slice"
+import { updateProfileThunk } from "@/redux/user/profile.slice"
 import { ArrowLeft, Info, AtSign, Calendar, Pencil } from "lucide-react"
 import { LogOut, Lock as LockIcon } from "lucide-react"
 import { resetAuthStatus } from "@/redux/auth/auth.slice"
@@ -24,30 +24,12 @@ const AccountPage = ({
   showBackButton?: boolean
   onBack?: () => void
 }) => {
-  const [refreshKey, setRefreshKey] = useState(0)
-  const userProfile = useUserProfile(refreshKey)
+  const { userProfile, loading: profileLoading, error, refetch } = useUserProfile()
   const dispatch = useAppDispatch()
   // State cho form
-  const [avatar, setAvatar] = useState<string | null>(null)
-  const [fullname, setFullname] = useState("")
-  const [birthday, setBirthday] = useState("")
-  const [about, setAbout] = useState("")
-  const [showCropper, setShowCropper] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const [logoutLoading, setLogoutLoading] = useState(false)
-
-  // Khi userProfile thay đổi, set lại state form
-  useEffect(() => {
-    if (userProfile) {
-      setAvatar(userProfile.Profile.avatar || null)
-      setFullname(userProfile.Profile.fullName || "")
-      setBirthday(userProfile.Profile.birthday || "")
-      setAbout(userProfile.Profile.about || "")
-    }
-  }, [userProfile])
 
   // Profile update function (can reuse handleSave or write new)
   const handleEditProfileSave = async ({
@@ -61,7 +43,6 @@ const AccountPage = ({
     birthday: string
     about: string
   }) => {
-    setLoading(true)
     try {
       const avatarToSend = avatar && avatar.startsWith("http") ? avatar : undefined
       await dispatch(
@@ -72,11 +53,8 @@ const AccountPage = ({
           avatar: avatarToSend,
         })
       ).unwrap()
-      await dispatch(fetchProfile())
-
-      // Update refreshKey to force hook refetch new data
-      setRefreshKey((prev) => prev + 1)
-
+      // Refetch profile data để cập nhật UI
+      await refetch()
       // Close modal after successful save
       setShowEditModal(false)
 
@@ -84,8 +62,6 @@ const AccountPage = ({
     } catch (err) {
       console.log(err)
       toast.error(axiosErrorHandler.handleHttpError(err).message)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -108,8 +84,14 @@ const AccountPage = ({
     setShowChangePasswordModal(true)
   }
 
-  if (!userProfile)
+  if (profileLoading)
     return <div className="text-white flex items-center justify-center h-full">Loading...</div>
+
+  if (error)
+    return <div className="text-white flex items-center justify-center h-full">Error: {error}</div>
+
+  if (!userProfile)
+    return <div className="text-white flex items-center justify-center h-full">No profile data</div>
 
   return (
     <div className="w-full h-full bg-[#232526] flex flex-col">
@@ -231,16 +213,6 @@ const AccountPage = ({
           </div>
         </div>
       </div>
-
-      {/* Avatar crop modal */}
-      {showCropper && selectedImage && (
-        <EditProfileModal
-          open={showCropper}
-          onClose={() => setShowCropper(false)}
-          userProfile={userProfile}
-          onSave={handleEditProfileSave}
-        />
-      )}
 
       {/* Edit modal */}
       <EditProfileModal

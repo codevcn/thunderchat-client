@@ -11,8 +11,10 @@ import type {
   EAppRole,
   EReportCategory,
   EViolationReportStatus,
+  EBanType,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
+import { TReportedMessageFE } from "./fe-api"
 
 // ================================= DB entities =================================
 export type TUser = {
@@ -57,6 +59,7 @@ export type TMessage = {
   mediaId?: number
   type: EMessageTypes
   isDeleted: boolean
+  isViolated: boolean
 }
 
 export type TMessageMedia = {
@@ -404,12 +407,11 @@ export type TGetMediaMessagesResponse = {
   }
   message?: string
   errorCode?: string | null
-  errors?: any
 }
 
 export type TMediaFilters = {
-  type?: "image" | "video" | "file" | "voice"
-  types?: ("image" | "video" | "file" | "voice")[]
+  type?: EMessageMediaTypes
+  types?: EMessageMediaTypes[]
   senderId?: number
   fromDate?: string
   toDate?: string
@@ -417,8 +419,8 @@ export type TMediaFilters = {
 
 export type TGetMediaMessagesParams = {
   directChatId: number
-  type?: "image" | "video" | "file" | "voice"
-  types?: ("image" | "video" | "file" | "voice")[]
+  type?: EMessageMediaTypes
+  types?: EMessageMediaTypes[]
   senderId?: number
   fromDate?: string
   toDate?: string
@@ -440,7 +442,6 @@ export type TGetMediaStatisticsResponse = {
   data: TMediaStatisticsData
   message?: string
   errorCode?: string | null
-  errors?: any
 }
 
 // ================================= Report Types =================================
@@ -472,13 +473,20 @@ export type TCreateViolationReportData = {
   reportedMessages?: TReportedMessage[]
 }
 
+export type TViolationReportErrorDetails =
+  | { reportedUserId: number }
+  | { existingReportId: number; createdAt: Date }
+  | { currentCount: number; maxAllowed: number }
+  | { error: string }
+  | { originalError: string }
+
 export type TCreateViolationReportResponse = {
   success: boolean
   reportId?: number
   message?: string
   error?: string
   code?: string
-  details?: any
+  details?: TViolationReportErrorDetails
 }
 
 // ================================= Admin Violation Reports Types =================================
@@ -505,6 +513,14 @@ export type TAdminViolationReport = {
   updatedAt: string
 }
 
+export type TViolationAction = {
+  id: number
+  actionType: EBanType
+  actionReason: string
+  bannedUntil: string | null
+  createdAt: string
+}
+
 export type TAdminViolationReportDetail = {
   id: number
   reporterId: number
@@ -525,13 +541,9 @@ export type TAdminViolationReportDetail = {
     imageUrl: string
     createdAt: string
   }>
-  reportedMessages: Array<{
-    id: number
-    messageId: number
-    messageType: string
-    messageContent: string
-    createdAt: string
-  }>
+  reportedMessages: TReportedMessageFE[]
+  violationAction: TViolationAction | null
+  latestBanAction: TViolationAction | null
   createdAt: string
   updatedAt: string
 }

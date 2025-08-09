@@ -15,8 +15,8 @@ import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
 import { createPortal } from "react-dom"
 import { useUser } from "@/hooks/user"
 import {
-  updateMessages,
-  mergeMessages,
+  updateGroupMessages,
+  mergeGroupMessages,
   setLastSentMessage,
   resetGroupMessages,
   setFetchedMsgs,
@@ -255,7 +255,7 @@ export const Messages = memo(
         .then((result) => {
           console.log(">>> result:", result)
           hasMoreMessages.current = result.hasMoreMessages
-          dispatch(mergeMessages(result.groupMessages))
+          dispatch(mergeGroupMessages(result.groupMessages))
           dispatch(setFetchedMsgs(true))
         })
         .catch((error) => {
@@ -312,13 +312,14 @@ export const Messages = memo(
 
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendMessage = (newMessage: TGetMessagesMessage) => {
+      console.log(">>> listen send message at group messages 315:", newMessage)
       const { id } = newMessage
       if (groupChatId === -1) {
         readyNewMessage.current = newMessage
         return
       }
       if (newMessage.groupChatId !== groupChatId) return
-      dispatch(mergeMessages([newMessage]))
+      dispatch(mergeGroupMessages([newMessage]))
       dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.GROUP }))
       clientSocket.setMessageOffset(id, groupChatId)
     }
@@ -326,7 +327,7 @@ export const Messages = memo(
     // Xử lý sự kiện kết nối lại từ server
     const handleRecoverdConnection = (newMessages: TGetMessagesMessage[]) => {
       if (newMessages && newMessages.length > 0) {
-        dispatch(mergeMessages(newMessages))
+        dispatch(mergeGroupMessages(newMessages))
         const { id } = newMessages[newMessages.length - 1]
         clientSocket.setMessageOffset(id, groupChatId)
       }
@@ -440,7 +441,7 @@ export const Messages = memo(
 
     // Xử lý sự kiện đã đọc tin nhắn từ đối phương
     const handleMessageSeen = ({ messageId, status }: TMsgSeenListenPayload) => {
-      dispatch(updateMessages([{ msgId: messageId, msgUpdates: { status } }]))
+      dispatch(updateGroupMessages([{ msgId: messageId, msgUpdates: { status } }]))
     }
 
     // Hàm scroll đến tin nhắn gốc
@@ -504,7 +505,7 @@ export const Messages = memo(
           ...msg,
           isContextMessage: true,
         }))
-        dispatch(mergeMessages(contextWithFlag))
+        dispatch(mergeGroupMessages(contextWithFlag))
         // Lưu id lớn nhất của context
         setContextEndId(Math.max(...contextWithFlag.map((m: TStateMessage) => m.id)))
         setTimeout(() => {
@@ -538,7 +539,7 @@ export const Messages = memo(
         if (!newerMsgs || newerMsgs.length === 0) {
           break
         }
-        dispatch(mergeMessages(newerMsgs))
+        dispatch(mergeGroupMessages(newerMsgs))
         // Lấy id lớn nhất vừa nhận được
         const maxId = Math.max(...newerMsgs.map((m: TStateMessage) => m.id))
         // Nếu đã vượt qua toId thì dừng
@@ -561,7 +562,7 @@ export const Messages = memo(
       try {
         const newerMsgs = await groupChatService.getNewerMessages(groupChatId, offset, 20)
         if (newerMsgs && newerMsgs.length > 0) {
-          dispatch(mergeMessages(newerMsgs))
+          dispatch(mergeGroupMessages(newerMsgs))
           // Nếu đang ở context, cập nhật contextEndId = id lớn nhất vừa merge (hoặc set null nếu đã hết context)
           if (contextEndId) {
             const maxId = Math.max(...newerMsgs.map((m: TStateMessage) => m.id))
@@ -610,7 +611,7 @@ export const Messages = memo(
       if (readyNewMessage.current && groupChatId !== -1) {
         const newMessage = readyNewMessage.current
         readyNewMessage.current = null
-        dispatch(mergeMessages([newMessage]))
+        dispatch(mergeGroupMessages([newMessage]))
       }
     }
 

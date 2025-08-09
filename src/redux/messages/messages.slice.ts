@@ -50,6 +50,22 @@ export const messagesSlice = createSlice({
         })
       }
     },
+    updateGroupMessages: (state, action: PayloadAction<TMessageStateUpdates[]>) => {
+      const currentMessages = state.groupMessages
+      const updatesList = action.payload
+      if (currentMessages && currentMessages.length > 0) {
+        state.groupMessages = currentMessages.map((msg) => {
+          const updates = updatesList.find(({ msgId }) => msgId === msg.id)?.msgUpdates
+          if (updates) {
+            return {
+              ...msg,
+              ...updates,
+            }
+          }
+          return msg
+        })
+      }
+    },
     setFetchedMsgs: (state, action: PayloadAction<boolean>) => {
       state.fetchedMsgs = action.payload
     },
@@ -61,6 +77,14 @@ export const messagesSlice = createSlice({
         ...currentMessages,
         ...newMessages.filter((m) => !ids.has(m.id)),
       ].sort((a, b) => a.id - b.id)
+    },
+    mergeGroupMessages: (state, action: PayloadAction<TStateMessage[]>) => {
+      const currentMessages = state.groupMessages || []
+      const newMessages = action.payload
+      const ids = new Set(currentMessages.map((m) => m.id))
+      state.groupMessages = [...currentMessages, ...newMessages.filter((m) => !ids.has(m.id))].sort(
+        (a, b) => a.id - b.id
+      )
     },
     updateGroupChat: (
       state,
@@ -142,6 +166,7 @@ export const messagesSlice = createSlice({
 
 export const {
   updateMessages,
+  updateGroupMessages,
   updateGroupChat,
   removeGroupChatMember,
   setDirectChat,
@@ -149,6 +174,7 @@ export const {
   resetAllChatData,
   setFetchedMsgs,
   mergeMessages,
+  mergeGroupMessages,
   updateDirectChat,
   setLastSentMessage,
   resetDirectMessages,

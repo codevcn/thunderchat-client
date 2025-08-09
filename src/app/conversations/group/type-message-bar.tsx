@@ -786,7 +786,6 @@ export const TypeMessageBar = memo(
             chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()
             setAudioUrl(null) // reset state
-            toast.success("Đã gửi file ghi âm thành công")
           } else if ("isError" in data && data.isError) {
             toast.error(`Lỗi khi gửi file ghi âm`)
           }

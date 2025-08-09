@@ -20,6 +20,7 @@ type TMessagesState = {
   directMessages: TStateMessage[] | null
   groupMessages: TStateMessage[] | null
   fetchedMsgs: boolean
+  blockedUserId: number | null
 }
 
 const initialState: TMessagesState = {
@@ -28,6 +29,7 @@ const initialState: TMessagesState = {
   directMessages: null,
   groupMessages: null,
   fetchedMsgs: false,
+  blockedUserId: null,
 }
 
 export const messagesSlice = createSlice({
@@ -161,6 +163,9 @@ export const messagesSlice = createSlice({
     setGroupChat: (state, action: PayloadAction<TGroupChatData>) => {
       state.groupChat = action.payload
     },
+    setBlockedUserId: (state, action: PayloadAction<number | null>) => {
+      state.blockedUserId = action.payload
+    },
   },
 })
 
@@ -181,4 +186,5 @@ export const {
   resetGroupMessages,
   setGroupChat,
   addGroupChatMembers,
+  setBlockedUserId,
 } = messagesSlice.actions

@@ -1,8 +1,13 @@
-import type { TRegisterUserParams, TSearchUsersData, TUserWithProfile } from "@/utils/types/be-api"
-import { getSearchUsers, getUserByEmail, postRegisterUser } from "@/apis/user"
-import { EPaginations } from "@/utils/enums"
+import type {
+  TBlockedUserFullInfo,
+  TRegisterUserParams,
+  TSearchUsersData,
+  TUserWithProfile,
+} from "@/utils/types/be-api"
+import { getSearchUsers, getUserByEmail, postRegisterUser, getCheckBlockedUser } from "@/apis/user"
+import { EBlockTypes, EPaginations } from "@/utils/enums"
 import type { TSuccess } from "@/utils/types/global"
-import { postChangePassword } from "@/apis/user"
+import { postChangePassword, postBlockUser } from "@/apis/user"
 
 class UserService {
   async searchUsers(keyword: string): Promise<TSearchUsersData[]> {
@@ -25,6 +30,16 @@ class UserService {
 
   async changePassword(oldPassword: string, newPassword: string) {
     const { data } = await postChangePassword({ oldPassword, newPassword })
+    return data
+  }
+
+  async blockUser(userId: number, blockType: EBlockTypes): Promise<TSuccess> {
+    const { data } = await postBlockUser(userId, blockType)
+    return data
+  }
+
+  async checkBlockedUser(otherUserId: number): Promise<TBlockedUserFullInfo | null> {
+    const { data } = await getCheckBlockedUser(otherUserId)
     return data
   }
 }

@@ -31,6 +31,7 @@ interface IEventEmitter {
     groupChat: TGroupChat,
     executor: TUserWithProfile
   ) => void
+  [EInternalEvents.SEND_MESSAGE]: () => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

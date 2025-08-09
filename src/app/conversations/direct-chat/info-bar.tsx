@@ -1,4 +1,4 @@
-import { X, Info, Mail, AlertTriangle } from "lucide-react"
+import { X, Info, Mail, AlertTriangle, Ban, MessageCircleX, Check } from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
@@ -7,7 +7,14 @@ import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import MediaPanel from "../../../components/conversation-media/media-panel"
 import { ReportModal } from "../../../components/chatbox/user-report/report-model"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { userService } from "@/services/user.service"
+import { toaster } from "@/utils/toaster"
+import axiosErrorHandler from "@/utils/axios-error-handler"
+import { Checkbox, CustomDialog, Spinner } from "@/components/materials"
+import { EBlockTypes } from "@/utils/enums"
+import { setBlockedUserId } from "@/redux/messages/messages.slice"
+import { useUser } from "@/hooks/user"
 
 type TAvatarProps = {
   recipient: TUserWithProfile
@@ -56,6 +63,10 @@ const ProfileInfo = ({
   const { Profile, email } = recipient
   const { about } = Profile
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [isBlocking, setIsBlocking] = useState<boolean>(false)
+  const [openBlockModal, setOpenBlockModal] = useState<boolean>(false)
+  const [pickedBlockOption, setPickedBlockOption] = useState<EBlockTypes>()
+  const dispatch = useAppDispatch()
 
   const handleOpenReportModal = () => {
     setIsReportModalOpen(true)
@@ -63,6 +74,35 @@ const ProfileInfo = ({
 
   const handleCloseReportModal = () => {
     setIsReportModalOpen(false)
+  }
+
+  const blockUser = async () => {
+    if (!pickedBlockOption) {
+      toaster.error("Please select a block option")
+      return
+    }
+    setIsBlocking(true)
+    try {
+      await userService.blockUser(recipient.id, pickedBlockOption)
+      setOpenBlockModal(false)
+      dispatch(setBlockedUserId(recipient.id))
+    } catch (error) {
+      toaster.error(axiosErrorHandler.handleHttpError(error).message)
+    } finally {
+      setIsBlocking(false)
+    }
+  }
+
+  const openBlockUserDialog = async () => {
+    setOpenBlockModal(true)
+  }
+
+  const checkOptionIsPicked = (option: EBlockTypes) => {
+    return pickedBlockOption === option
+  }
+
+  const togglePickBlockOption = (option: EBlockTypes) => {
+    setPickedBlockOption((prev) => (prev === option ? undefined : option))
   }
 
   return (
@@ -105,6 +145,25 @@ const ProfileInfo = ({
         </div>
       </div>
 
+      <div
+        onClick={openBlockUserDialog}
+        className={`${isBlocking ? "opacity-90 cursor-not-allowed" : "cursor-pointer hover:bg-red-600/20"} flex gap-4 items-center px-4 py-2 rounded-md transition-colors relative`}
+      >
+        {isBlocking && (
+          <div className="flex absolute top-0 left-0 w-full h-full bg-black/40 rounded-md">
+            <div className="flex items-center gap-2 m-auto">
+              <Spinner size="small" />
+            </div>
+          </div>
+        )}
+        <div className="text-red-500">
+          <Ban color="currentColor" />
+        </div>
+        <div className="w-full">
+          <div className="text-base leading-5 w-full text-left text-red-500">Block user</div>
+        </div>
+      </div>
+
       {/* Report Modal */}
       <ReportModal
         isOpen={isReportModalOpen}
@@ -112,6 +171,47 @@ const ProfileInfo = ({
         user={recipient}
         conversationId={directChatId}
         conversationType="direct"
+      />
+
+      {/* Block Modal */}
+      <CustomDialog
+        open={openBlockModal}
+        onHideShow={setOpenBlockModal}
+        dialogHeader={{ title: `Manage blocking user "${Profile.fullName}"` }}
+        dialogBody={
+          <div className="flex flex-col min-w-[400px] gap-2 my-3">
+            <div
+              className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer"
+              onClick={() => togglePickBlockOption(EBlockTypes.MESSAGE)}
+            >
+              <MessageCircleX size={24} />
+              <div>
+                <h3 className="text-sm font-medium">Block messages</h3>
+                <p className="text-xs text-regular-placeholder-cl mt-1">
+                  Both users will not be able to send messages to each other.
+                </p>
+              </div>
+              <div>
+                <Checkbox
+                  inputId={EBlockTypes.MESSAGE}
+                  checked={checkOptionIsPicked(EBlockTypes.MESSAGE)}
+                  readOnly
+                  labelClassName="border-[#949494] border-2"
+                  labelIconSize={16}
+                />
+              </div>
+            </div>
+          </div>
+        }
+        confirmElement={
+          <button
+            onClick={blockUser}
+            className="flex gap-2 items-center bg-regular-red-cl text-regular-white-cl px-3 py-1.5 border-2 border-regular-red-cl rounded-md hover:bg-transparent hover:text-regular-red-cl"
+          >
+            <Check size={16} color="currentColor" />
+            <span>Confirm</span>
+          </button>
+        }
       />
     </div>
   )
@@ -124,11 +224,30 @@ type TInfoBarProps = {
 
 export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
+  const { blockedUserId } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
+  const user = useUser()!
 
   const handleOpenInfoBar = (open: boolean) => {
     dispatch(openInfoBar(open))
   }
+
+  const checkBlockedUser = async () => {
+    const blockedUser = await userService.checkBlockedUser(friendInfo.id)
+    if (blockedUser) {
+      const blockerUserId = blockedUser.UserBlocker.id
+      const blockedUserId = blockedUser.UserBlocked.id
+      if (blockerUserId === user.id) {
+        dispatch(setBlockedUserId(blockedUserId))
+      } else {
+        dispatch(setBlockedUserId(blockerUserId))
+      }
+    }
+  }
+
+  useEffect(() => {
+    checkBlockedUser()
+  }, [friendInfo.id])
 
   return (
     <div
@@ -150,8 +269,38 @@ export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
       <div className="flex-1 min-h-0 w-full">
         <div className="overflow-y-auto STYLE-styled-scrollbar h-full min-h-0 bg-regular-info-bar-bgcl">
           <Avatar recipient={friendInfo} />
-          <ProfileInfo recipient={friendInfo} directChatId={directChatId} />
-          <MediaPanel />
+          {blockedUserId ? (
+            blockedUserId === friendInfo.id ? (
+              <div className="flex items-center gap-2 px-4 py-2 mt-4">
+                <div className="text-red-500">
+                  <Ban size={24} color="currentColor" />
+                </div>
+                <div className="w-info-bar text-red-500">
+                  <p className="text-base leading-5 w-full">
+                    You blocked this user. You two will not be able to send messages to each other.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              user.id === blockedUserId && (
+                <div className="flex items-center gap-2 px-4 py-2 mt-4">
+                  <div className="text-red-500">
+                    <Ban size={24} color="currentColor" />
+                  </div>
+                  <div className="w-info-bar text-red-500">
+                    <p className="text-base leading-5 w-full">
+                      You are blocked by this user. You will not be able to send messages to them.
+                    </p>
+                  </div>
+                </div>
+              )
+            )
+          ) : (
+            <>
+              <ProfileInfo recipient={friendInfo} directChatId={directChatId} />
+              <MediaPanel />
+            </>
+          )}
         </div>
       </div>
     </div>

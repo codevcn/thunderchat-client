@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Bell, Settings, MessageCircle, Users, User } from "lucide-react"
+import { Home, Settings, MessageCircle, Users, User } from "lucide-react"
 import Link from "next/link"
 import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
@@ -19,10 +19,6 @@ const navs: TNav[] = [
     icon: <Home size={20} color="white" />,
   },
   {
-    label: "Notification",
-    icon: <Bell size={20} color="white" />,
-  },
-  {
     label: "Conversations",
     href: "/conversations",
     icon: <MessageCircle size={20} color="white" />,
@@ -34,11 +30,7 @@ const navs: TNav[] = [
   },
 ]
 
-type AppNavigationProps = {
-  // Có thể thêm các prop khác nếu cần
-}
-
-export const AppNavigation = memo((props: AppNavigationProps) => {
+export const AppNavigation = memo(() => {
   const { openAccount } = useAccountModal()
 
   return (

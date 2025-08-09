@@ -12,6 +12,7 @@ import type {
   EReportCategory,
   EViolationReportStatus,
   EBanType,
+  EBlockTypes,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 import { TReportedMessageFE } from "./fe-api"
@@ -154,6 +155,13 @@ export type TGroupChatMemberWithUser = Omit<TGroupChatMember, "userId"> & {
   }
 }
 
+export type TBlockedUser = {
+  id: number
+  blockerUserId: number
+  blockedUserId: number
+  createdAt: Date
+  blockType: EBlockTypes
+}
 // ================================= API types =================================
 export type TLoginUserParams = {
   email: string
@@ -737,4 +745,9 @@ export type TPinnedChat = {
   groupChatId: number | null
   pinnedBy: number
   pinnedAt: Date
+}
+
+export type TBlockedUserFullInfo = TBlockedUser & {
+  UserBlocker: TUserWithProfile
+  UserBlocked: TUserWithProfile
 }

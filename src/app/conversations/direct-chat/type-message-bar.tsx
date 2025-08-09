@@ -384,7 +384,23 @@ const MessageTextField = ({
     }
   }
 
+  const sendMessageOnEventHandler = () => {
+    const textFieldEle = textFieldRef.current
+    if (textFieldEle) {
+      const event = new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13, // Một số trình duyệt cũ vẫn cần
+        which: 13,
+        bubbles: true,
+        cancelable: true,
+      })
+      textFieldEle.dispatchEvent(event)
+    }
+  }
+
   useEffect(() => {
+    eventEmitter.on(EInternalEvents.SEND_MESSAGE, sendMessageOnEventHandler)
     eventEmitter.on(EInternalEvents.CLICK_ON_LAYOUT, handleClickOnLayout)
 
     // Thêm paste event listener
@@ -825,6 +841,10 @@ export const TypeMessageBar = memo(
         .padStart(2, "0")},${msPart.toString().padStart(2, "0")}`
     }
 
+    const sendMessage = () => {
+      eventEmitter.emit(EInternalEvents.SEND_MESSAGE)
+    }
+
     useEffect(() => {
       if (isRecording) {
         timerRef.current = setInterval(() => {
@@ -839,6 +859,7 @@ export const TypeMessageBar = memo(
         if (timerRef.current) clearInterval(timerRef.current)
       }
     }, [isRecording])
+
     useEffect(() => {
       if (audioUrl && !isRecording) {
         // Không chạy khi đang ghi, chỉ chạy khi vừa dừng ghi và có file
@@ -847,9 +868,6 @@ export const TypeMessageBar = memo(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl, isRecording])
 
-    {
-      /* Hiển thị thông báo khi không thể gửi tin nhắn */
-    }
     if (canSend === false) {
       return (
         <div className="flex-1 flex items-center justify-center w-full py-10">
@@ -981,7 +999,7 @@ export const TypeMessageBar = memo(
             <div
               onClick={async () => {
                 if (hasContent) {
-                  // sendMessage
+                  sendMessage()
                 } else if (isRecording) {
                   stopRecording() // Dừng ghi âm TRƯỚC
                 } else {
@@ -1010,7 +1028,7 @@ export const TypeMessageBar = memo(
               }}
             >
               <div
-                className={`${hasContent || isRecording ? "animate-hide-icon" : "animate-grow-icon"} absolute`}
+                className={`${hasContent || isRecording ? "animate-hide-icon" : "animate-grow-icon"} DODODO absolute`}
               >
                 <Mic />
               </div>

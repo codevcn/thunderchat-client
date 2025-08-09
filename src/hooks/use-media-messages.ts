@@ -1,26 +1,10 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAppSelector } from "./redux"
 import { messageService } from "@/services/message.service"
-import { EMessageTypes, ESortTypes, EMessageMediaTypes } from "@/utils/enums"
+import { EMessageMediaTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TMessage, TMessageFullInfo, TMsgWithMediaSticker } from "@/utils/types/be-api"
-
-const isUrl = (text: string) => {
-  try {
-    new URL(text)
-    return true
-  } catch {
-    return false
-  }
-}
-
-const isMediaMessage = (message: TMessageFullInfo): boolean => {
-  return (
-    message.type === EMessageTypes.MEDIA ||
-    (message.type === EMessageTypes.TEXT && isUrl(message.content))
-  )
-}
+import type { TMessage, TMessageFullInfo } from "@/utils/types/be-api"
 
 export const useMediaMessages = () => {
   const { directChat } = useAppSelector(({ messages }) => messages)
@@ -41,27 +25,6 @@ export const useMediaMessages = () => {
     links: 0,
   })
 
-  // Hàm kiểm tra URL
-  const isUrl = useCallback((text: string) => {
-    try {
-      new URL(text)
-      return true
-    } catch {
-      return false
-    }
-  }, [])
-
-  // Hàm kiểm tra xem tin nhắn có phải là media không
-  const isMediaMessage = useCallback(
-    (message: TMessage) => {
-      return (
-        message.type === EMessageTypes.MEDIA ||
-        (message.type === EMessageTypes.TEXT && message.content && isUrl(message.content))
-      )
-    },
-    [isUrl]
-  )
-
   // Hàm fetch statistics
   const fetchStatistics = useCallback(async () => {
     if (!directChat?.id) return
@@ -79,7 +42,7 @@ export const useMediaMessages = () => {
         })
       }
     } catch (err) {
-      console.error("Failed to fetch media statistics:", err)
+      // ignore
     }
   }, [directChat?.id])
 
@@ -91,37 +54,51 @@ export const useMediaMessages = () => {
     setError(null)
 
     try {
-      // Fetch all media messages in one call
-      const response = await messageService.getMediaMessagesWithFilters(
-        directChat.id,
-        {}, // No type filter, get all media types
-        1, // page
-        20, // limit - get more to have enough for all sections
-        "desc" // sort
-      )
+      // Gọi BE theo nhóm: 6 ảnh/video, 3 file, 3 voice
+      const [mixedResp, filesResp, audiosResp] = await Promise.all([
+        messageService.getMediaMessagesWithMultipleTypes(
+          directChat.id,
+          [EMessageMediaTypes.IMAGE, EMessageMediaTypes.VIDEO],
+          {},
+          1,
+          6,
+          "desc"
+        ),
+        messageService.getMediaMessagesWithFilters(
+          directChat.id,
+          { type: EMessageMediaTypes.DOCUMENT },
+          1,
+          3,
+          "desc"
+        ),
+        messageService.getMediaMessagesWithFilters(
+          directChat.id,
+          { type: EMessageMediaTypes.AUDIO },
+          1,
+          3,
+          "desc"
+        ),
+      ])
 
-      if (response.success) {
-        // Lọc ra tin nhắn chưa bị xóa và sắp xếp theo thời gian
-        const nonDeletedMessages = response.data.items
-          .filter((msg: TMessage) => !msg.isDeleted)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      const mixedItems = mixedResp.success ? mixedResp.data.items : []
+      const fileItems = filesResp.success ? filesResp.data.items : []
+      const audioItems = audiosResp.success ? audiosResp.data.items : []
 
-        console.log("Filtered media messages:", nonDeletedMessages)
-        console.log("Setting mediaMessages state with:", nonDeletedMessages.length, "items")
-        setMediaMessages(nonDeletedMessages)
-      } else {
-        console.error("Media messages API error:", response)
-        setError(response.message || "Failed to fetch media messages")
-      }
+      // Kết hợp và sắp xếp theo thời gian mới nhất
+      const combined = [...mixedItems, ...fileItems, ...audioItems]
+        .filter((msg: TMessage) => !msg.isDeleted)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-      // Fetch statistics after media messages are updated
-      await fetchStatistics()
+      setMediaMessages(combined)
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred"
       setError(errorMessage)
     } finally {
       setLoading(false)
     }
+
+    // Fetch statistics after media messages are updated
+    await fetchStatistics()
   }, [directChat?.id, fetchStatistics])
 
   // Hàm xử lý tin nhắn mới hoặc cập nhật từ socket
@@ -130,46 +107,33 @@ export const useMediaMessages = () => {
       setMediaMessages((prev) => {
         const existingIndex = prev.findIndex((msg) => msg.id === updatedMessage.id)
 
-        // Nếu tin nhắn đã bị xóa và là media message, loại bỏ khỏi danh sách
-        if (updatedMessage.isDeleted && isMediaMessage(updatedMessage)) {
+        if (updatedMessage.isDeleted) {
           if (existingIndex !== -1) {
             const newMessages = prev.filter((msg) => msg.id !== updatedMessage.id)
             const sortedMessages = newMessages.sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             )
-
-            // Update statistics after removing message
             setTimeout(() => fetchStatistics(), 100)
-
             return sortedMessages
           }
           return prev
         }
 
-        // Nếu tin nhắn chưa bị xóa và là media message
-        if (!updatedMessage.isDeleted && isMediaMessage(updatedMessage)) {
+        if (!updatedMessage.isDeleted) {
           if (existingIndex !== -1) {
-            // Cập nhật tin nhắn hiện có
             const newMessages = [...prev]
             newMessages[existingIndex] = updatedMessage
             const sortedMessages = newMessages.sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             )
-
-            // Update statistics after updating message
             setTimeout(() => fetchStatistics(), 100)
-
             return sortedMessages
           } else {
-            // Thêm tin nhắn mới
             const newMediaMessages = [updatedMessage, ...prev]
             const sortedMessages = newMediaMessages.sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             )
-
-            // Update statistics after adding new message
             setTimeout(() => fetchStatistics(), 100)
-
             return sortedMessages
           }
         }
@@ -177,7 +141,7 @@ export const useMediaMessages = () => {
         return prev
       })
     },
-    [isMediaMessage, fetchStatistics]
+    [fetchStatistics]
   )
 
   // Effect để fetch media messages ban đầu
@@ -189,9 +153,7 @@ export const useMediaMessages = () => {
   useEffect(() => {
     if (!directChat?.id) return
 
-    // Lắng nghe tin nhắn mới/cập nhật từ socket
     clientSocket.socket.on(ESocketEvents.send_message_direct, handleMessageUpdate)
-
     return () => {
       clientSocket.socket.removeListener(ESocketEvents.send_message_direct, handleMessageUpdate)
     }

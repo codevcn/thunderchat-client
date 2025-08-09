@@ -11,7 +11,7 @@ import { toast } from "sonner"
 
 type TReportReason = "sensitive" | "annoying" | "scam" | "other"
 
-import type { TProfile, TUserWithProfile } from "@/utils/types/be-api"
+import type { TUserWithProfile } from "@/utils/types/be-api"
 import { EMessageStatus } from "@/utils/socket/enums"
 
 type TReportModalProps = {
@@ -97,6 +97,7 @@ export const ReportModal = ({
         mediaId: undefined,
         type: reportedMessage.messageType as EMessageTypes,
         isDeleted: false,
+        isViolated: false,
         createdAt: new Date().toISOString(),
         Author: {} as TUserWithProfile,
         ReplyTo: null,
@@ -466,7 +467,7 @@ export const ReportModal = ({
           {/* Description Input - Always visible */}
           <div>
             <label className="block text-regular-white-cl text-sm font-medium mb-2">
-              Enter description to continue*
+              Enter description to continue
             </label>
             <div className="relative">
               <textarea
@@ -494,9 +495,9 @@ export const ReportModal = ({
                 </h3>
                 <p className="text-regular-text-secondary-cl text-sm leading-relaxed">
                   You can attach messages and upload related photos to clarify the violation.{" "}
-                  <span className="text-regular-violet-cl cursor-pointer hover:underline">
+                  {/* <span className="text-regular-violet-cl cursor-pointer hover:underline">
                     Learn more
-                  </span>
+                  </span> */}
                 </p>
               </div>
               <ChevronRight

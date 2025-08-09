@@ -163,7 +163,7 @@ export const MessageSelectionModal = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden p-6 min-h-0">
+        <div className="flex flex-col flex-1 p-6 min-h-0 gap-2">
           {reportedMessages.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-regular-text-secondary-cl">No messages to select</p>
@@ -171,7 +171,7 @@ export const MessageSelectionModal = ({
           ) : (
             <>
               {/* Select All Option */}
-              <div className="mb-4 p-4 bg-regular-black-cl rounded-lg">
+              <div className="p-4 bg-regular-black-cl rounded-lg">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -185,7 +185,7 @@ export const MessageSelectionModal = ({
               </div>
 
               {/* Messages List */}
-              <div className="space-y-3 max-h-80 overflow-y-auto STYLE-styled-modal-scrollbar">
+              <div className="space-y-3 grow overflow-y-auto STYLE-styled-modal-scrollbar">
                 {reportedMessages.map((message: TReportedMessageFE, index: number) => (
                   <div
                     key={message.messageId}

@@ -118,12 +118,14 @@ class PinService {
               },
             },
             isDeleted: false,
+            isViolated: false,
           }
         : null,
       isNewMsg: false,
       isDeleted: message.isDeleted,
       Media,
       Sticker,
+      isViolated: message.isViolated,
     }
   }
 }

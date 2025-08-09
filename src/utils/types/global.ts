@@ -130,6 +130,7 @@ export type TMediaData = {
   fileSize: number
   thumbnailUrl: string
   mediaType: EMessageMediaTypes
+  isViolated: boolean
 }
 
 export type TMediaDataCollection = {

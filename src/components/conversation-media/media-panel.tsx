@@ -107,6 +107,7 @@ const MediaPanel = React.memo(() => {
           fileSize: 0,
           thumbnailUrl: "",
           mediaType: EMessageMediaTypes.DOCUMENT, // Default type for links
+          isViolated: message.isViolated,
         }
         links.push(messageData)
         return
@@ -125,6 +126,7 @@ const MediaPanel = React.memo(() => {
           fileSize: message.Media.fileSize,
           thumbnailUrl: message.Media.thumbnailUrl,
           mediaType: message.Media.type,
+          isViolated: message.isViolated,
         }
 
         if (message.Media.type === EMessageMediaTypes.IMAGE) {
@@ -197,6 +199,7 @@ const MediaPanel = React.memo(() => {
           createdAt: new Date(voiceMessage.createdAt),
         },
         Sticker: null,
+        isViolated: voiceMessage.isViolated,
       })
       setShowPlayer(true)
     },
@@ -275,18 +278,6 @@ const MediaPanel = React.memo(() => {
       if (bytes < 1024) return bytes + " B"
       if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
       return (bytes / (1024 * 1024)).toFixed(1) + " MB"
-    },
-    []
-  )
-
-  const formatUrl = useMemo(
-    () => (url: string) => {
-      try {
-        const urlObj = new URL(url)
-        return urlObj.hostname + urlObj.pathname
-      } catch {
-        return url
-      }
     },
     []
   )
@@ -421,12 +412,12 @@ const MediaPanel = React.memo(() => {
             >
               <div>{getFileIcon(item.fileName || "")}</div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white truncate">
+                <div className="font-semibold text-white truncate leading-snug">
                   {item.fileName || "Unknown file"}
                 </div>
-                <div className="text-xs text-gray-400 flex items-center justify-between">
-                  <span>{dayjs(item.createdAt).format("DD/MM/YYYY")}</span>
-                  <span>{formatFileSize(item.fileSize)}</span>
+                <div className="text-xs text-gray-400">
+                  <span className="block">{dayjs(item.createdAt).format("DD/MM/YYYY")}</span>
+                  <span className="block">{formatFileSize(item.fileSize)}</span>
                 </div>
               </div>
               {/* Action icons on hover */}

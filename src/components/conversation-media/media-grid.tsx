@@ -6,7 +6,6 @@ import { useUser } from "@/hooks/user"
 import { Play } from "lucide-react"
 import { useVoicePlayerActions } from "@/contexts/voice-player.context"
 import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
-import { TMediaData } from "@/utils/types/global"
 import { TMessageFullInfo } from "@/utils/types/be-api"
 import { TUserWithProfileFE } from "@/utils/types/fe-api"
 import { EMessageStatus } from "@/utils/socket/enums"
@@ -303,6 +302,7 @@ export const AudioList = React.memo(({ items }: { items: TMessageFullInfo[] }) =
         Author: voiceMessage.Author || currentUser,
         ReplyTo: voiceMessage.ReplyTo || null,
         Sticker: voiceMessage.Sticker || null,
+        isViolated: voiceMessage.isViolated,
       })
       setShowPlayer(true)
     },

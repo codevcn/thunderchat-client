@@ -346,6 +346,17 @@ export const ViolationDetailModal = ({
                               Current Ban Information
                             </h4>
                             <div className="space-y-2 text-sm">
+                              <div>
+                                <span className="text-regular-text-secondary-cl">Banned User:</span>
+                                <p className="text-regular-white-cl mt-1">
+                                  <span className="font-bold">
+                                    {detailedReport.reportedUserName}
+                                  </span>
+                                  <span className="text-regular-text-secondary-cl ml-1">
+                                    ({detailedReport.reportedUserEmail})
+                                  </span>
+                                </p>
+                              </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-regular-text-secondary-cl">Action Type:</span>
                                 <span
@@ -413,7 +424,7 @@ export const ViolationDetailModal = ({
                   )}
 
                   {/* Show review confirmation if no action has been taken for this report yet */}
-                  {!detailedReport?.violationAction && (
+                  {!detailedReport?.violationAction && !detailedReport?.latestBanAction && (
                     <div className="bg-regular-hover-card-cl p-4 rounded-lg border border-regular-violet-cl/20">
                       <div className="flex items-start gap-3">
                         <input

@@ -47,8 +47,6 @@ export const AdminLoginForm = ({ typedEmail, onGoBack }: TAdminLoginFormProps) =
         .loginAdmin(email, password, keepSigned === "on")
         .then(() => {
           dispatch(setAdminAuthStatus(EAdminAuthStatus.AUTHENTICATED))
-          toast.success("Admin login successful! Welcome to admin panel.")
-          // Let the admin page handle the redirect
         })
         .catch((error) => {
           handleAdminError(error)

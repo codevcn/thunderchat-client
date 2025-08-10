@@ -1,6 +1,6 @@
 "use client"
 
-import { CustomTooltip, IconButton, CircularProgress } from "@/components/materials"
+import { CustomTooltip, IconButton, CircularProgress, Spinner } from "@/components/materials"
 import {
   FileVideo,
   Mic,
@@ -39,6 +39,12 @@ import {
 } from "@/utils/helpers"
 import { TChattingPayload } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
+import type { TUserWithProfile } from "@/utils/types/be-api"
+import { userService } from "@/services/user.service"
+import { setBlockedUserId } from "@/redux/messages/messages.slice"
+import { toaster } from "@/utils/toaster"
+import axiosErrorHandler from "@/utils/axios-error-handler"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -91,7 +97,6 @@ const ExpressionPicker = ({
       },
       (data) => {
         if ("success" in data && data.success) {
-          chattingService.setAcknowledgmentFlag(true)
           chattingService.recursiveSendingQueueMessages()
         } else if ("isError" in data && data.isError) {
           toast.error(data?.message || "Error when sending message")
@@ -354,7 +359,6 @@ const MessageTextField = ({
 
     chattingService.sendMessage(EMessageTypeAllTypes.TEXT, payload, (data) => {
       if ("success" in data && data.success) {
-        chattingService.setAcknowledgmentFlag(true)
         chattingService.recursiveSendingQueueMessages()
       } else if ("isError" in data && data.isError) {
         toast.error(data?.message || "Error when sending message")
@@ -480,11 +484,18 @@ type TTypeMessageBarProps = {
   replyMessage: TStateMessage | null
   setReplyMessage: (msg: any | null) => void
   canSend?: boolean | null
+  friendInfo: TUserWithProfile
 }
 
 export const TypeMessageBar = memo(
-  ({ directChat, replyMessage, setReplyMessage, canSend }: TTypeMessageBarProps) => {
-    const user = useUser()
+  ({
+    directChat,
+    replyMessage,
+    setReplyMessage,
+    canSend = true,
+    friendInfo,
+  }: TTypeMessageBarProps) => {
+    const user = useUser()!
     const textFieldRef = useRef<HTMLDivElement | null>(null)
     const [hasContent, setHasContent] = useState<boolean>(false)
     const textFieldContainerRef = useRef<HTMLDivElement | null>(null)
@@ -497,6 +508,9 @@ export const TypeMessageBar = memo(
     const [fileMode, setFileMode] = useState<string>("")
     const [fileInputKey, setFileInputKey] = useState<number>(0)
     const [uploadProgress, setUploadProgress] = useState<number>(0)
+    const { blockedUserId } = useAppSelector((state) => state.messages)
+    const dispatch = useAppDispatch()
+    const [isUnblocking, setIsUnblocking] = useState<boolean>(false)
 
     const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
       const textField = textFieldRef.current
@@ -629,7 +643,6 @@ export const TypeMessageBar = memo(
             msgPayload,
             (data) => {
               if ("success" in data && data.success) {
-                chattingService.setAcknowledgmentFlag(true)
                 chattingService.recursiveSendingQueueMessages()
               } else if ("isError" in data && data.isError) {
                 toast.error(`Lỗi khi gửi file ${file.name}`)
@@ -809,7 +822,6 @@ export const TypeMessageBar = memo(
 
         chattingService.sendMessage(EMessageTypeAllTypes.AUDIO, msgPayload, (data) => {
           if ("success" in data && data.success) {
-            chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()
             setAudioUrl(null) // reset state
           } else if ("isError" in data && data.isError) {
@@ -845,6 +857,21 @@ export const TypeMessageBar = memo(
       eventEmitter.emit(EInternalEvents.SEND_MESSAGE)
     }
 
+    const unblockUser = () => {
+      setIsUnblocking(true)
+      userService
+        .unblockUser(friendInfo.id)
+        .then(() => {
+          dispatch(setBlockedUserId(null))
+        })
+        .catch((err) => {
+          toaster.error(axiosErrorHandler.handleHttpError(err).message)
+        })
+        .finally(() => {
+          setIsUnblocking(false)
+        })
+    }
+
     useEffect(() => {
       if (isRecording) {
         timerRef.current = setInterval(() => {
@@ -868,10 +895,35 @@ export const TypeMessageBar = memo(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl, isRecording])
 
-    if (canSend === false) {
+    if (blockedUserId === user.id) {
       return (
-        <div className="flex-1 flex items-center justify-center w-full py-10">
-          <div className="system-message text-center text-gray-500 py-4 w-full">
+        <div className="flex-1 flex items-center justify-center w-full py-8">
+          <div className="system-message text-center text-gray-400 py-4 w-full">
+            You are blocked by this person. You cannot send a message.
+          </div>
+        </div>
+      )
+    }
+
+    if (blockedUserId === friendInfo.id) {
+      return (
+        <div className="flex-1 flex flex-col items-center gap-3 justify-center w-full py-6 bg-regular-dark-gray-cl">
+          <h3>You blocked this person.</h3>
+          <button
+            className="bg-regular-violet-cl text-white px-4 h-8 rounded-md hover:scale-110 transition overflow-visible"
+            onClick={unblockUser}
+            disabled={isUnblocking}
+          >
+            {isUnblocking ? <Spinner size="small" /> : "Unblock"}
+          </button>
+        </div>
+      )
+    }
+
+    if (!canSend) {
+      return (
+        <div className="flex-1 flex items-center justify-center w-full py-8">
+          <div className="system-message text-center text-gray-400 py-4 w-full">
             This person only accepts messages from friends. You cannot send a message.
           </div>
         </div>
@@ -879,7 +931,7 @@ export const TypeMessageBar = memo(
     }
 
     return (
-      <div className="flex gap-2.5 items-end pt-2 pb-4 z-999 box-border relative">
+      <div className="flex gap-2.5 items-end pt-2 pb-4 box-border relative">
         <div className="flex flex-col grow">
           {/* Reply Preview */}
           {replyMessage && !replyMessage.isDeleted && !replyMessage.isViolated && (

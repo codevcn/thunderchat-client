@@ -38,6 +38,7 @@ class ChattingService {
               console.error(">>> error when sending message & save offline message:", error)
               this.saveOfflineMessage({ type, msgPayload: message })
             } else {
+              this.setAcknowledgmentFlag(true)
               if (data) {
                 if ("isError" in data) {
                   console.error(">>> error when sending message & callback:", data)
@@ -75,6 +76,7 @@ class ChattingService {
               this.saveOfflineMessage({ type, msgPayload: message })
             } else {
               if (data) {
+                this.setAcknowledgmentFlag(true)
                 if ("isError" in data) {
                   console.error(">>> error when sending message & callback:", data)
                 }

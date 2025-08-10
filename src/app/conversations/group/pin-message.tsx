@@ -132,13 +132,7 @@ export const renderMessageContent = (message: TStateMessage) => {
     return (
       <div className="flex items-center gap-2">
         <div className="rounded overflow-hidden flex-shrink-0">
-          <Image
-            src={stickerUrl}
-            alt="Sticker"
-            width={28}
-            height={28}
-            className="w-full h-full object-cover"
-          />
+          <Image src={stickerUrl} alt="Sticker" width={28} height={28} className="object-cover" />
         </div>
         <span className="text-xs text-gray-300">Sticker</span>
       </div>

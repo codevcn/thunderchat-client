@@ -7,7 +7,7 @@ import { robotoFont } from "@/utils/fonts"
 import type { TUserWithProfile } from "@/utils/types/be-api"
 import MediaPanel from "../../../components/conversation-media/media-panel"
 import { ReportModal } from "../../../components/chatbox/user-report/report-model"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { userService } from "@/services/user.service"
 import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -231,23 +231,6 @@ export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
   const handleOpenInfoBar = (open: boolean) => {
     dispatch(openInfoBar(open))
   }
-
-  const checkBlockedUser = async () => {
-    const blockedUser = await userService.checkBlockedUser(friendInfo.id)
-    if (blockedUser) {
-      const blockerUserId = blockedUser.UserBlocker.id
-      const blockedUserId = blockedUser.UserBlocked.id
-      if (blockerUserId === user.id) {
-        dispatch(setBlockedUserId(blockedUserId))
-      } else {
-        dispatch(setBlockedUserId(blockerUserId))
-      }
-    }
-  }
-
-  useEffect(() => {
-    checkBlockedUser()
-  }, [friendInfo.id])
 
   return (
     <div

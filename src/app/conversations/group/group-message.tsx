@@ -295,22 +295,22 @@ const StickyTime = ({ stickyTime }: TStickyTimeProps) => {
 }
 
 const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
-  const { type, Media, Sticker, content, isDeleted } = replyTo
+  const { type, Media, Sticker, content, isDeleted, isViolated } = replyTo
   const mediaUrl = Media?.url
   const fileName = Media?.fileName
   const stickerUrl = Sticker?.imageUrl
+  const mediaType = Media?.type
 
-  // Nếu tin nhắn gốc đã bị thu hồi, hiển thị thông báo thu hồi
+  // Nếu tin nhắn gốc đã bị thu hồi hoặc vi phạm, hiển thị thông báo tương ứng
   if (isDeleted) {
-    return (
-      <span className="text-xs rounded mt-0.5 inline-block text-gray-400">
-        This message has been deleted
-      </span>
-    )
+    const messageText = isViolated
+      ? "This message has been recalled due to violation"
+      : "This message has been deleted"
+    return <span className="text-xs rounded mt-0.5 inline-block text-gray-400">{messageText}</span>
   }
 
   // Nếu là ảnh
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.IMAGE && mediaUrl) {
     return (
       <div className="flex items-center gap-2 rounded p-0.5 mt-0.5">
         <img src={mediaUrl} alt="img" className="object-cover h-8" />
@@ -318,7 +318,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     )
   }
   // Nếu là audio
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.AUDIO && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <Mic size={16} />
@@ -327,7 +327,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     )
   }
   // Nếu là video
-  if (type === EMessageTypes.MEDIA && mediaUrl) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.VIDEO && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <FileVideo size={16} />
@@ -336,7 +336,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     )
   }
   // Nếu là file tài liệu
-  if (type === EMessageTypes.MEDIA && Media?.url) {
+  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT && mediaUrl) {
     return (
       <div className="flex items-center gap-2 mt-0.5">
         <Paperclip size={16} />

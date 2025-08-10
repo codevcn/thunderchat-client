@@ -1,7 +1,7 @@
 "use client"
 
 import type { TGetFriendRequestsData, TUserWithoutPassword } from "@/utils/types/be-api"
-import { CustomAvatar, CustomDropdown, DefaultAvatar } from "@/components/materials"
+import { CustomAvatar, CustomDropdown } from "@/components/materials"
 import { Spinner } from "@/components/materials/spinner"
 import { useUser } from "@/hooks/user"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -53,9 +53,11 @@ const RequestCard = ({ req, loading, user }: TRequestCardProps) => {
       <div className="flex items-center gap-x-3">
         <div>
           <CustomAvatar
-            fallback={<DefaultAvatar size={45} />}
-            src={Profile?.avatar || undefined}
+            fallback={Profile?.fullName[0].toUpperCase()}
+            src={Profile?.avatar}
             imgSize={45}
+            alt={Profile?.fullName}
+            className="bg-regular-violet-cl text-2xl"
           />
         </div>
         <div className="h-fit">
@@ -277,16 +279,11 @@ export const FriendRequests = () => {
       className: "QUERY-request-card-action",
     })
     if (!dataset) return
-    const { action, friendEmail, requestId, senderId } = dataset
+    const { action, requestId, senderId } = dataset
     setLoading(`request-card-${action}-${requestId}`)
     friendRequestService
       .friendRequestAction({ action, requestId, senderId })
       .then(() => {
-        if (action === EFriendRequestStatus.ACCEPTED) {
-          toaster.success(`The user ${friendEmail} now becomes your friend.`)
-        } else {
-          toaster.success(`You rejected invitation of the user ${friendEmail}.`)
-        }
         updateRequest(requestId, action)
       })
       .catch((error) => {

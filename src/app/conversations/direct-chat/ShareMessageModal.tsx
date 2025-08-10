@@ -131,7 +131,6 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
             (res) => {
               if (res && typeof res === "object" && Object.keys(res).length > 0) {
                 if ("success" in res && res.success) {
-                  chattingService.setAcknowledgmentFlag(true)
                   chattingService.recursiveSendingQueueMessages()
                   toast.success("Message shared successfully!")
                 } else if ("isError" in res && res.isError) {

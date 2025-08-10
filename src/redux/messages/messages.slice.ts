@@ -153,6 +153,7 @@ export const messagesSlice = createSlice({
       state.directMessages = null
       state.groupMessages = null
       state.fetchedMsgs = false
+      state.blockedUserId = null
     },
     resetDirectMessages: (state) => {
       state.directMessages = null

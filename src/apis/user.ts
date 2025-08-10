@@ -33,3 +33,6 @@ export const getCheckBlockedUser = (otherUserId: number) =>
     ...requestConfig,
     params: { otherUserId },
   })
+
+export const postUnblockUser = (blockedUserId: number) =>
+  clientAxios.post<TSuccess>("/user/unblock-user", { blockedUserId }, requestConfig)

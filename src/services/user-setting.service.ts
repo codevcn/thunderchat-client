@@ -1,9 +1,13 @@
 import { getUserSettings, updateUserSettings } from "@/apis/user-setting"
 
-export const fetchUserSettings = async () => {
-  return await getUserSettings()
+class UserSettingService {
+  async fetchUserSettings() {
+    return await getUserSettings()
+  }
+
+  async updateOnlyReceiveFriendMessage(onlyReceiveFriendMessage: boolean) {
+    return await updateUserSettings({ onlyReceiveFriendMessage })
+  }
 }
 
-export const updateUserSettingsService = async (onlyReceiveFriendMessage: boolean) => {
-  return await updateUserSettings({ onlyReceiveFriendMessage })
-}
+export const userSettingService = new UserSettingService()

@@ -78,10 +78,8 @@ const NoMessagesYet = ({ directChat, user, canSend }: TNoMessagesYetProps) => {
         },
         (data) => {
           if ("success" in data && data.success) {
-            chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()
           } else if ("isError" in data && data.isError) {
-            console.log(">>> error in data:", data)
             toast.error(data?.message || "Error when sending message")
           }
         }
@@ -711,7 +709,6 @@ export const Messages = memo(
         // Xử lý response dựa trên loại response
         if ("success" in response && response.success) {
           setPinnedMessages((prev) => prev.filter((m) => m.id !== msgId))
-          toast.success("Đã bỏ ghim tin nhắn")
         }
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || "Lỗi khi bỏ ghim tin nhắn"

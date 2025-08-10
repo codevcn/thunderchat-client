@@ -7,7 +7,7 @@ import type {
 import { getSearchUsers, getUserByEmail, postRegisterUser, getCheckBlockedUser } from "@/apis/user"
 import { EBlockTypes, EPaginations } from "@/utils/enums"
 import type { TSuccess } from "@/utils/types/global"
-import { postChangePassword, postBlockUser } from "@/apis/user"
+import { postChangePassword, postBlockUser, postUnblockUser } from "@/apis/user"
 
 class UserService {
   async searchUsers(keyword: string): Promise<TSearchUsersData[]> {
@@ -40,6 +40,11 @@ class UserService {
 
   async checkBlockedUser(otherUserId: number): Promise<TBlockedUserFullInfo | null> {
     const { data } = await getCheckBlockedUser(otherUserId)
+    return data
+  }
+
+  async unblockUser(blockedUserId: number): Promise<TSuccess> {
+    const { data } = await postUnblockUser(blockedUserId)
     return data
   }
 }

@@ -8,13 +8,7 @@ import { useUser } from "@/hooks/user"
 import { userService } from "@/services/user.service"
 import { useCallback, useRef, useState } from "react"
 import type { TSearchUsersData } from "@/utils/types/be-api"
-import {
-  CustomAvatar,
-  CustomDialog,
-  CustomTooltip,
-  DefaultAvatar,
-  TextField,
-} from "@/components/materials"
+import { CustomAvatar, CustomDialog, CustomTooltip, TextField } from "@/components/materials"
 import { toast } from "@/components/materials"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
@@ -27,18 +21,21 @@ type TUserCardProps = {
 }
 
 const UserCard = ({ item, loading, onSendFriendRequest }: TUserCardProps) => {
+  console.log(">>> item:", item)
   const profile = item.Profile
   const avatarSrc = profile?.avatar
-  const fullName = profile?.fullName
+  const fullName = profile.fullName
   const email = item.email
   const recipientId = item.id
 
   return (
     <div className="hover:bg-regular-icon-btn-cl flex items-center gap-x-3 rounded-md py-2 px-3 relative">
       <CustomAvatar
-        fallback={<DefaultAvatar size={45} />}
-        src={avatarSrc || undefined}
-        imgSize={45}
+        fallback={fullName[0].toUpperCase()}
+        src={avatarSrc}
+        imgSize={50}
+        alt={fullName}
+        className="bg-regular-violet-cl text-2xl"
       />
       <div className="text-regular-white-cl w-full">
         {fullName && <p>{fullName}</p>}
@@ -152,7 +149,7 @@ export const AddFriend = () => {
               onChange={searchUsers}
               ref={inputRef}
             />
-            <div className="flex flex-col gap-y-2 pr-1 mt-4 STYLE-styled-modal-scrollbar overflow-y-auto min-h-40 max-h-80">
+            <div className="flex flex-col gap-y-2 pr-1 mt-4 STYLE-styled-modal-scrollbar overflow-y-auto min-h-40 max-h-[400px]">
               {loading === "searching-users" ? (
                 <div className="flex w-full justify-center mt-5">
                   <Spinner color="text-white" className="h-7" />

@@ -17,7 +17,7 @@ import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.con
 import { useAudioMessages } from "@/hooks/voice-messages"
 import { useUser } from "@/hooks/user"
 import type { TStateMessage } from "@/utils/types/global"
-import { resetAllChatData, setDirectChat } from "@/redux/messages/messages.slice"
+import { resetAllChatData, setBlockedUserId, setDirectChat } from "@/redux/messages/messages.slice"
 import type { TCheckUserOnlineStatusRes, TPinMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
@@ -27,6 +27,7 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EOnlineStatus } from "@/utils/socket/enums"
+import { userService } from "@/services/user.service"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -53,7 +54,7 @@ type THeaderProps = {
   infoBarIsOpened: boolean
   onOpenInfoBar: (open: boolean) => void
   friendInfo: TUserWithProfile
-  canSend: boolean | null
+  canSend: boolean
   directChat: TDirectChatData
 }
 
@@ -188,10 +189,10 @@ const Header = ({
 
 type TMainProps = {
   directChat: TDirectChatData
-  canSend: boolean | null
+  canSend: boolean
 }
 
-const Main = ({ directChat, canSend }: TMainProps) => {
+const Main = ({ directChat, canSend = true }: TMainProps) => {
   const { Recipient, Creator, id: directChatId } = directChat
   const user = useUser()!
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
@@ -292,6 +293,23 @@ const Main = ({ directChat, canSend }: TMainProps) => {
   // Lấy tin nhắn ghim mới nhất (API đã sort đúng thứ tự mới nhất đến cũ nhất)
   const latestPinned = pinnedMessages[0] || null
 
+  const checkBlockedUser = async () => {
+    const blockedUser = await userService.checkBlockedUser(friendInfo.id)
+    if (blockedUser) {
+      const blockerUserId = blockedUser.blockerUserId
+      const blockedUserId = blockedUser.blockedUserId
+      if (blockerUserId === user.id) {
+        dispatch(setBlockedUserId(blockedUserId))
+      } else {
+        dispatch(setBlockedUserId(user.id))
+      }
+    }
+  }
+
+  useEffect(() => {
+    checkBlockedUser()
+  }, [friendInfo.id])
+
   return (
     <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative">
       <div className="flex flex-col items-center w-full box-border h-screen bg-no-repeat bg-transparent bg-cover bg-center relative">
@@ -374,6 +392,7 @@ const Main = ({ directChat, canSend }: TMainProps) => {
                 replyMessage={replyMessage}
                 setReplyMessage={handleSetReplyMessage}
                 canSend={canSend}
+                friendInfo={friendInfo}
               />
             </div>
           </div>
@@ -389,7 +408,7 @@ let fetchDirectChatAbortController: AbortController = new AbortController()
 export const DirectChatbox = () => {
   const { directChat } = useAppSelector(({ messages }) => messages)
   const dispatch = useAppDispatch()
-  const [canSend, setCanSend] = useState<boolean | null>(null)
+  const [canSend, setCanSend] = useState<boolean>(true)
   const user = useUser()
 
   const handleFetchDirectChat = (directChatId: number) => {
@@ -426,9 +445,8 @@ export const DirectChatbox = () => {
       .then((result) => {
         setCanSend(result)
       })
-      .catch((error) => {
-        console.error("[DEBUG] Error checking canSend:", error)
-        setCanSend(true) // Default to true on error
+      .catch(() => {
+        setCanSend(true)
       })
   }, [directChat?.id, user?.id])
 

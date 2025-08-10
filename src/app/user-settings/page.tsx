@@ -1,24 +1,21 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Lock, ArrowLeft } from "lucide-react"
 import { AppNavigation } from "@/components/layout/app-navigation"
-import { Settings as SettingsIcon, UserCog } from "lucide-react"
-import { fetchUserSettings, updateUserSettingsService } from "@/services/user-setting.service"
-import { toast } from "sonner" // Nếu đã có thư viện toast, nếu chưa có thì dùng alert
+import { UserCog } from "lucide-react"
+import { userSettingService } from "@/services/user-setting.service"
+import { toast } from "sonner"
+import { toaster } from "@/utils/toaster"
+import axiosErrorHandler from "@/utils/axios-error-handler"
 
-const sidebarOptions = [{ key: "privacy", label: "Privacy", icon: <UserCog size={20} /> }]
-
-// Toggle switch component chuẩn Tailwind
-function ToggleSwitch({
-  checked,
-  onChange,
-  labelId,
-}: {
+type TToggleSwitchProps = {
   checked: boolean
   onChange: (v: boolean) => void
   labelId?: string
-}) {
+}
+
+// Toggle switch component chuẩn Tailwind
+function ToggleSwitch({ checked, onChange, labelId }: TToggleSwitchProps) {
   return (
     <label
       className="relative inline-flex items-center cursor-pointer select-none"
@@ -53,13 +50,19 @@ const PrivacyContent = ({
     <div className="flex-1 flex justify-center bg-regular-black-cl min-h-screen px-16 py-8">
       <div className="w-full h-fit bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl p-8 shadow-lg overflow-auto">
         <div className="font-bold text-xl text-regular-white-cl">Privacy</div>
-        <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-4 mt-6">
-          <span className="text-base text-regular-white-cl font-medium">
-            Block messages from strangers
-          </span>
+        <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-8 mt-6">
+          <div>
+            <h3 className="text-base text-regular-white-cl font-medium">
+              Block messages from strangers
+            </h3>
+            <p className="text-xs text-regular-gray-cl mt-2 text-gray-400">
+              When you enable this, you will not receive messages from people who are not your
+              friends.
+            </p>
+          </div>
           <ToggleSwitch
             checked={onlyReceiveFriendMessage}
-            onChange={handleTogglePrivacy}
+            onChange={(v) => handleTogglePrivacy(v)}
             labelId="toggle-block-stranger"
           />
         </div>
@@ -68,39 +71,60 @@ const PrivacyContent = ({
   )
 }
 
-export default function UserSettingsPage() {
-  const [selectedTab, setSelectedTab] = useState("privacy")
-  const [onlyReceiveFriendMessage, setOnlyReceiveFriendMessage] = useState(false)
-  const [loading, setLoading] = useState(false)
+type TSettingsLoadingItem = "only-receive-friend-message"
 
-  // Lấy trạng thái ban đầu khi mở tab Quyền riêng tư
-  useEffect(() => {
-    if (selectedTab === "privacy") {
-      setLoading(true)
-      fetchUserSettings()
+type TSettingsLoading = TSettingsLoadingItem[]
+
+enum ESettingsTab {
+  PRIVACY = "PRIVACY",
+}
+
+const sidebarOptions = [
+  { key: ESettingsTab.PRIVACY, label: "Privacy", icon: <UserCog size={20} /> },
+]
+
+export default function UserSettingsPage() {
+  const [selectedTab, setSelectedTab] = useState<ESettingsTab>(ESettingsTab.PRIVACY)
+  const [onlyReceiveFriendMessage, setOnlyReceiveFriendMessage] = useState<boolean>(false)
+  const [loading, setLoading] = useState<TSettingsLoading>([])
+
+  // Hàm cập nhật trạng thái toggle
+  const handleTogglePrivacy = (value: boolean) => {
+    userSettingService
+      .updateOnlyReceiveFriendMessage(value)
+      .then(() => {
+        setOnlyReceiveFriendMessage(value)
+      })
+      .catch((error) => {
+        toaster.error(axiosErrorHandler.handleHttpError(error).message)
+      })
+  }
+
+  const checkLoading = (key: TSettingsLoadingItem): boolean => {
+    return loading?.includes(key) || false
+  }
+
+  const fetchSettingsPrivacy = () => {
+    if (selectedTab === ESettingsTab.PRIVACY) {
+      setLoading((prev) => [...prev, "only-receive-friend-message"])
+      userSettingService
+        .fetchUserSettings()
         .then((data) => {
           setOnlyReceiveFriendMessage(!!data.onlyReceiveFriendMessage)
         })
         .catch((error) => {
-          console.error("Lỗi khi lấy trạng thái quyền riêng tư:", error)
-          toast.error("Không lấy được trạng thái quyền riêng tư!")
+          toaster.error(axiosErrorHandler.handleHttpError(error).message)
         })
-        .finally(() => setLoading(false))
+        .finally(() => {
+          setLoading((prev) => prev.filter((item) => item !== "only-receive-friend-message"))
+        })
     }
-  }, [selectedTab])
-
-  // Hàm cập nhật trạng thái toggle
-  const handleTogglePrivacy = (value: boolean) => {
-    setOnlyReceiveFriendMessage(value)
-    updateUserSettingsService(value)
-      .then(() => {
-        toast.success("Cập nhật thành công!")
-      })
-      .catch((error) => {
-        console.error("Lỗi khi cập nhật trạng thái quyền riêng tư:", error)
-        toast.error("Cập nhật thất bại!")
-      })
   }
+
+  // Lấy trạng thái ban đầu khi mở tab Quyền riêng tư
+  useEffect(() => {
+    fetchSettingsPrivacy()
+  }, [selectedTab])
 
   return (
     <div
@@ -142,7 +166,7 @@ export default function UserSettingsPage() {
           {sidebarOptions.map((opt) => (
             <div
               key={opt.key}
-              onClick={() => setSelectedTab(opt.key)}
+              onClick={() => setSelectedTab(ESettingsTab[opt.key])}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -170,7 +194,7 @@ export default function UserSettingsPage() {
         </div>
       </div>
       {/* MAIN CONTENT */}
-      {selectedTab === "privacy" && (
+      {selectedTab === ESettingsTab.PRIVACY && (
         <PrivacyContent
           onlyReceiveFriendMessage={onlyReceiveFriendMessage}
           handleTogglePrivacy={handleTogglePrivacy}

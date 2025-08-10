@@ -677,11 +677,10 @@ export const Messages = memo(
     // Hàm bỏ ghim tin nhắn (unpin)
     const handleUnpinMessage = async (msgId: number) => {
       try {
-        const response = await pinService.togglePinMessage(msgId, groupChat.id, false)
+        const response = await pinService.togglePinMessage(msgId, undefined, false, groupChatId)
         // Xử lý response dựa trên loại response
         if ("success" in response && response.success) {
           setPinnedMessages((prev) => prev.filter((m) => m.id !== msgId))
-          toast.success("Đã bỏ ghim tin nhắn")
         }
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || "Lỗi khi bỏ ghim tin nhắn"

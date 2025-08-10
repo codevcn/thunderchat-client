@@ -58,9 +58,11 @@ const FriendCard = ({ friend, user }: TFriendCardProps) => {
       <div className="flex items-center gap-x-3">
         <div>
           <CustomAvatar
-            fallback={<DefaultAvatar size={45} />}
-            src={Profile?.avatar || undefined}
+            fallback={Profile?.fullName[0].toUpperCase()}
+            src={Profile?.avatar}
             imgSize={45}
+            alt={Profile?.fullName}
+            className="bg-regular-violet-cl text-2xl"
           />
         </div>
         <div className="h-fit">
@@ -272,10 +274,10 @@ export const FriendsList = () => {
           )
         ) : filteredFriends && filteredFriends.length > 0 ? (
           <>
-            <LoadMoreBtn onLoadMore={onLoadMore} hidden={isFetchingFriends} />
             {filteredFriends.map((friend) => (
               <FriendCard key={friend.id} friend={friend} user={user} />
             ))}
+            <LoadMoreBtn onLoadMore={onLoadMore} hidden={isFetchingFriends} />
           </>
         ) : isFetchingFriends ? (
           <div className="flex flex-col items-center gap-4 pt-4">

@@ -141,7 +141,3 @@ export enum EGroupChatErrMsgs {
   CONV_NOT_FOUND = "Group Chat not found",
   CONVS_NOT_FOUND = "Group Chats not found",
 }
-
-export enum EBlockTypes {
-  MESSAGE = "MESSAGE",
-}

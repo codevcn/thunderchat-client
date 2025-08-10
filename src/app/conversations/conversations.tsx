@@ -16,7 +16,6 @@ import type {
   TUserSearchOffset,
   TMessageSearchOffset,
   TUserWithProfile,
-  TDirectChatData,
   TMessage,
   TDirectChat,
   TGetMessagesMessage,
@@ -32,7 +31,6 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import {
   checkNewConversationIsCurrentChat,
   extractHighlightOffsets,
-  randomInRange,
   santizeMsgContent,
 } from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
@@ -57,7 +55,7 @@ import {
   setNoMoreUsers,
 } from "@/redux/search/search.slice"
 import { renderHighlightedContent } from "@/utils/tsx-helpers"
-import { useNavToConversation } from "@/hooks/navigation"
+import { useNavToConversation, useNavToTempDirectChat } from "@/hooks/navigation"
 import { resetAllChatData, updateDirectChat } from "@/redux/messages/messages.slice"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
@@ -151,6 +149,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
   const [activeTab, setActiveTab] = useState<TSearchType>("users")
   const buttonsGroupRef = useRef<HTMLDivElement>(null)
   const navToConversation = useNavToConversation()
+  const navToTempDirectChat = useNavToTempDirectChat()
   const dispatch = useAppDispatch()
   const user = useUser()!
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -184,34 +183,7 @@ const SearchResult = ({ searchResult, globalSearchInputRef }: TSearchResultProps
             navToConversation(directChat.id, EChatType.DIRECT)
           } else {
             dispatch(resetAllChatData())
-            const tempChatData: TDirectChatData = {
-              id: -1,
-              createdAt: new Date().toISOString(),
-              creatorId: user.id,
-              recipientId: otherUserId,
-              Creator: {
-                id: user.id,
-                email: user.email,
-                password: user.password,
-                createdAt: user.createdAt,
-                Profile: user.Profile,
-                role: user.role,
-              },
-              Recipient: {
-                id: otherUserId,
-                email: otherUser.email,
-                password: otherUser.password,
-                createdAt: otherUser.createdAt,
-                Profile: otherUser.Profile,
-                role: otherUser.role,
-              },
-            }
-            const tempId = randomInRange(1, 100000)
-            localStorageManager.setLastDirectChatData({
-              chatData: tempChatData,
-              tempId,
-            })
-            navToConversation(tempId, EChatType.DIRECT, true)
+            navToTempDirectChat(user, otherUser)
           }
         })
         .catch((err) => {

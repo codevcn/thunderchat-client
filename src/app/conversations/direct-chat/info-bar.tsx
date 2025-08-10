@@ -1,4 +1,4 @@
-import { X, Info, Mail, AlertTriangle, Ban, MessageCircleX, Check } from "lucide-react"
+import { X, Info, Mail, AlertTriangle, Ban, MessageCircleX, Check, UserPlus } from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
@@ -11,8 +11,7 @@ import { useState } from "react"
 import { userService } from "@/services/user.service"
 import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { Checkbox, CustomDialog, Spinner } from "@/components/materials"
-import { EBlockTypes } from "@/utils/enums"
+import { CustomDialog, Spinner } from "@/components/materials"
 import { setBlockedUserId } from "@/redux/messages/messages.slice"
 import { useUser } from "@/hooks/user"
 
@@ -65,7 +64,6 @@ const ProfileInfo = ({
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [isBlocking, setIsBlocking] = useState<boolean>(false)
   const [openBlockModal, setOpenBlockModal] = useState<boolean>(false)
-  const [pickedBlockOption, setPickedBlockOption] = useState<EBlockTypes>()
   const dispatch = useAppDispatch()
 
   const handleOpenReportModal = () => {
@@ -77,13 +75,9 @@ const ProfileInfo = ({
   }
 
   const blockUser = async () => {
-    if (!pickedBlockOption) {
-      toaster.error("Please select a block option")
-      return
-    }
     setIsBlocking(true)
     try {
-      await userService.blockUser(recipient.id, pickedBlockOption)
+      await userService.blockUser(recipient.id)
       setOpenBlockModal(false)
       dispatch(setBlockedUserId(recipient.id))
     } catch (error) {
@@ -95,14 +89,6 @@ const ProfileInfo = ({
 
   const openBlockUserDialog = async () => {
     setOpenBlockModal(true)
-  }
-
-  const checkOptionIsPicked = (option: EBlockTypes) => {
-    return pickedBlockOption === option
-  }
-
-  const togglePickBlockOption = (option: EBlockTypes) => {
-    setPickedBlockOption((prev) => (prev === option ? undefined : option))
   }
 
   return (
@@ -177,28 +163,28 @@ const ProfileInfo = ({
       <CustomDialog
         open={openBlockModal}
         onHideShow={setOpenBlockModal}
-        dialogHeader={{ title: `Manage blocking user "${Profile.fullName}"` }}
+        dialogHeader={{
+          title: `Blocking user "${Profile.fullName}"`,
+          description: "When blocked, this user cannot:",
+        }}
         dialogBody={
           <div className="flex flex-col min-w-[400px] gap-2 my-3">
-            <div
-              className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer"
-              onClick={() => togglePickBlockOption(EBlockTypes.MESSAGE)}
-            >
+            <div className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer">
               <MessageCircleX size={24} />
               <div>
-                <h3 className="text-sm font-medium">Block messages</h3>
+                <h3 className="text-sm font-medium">Send messages</h3>
                 <p className="text-xs text-regular-placeholder-cl mt-1">
-                  Both users will not be able to send messages to each other.
+                  This user will not be able to send messages to you.
                 </p>
               </div>
+            </div>
+            <div className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer">
+              <UserPlus size={24} />
               <div>
-                <Checkbox
-                  inputId={EBlockTypes.MESSAGE}
-                  checked={checkOptionIsPicked(EBlockTypes.MESSAGE)}
-                  readOnly
-                  labelClassName="border-[#949494] border-2"
-                  labelIconSize={16}
-                />
+                <h3 className="text-sm font-medium">Send friend invitations</h3>
+                <p className="text-xs text-regular-placeholder-cl mt-1">
+                  This user will not be able to send friend invitations to you.
+                </p>
               </div>
             </div>
           </div>

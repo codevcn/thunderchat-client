@@ -552,7 +552,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                     title="Reply to this message"
                     onClick={() => {
-                      if (message && message.type !== "PIN_NOTICE") {
+                      if (message && message.type !== EMessageTypes.PIN_NOTICE) {
                         onReply(message)
                       }
                     }}
@@ -679,7 +679,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                     title="Reply to this message"
                     onClick={() => {
-                      if (message && message.type !== "PIN_NOTICE") {
+                      if (message && message.type !== EMessageTypes.PIN_NOTICE) {
                         onReply(message)
                       }
                     }}

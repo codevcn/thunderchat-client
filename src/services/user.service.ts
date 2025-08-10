@@ -4,8 +4,14 @@ import type {
   TSearchUsersData,
   TUserWithProfile,
 } from "@/utils/types/be-api"
-import { getSearchUsers, getUserByEmail, postRegisterUser, getCheckBlockedUser } from "@/apis/user"
-import { EBlockTypes, EPaginations } from "@/utils/enums"
+import {
+  getSearchUsers,
+  getUserByEmail,
+  postRegisterUser,
+  getCheckBlockedUser,
+  getBlockedUsersList,
+} from "@/apis/user"
+import { EPaginations } from "@/utils/enums"
 import type { TSuccess } from "@/utils/types/global"
 import { postChangePassword, postBlockUser, postUnblockUser } from "@/apis/user"
 
@@ -33,8 +39,8 @@ class UserService {
     return data
   }
 
-  async blockUser(userId: number, blockType: EBlockTypes): Promise<TSuccess> {
-    const { data } = await postBlockUser(userId, blockType)
+  async blockUser(userId: number): Promise<TSuccess> {
+    const { data } = await postBlockUser(userId)
     return data
   }
 
@@ -45,6 +51,11 @@ class UserService {
 
   async unblockUser(blockedUserId: number): Promise<TSuccess> {
     const { data } = await postUnblockUser(blockedUserId)
+    return data
+  }
+
+  async getBlockedUsersList(): Promise<TBlockedUserFullInfo[]> {
+    const { data } = await getBlockedUsersList()
     return data
   }
 }

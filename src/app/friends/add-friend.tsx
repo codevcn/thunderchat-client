@@ -83,7 +83,7 @@ export const AddFriend = () => {
         userService
           .searchUsers(keyword)
           .then((users) => {
-            setUsers(users)
+            setUsers(users.filter((u) => u.id !== user.id))
           })
           .catch((error) => {
             toast.error(axiosErrorHandler.handleHttpError(error).message)

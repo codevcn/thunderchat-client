@@ -7,7 +7,6 @@ import type {
   TSearchUsersParams,
   TUserWithProfile,
 } from "../utils/types/be-api"
-import { EBlockTypes } from "@/utils/enums"
 
 export const getUserByEmail = (email: string) =>
   clientAxios.get<TUserWithProfile>("/user/get-user?email=" + email)
@@ -21,12 +20,8 @@ export const getSearchUsers = (params: TSearchUsersParams) =>
 export const postChangePassword = (data: { oldPassword: string; newPassword: string }) =>
   clientAxios.post("/user/change-password", data, requestConfig)
 
-export const postBlockUser = (userId: number, blockType: EBlockTypes) =>
-  clientAxios.post<TSuccess>(
-    "/user/block-user",
-    { blockedUserId: userId, blockType },
-    requestConfig
-  )
+export const postBlockUser = (userId: number) =>
+  clientAxios.post<TSuccess>("/user/block-user", { blockedUserId: userId }, requestConfig)
 
 export const getCheckBlockedUser = (otherUserId: number) =>
   clientAxios.get<TBlockedUserFullInfo | null>("/user/check-blocked-user", {
@@ -36,3 +31,6 @@ export const getCheckBlockedUser = (otherUserId: number) =>
 
 export const postUnblockUser = (blockedUserId: number) =>
   clientAxios.post<TSuccess>("/user/unblock-user", { blockedUserId }, requestConfig)
+
+export const getBlockedUsersList = () =>
+  clientAxios.get<TBlockedUserFullInfo[]>("/user/get-blocked-users-list", requestConfig)

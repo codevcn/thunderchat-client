@@ -41,6 +41,7 @@ import { TChattingPayloadForGroup } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
 import { useAppDispatch } from "@/hooks/redux"
 import { removeGroupChatMember } from "@/redux/messages/messages.slice"
+import axiosErrorHandler from "@/utils/axios-error-handler"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
 const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
@@ -92,10 +93,9 @@ const ExpressionPicker = ({
       },
       (data) => {
         if ("success" in data && data.success) {
-          chattingService.setAcknowledgmentFlag(true)
           chattingService.recursiveSendingQueueMessages()
         } else if ("isError" in data && data.isError) {
-          toast.error(data?.message || "Error when sending message")
+          toast.error(data.message)
         }
       }
     )
@@ -349,10 +349,9 @@ const MessageTextField = ({
 
     chattingService.sendGroupMessage(EMessageTypeAllTypes.TEXT, payload, (data) => {
       if ("success" in data && data.success) {
-        chattingService.setAcknowledgmentFlag(true)
         chattingService.recursiveSendingQueueMessages()
       } else if ("isError" in data && data.isError) {
-        toast.error(data?.message || "Error when sending message")
+        toast.error(data.message)
       }
     })
     setReplyMessage(null)
@@ -610,16 +609,15 @@ export const TypeMessageBar = memo(
             msgPayload,
             (data) => {
               if ("success" in data && data.success) {
-                chattingService.setAcknowledgmentFlag(true)
                 chattingService.recursiveSendingQueueMessages()
               } else if ("isError" in data && data.isError) {
-                toast.error(`Lỗi khi gửi file ${file.name}`)
+                toast.error(data.message)
               }
             }
           )
         }
       } catch (error) {
-        toast.error("Lỗi khi upload file")
+        toast.error(axiosErrorHandler.handleHttpError(error).message)
       } finally {
         setIsUploading(false)
       }
@@ -787,15 +785,14 @@ export const TypeMessageBar = memo(
 
         chattingService.sendGroupMessage(EMessageTypeAllTypes.AUDIO, msgPayload, (data) => {
           if ("success" in data && data.success) {
-            chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()
             setAudioUrl(null) // reset state
           } else if ("isError" in data && data.isError) {
-            toast.error(`Lỗi khi gửi file ghi âm`)
+            toast.error(data.message)
           }
         })
       } catch (error) {
-        toast.error("Lỗi khi gửi file ghi âm")
+        toast.error(axiosErrorHandler.handleHttpError(error).message)
       } finally {
         setIsUploading(false)
         setIsRecording(false)

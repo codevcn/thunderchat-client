@@ -1,7 +1,7 @@
 "use client"
 
 import type { TGetFriendsData, TUserWithProfile } from "@/utils/types/be-api"
-import { CustomAvatar, CustomPopover, DefaultAvatar, TextField } from "@/components/materials"
+import { CustomAvatar, CustomPopover, TextField } from "@/components/materials"
 import { Spinner } from "@/components/materials/spinner"
 import { useUser } from "@/hooks/user"
 import { friendService } from "@/services/friend.service"
@@ -12,7 +12,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { toast } from "@/components/materials"
 import { CircleMinus, Contact, Ellipsis, MessageCircleMore, Search } from "lucide-react"
-import { useNavToConversation } from "@/hooks/navigation"
+import { useNavToConversation, useNavToTempDirectChat } from "@/hooks/navigation"
 import { directChatService } from "@/services/direct-chat.service"
 import { useDebounce } from "@/hooks/debounce"
 
@@ -27,13 +27,21 @@ const FriendCard = ({ friend, user }: TFriendCardProps) => {
   const { Profile, email } = friendOfUser
   const navToDirectChat = useNavToConversation()
   const [isRemovingFriend, setIsRemovingFriend] = useState<boolean>(false)
+  const navToTempDirectChat = useNavToTempDirectChat()
 
   const navToChatWithFriend = () => {
-    directChatService.findConversationWithOtherUser(friendOfUser.id).then((res) => {
-      if (res) {
-        navToDirectChat(res.id, EChatType.DIRECT)
-      }
-    })
+    directChatService
+      .findConversationWithOtherUser(friendOfUser.id)
+      .then((res) => {
+        if (res) {
+          navToDirectChat(res.id, EChatType.DIRECT)
+        } else {
+          navToTempDirectChat(user, friendOfUser)
+        }
+      })
+      .catch((error) => {
+        toast.error(axiosErrorHandler.handleHttpError(error).message)
+      })
   }
 
   const removeFriend = () => {
@@ -67,7 +75,7 @@ const FriendCard = ({ friend, user }: TFriendCardProps) => {
         </div>
         <div className="h-fit">
           <div>
-            <span className="mb-1 font-bold">{Profile?.fullName || "Unnamed"}</span>
+            <span className="mb-1 font-bold leading-snug">{Profile.fullName}</span>
           </div>
           <div className="text-sm text-regular-icon-cl">
             <span>{email}</span>

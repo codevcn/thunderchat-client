@@ -645,13 +645,13 @@ export const TypeMessageBar = memo(
               if ("success" in data && data.success) {
                 chattingService.recursiveSendingQueueMessages()
               } else if ("isError" in data && data.isError) {
-                toast.error(`Lỗi khi gửi file ${file.name}`)
+                toast.error(data.message)
               }
             }
           )
         }
       } catch (error) {
-        toast.error("Lỗi khi upload file")
+        toast.error(axiosErrorHandler.handleHttpError(error).message)
       } finally {
         setIsUploading(false)
       }
@@ -825,11 +825,11 @@ export const TypeMessageBar = memo(
             chattingService.recursiveSendingQueueMessages()
             setAudioUrl(null) // reset state
           } else if ("isError" in data && data.isError) {
-            toast.error(`Lỗi khi gửi file ghi âm`)
+            toast.error(data.message)
           }
         })
       } catch (error) {
-        toast.error("Lỗi khi gửi file ghi âm")
+        toast.error(axiosErrorHandler.handleHttpError(error).message)
       } finally {
         setIsUploading(false)
         setIsRecording(false)

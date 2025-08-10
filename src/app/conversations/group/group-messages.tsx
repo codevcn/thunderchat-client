@@ -75,11 +75,10 @@ const NoMessagesYet = ({ groupChat }: TNoMessagesYetProps) => {
         },
         (data) => {
           if ("success" in data && data.success) {
-            chattingService.setAcknowledgmentFlag(true)
             chattingService.recursiveSendingQueueMessages()
           } else if ("isError" in data && data.isError) {
-            console.log(">>> error in data:", data)
-            toast.error(data?.message || "Error when sending message")
+            console.log(">>> error when sending sticker:", data)
+            toast.error(data.message)
           }
         }
       )

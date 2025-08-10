@@ -12,7 +12,6 @@ import type {
   EReportCategory,
   EViolationReportStatus,
   EBanType,
-  EBlockTypes,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 import { TReportedMessageFE } from "./fe-api"
@@ -160,7 +159,6 @@ export type TBlockedUser = {
   blockerUserId: number
   blockedUserId: number
   createdAt: Date
-  blockType: EBlockTypes
 }
 // ================================= API types =================================
 export type TLoginUserParams = {

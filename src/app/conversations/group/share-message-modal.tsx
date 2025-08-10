@@ -198,7 +198,7 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                           }
 
                           // Gửi tin nhắn sử dụng chattingService như trong codebase
-                          chattingService.sendMessage(
+                          chattingService.sendGroupMessage(
                             converToMessageTypeAllTypes(
                               messageToShare.type,
                               messageToShare.Media?.type
@@ -320,7 +320,7 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
                           }
 
                           // Gửi tin nhắn sử dụng chattingService như trong codebase
-                          chattingService.sendMessage(
+                          chattingService.sendGroupMessage(
                             converToMessageTypeAllTypes(
                               messageToShare.type,
                               messageToShare.Media?.type

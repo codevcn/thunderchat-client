@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, Check, Pencil, Plus, RefreshCw, Trash2, Users, X } from "lucide-react"
+import { ArrowLeft, Camera, Check, Pencil, Plus, RefreshCw, Users, X } from "lucide-react"
 import { openInfoBar, updateSingleConversation } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
@@ -22,6 +22,9 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { ManageMembers } from "./manage-members"
 import { useUser } from "@/hooks/user"
+import { checkIfGroupChatCreator } from "@/utils/helpers"
+import { PreviewInfo } from "./preview-info"
+import { GroupActions } from "./group-actions"
 
 type TMembersProps = {
   members: TGroupChatMemberWithUser[]
@@ -330,13 +333,8 @@ const EditGroup = ({ open, onClose, groupChat, members }: TEditGroupProps) => {
         </div>
       </div>
 
-      {/* Delete and Leave Group */}
-      <div className="w-full mt-2 bg-regular-info-bar-bgcl px-4 py-4 text-base">
-        <button className="flex items-center w-full justify-start text-red-500 rounded-md hover:bg-red-500/10 hover:text-red-400 p-4 h-auto">
-          <Trash2 className="h-5 w-5 mr-4" />
-          <span>Delete and Leave Group</span>
-        </button>
-      </div>
+      {/* Delete Group */}
+      <GroupActions groupChat={groupChat} />
 
       {/* Save Updates */}
       <div
@@ -387,7 +385,7 @@ export const InfoBar = () => {
             <h2 className="text-lg pl-2">Group Info</h2>
           </div>
 
-          {user.id === groupChat?.creatorId && (
+          {checkIfGroupChatCreator(user.id, groupChat || undefined) && (
             <div className="pr-4">
               <IconButton
                 className="flex justify-center items-center h-10 w-10 text-regular-icon-cl"
@@ -403,6 +401,7 @@ export const InfoBar = () => {
           <div className="grow w-full">
             <div className="overflow-y-auto STYLE-styled-scrollbar h-full w-full bg-regular-info-bar-bgcl">
               <Avatar groupChat={groupChat} membersCount={groupChatMembers.length} />
+              <PreviewInfo groupChat={groupChat} />
               <MembersList members={groupChatMembers} />
             </div>
           </div>

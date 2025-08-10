@@ -7,10 +7,14 @@ import {
   postUploadGroupAvatar,
   getGroupMessageContext,
   deleteGroupMessage,
+  getJoinGroupChatByInviteLink,
+  postCreateInviteLink,
 } from "@/apis/group-chat"
 import type {
   TGroupChat,
   TGroupChatData,
+  TJoinGroupChatByInviteLinkRes,
+  TCreateInviteLinkRes,
   TUpdateGroupChatParams,
   TUploadGroupAvatarData,
   TUserWithProfile,
@@ -79,6 +83,16 @@ class GroupChatService {
   // Xoá/thu hồi tin nhắn direct chat
   async deleteMessage(messageId: number) {
     const { data } = await deleteGroupMessage(messageId)
+    return data
+  }
+
+  async joinGroupChatByInviteLink(token: string): Promise<TJoinGroupChatByInviteLinkRes> {
+    const { data } = await getJoinGroupChatByInviteLink(token)
+    return data
+  }
+
+  async createInviteLink(groupChatId: number): Promise<TCreateInviteLinkRes> {
+    const { data } = await postCreateInviteLink(groupChatId)
     return data
   }
 }

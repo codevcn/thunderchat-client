@@ -26,3 +26,6 @@ export const postAddMembersToGroupChat = (groupChatId: number, memberIds: number
     { groupChatId, memberIds },
     requestConfig
   )
+
+export const postLeaveGroupChat = (groupChatId: number) =>
+  clientAxios.post<TSuccess>("/group-member/leave-group-chat", { groupChatId }, requestConfig)

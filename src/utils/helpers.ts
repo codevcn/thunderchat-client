@@ -3,6 +3,7 @@ import type { TEmoji, TFormData, THighlightOffsets } from "./types/global"
 import DOMPurify from "dompurify"
 import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
 import { EMessageMediaTypes, EMessageTypeAllTypes, EMessageTypes } from "./enums"
+import type { TGroupChat } from "./types/be-api"
 
 export const setLastSeen = (date: string) => {
   return dayjs(date).format("MM/DD/YYYY, h:mm A")
@@ -80,7 +81,7 @@ export const handleEventDelegation = <R extends Record<string, any>>(
 }
 
 /**
- * Create a path with query parameters
+ * Create a path with query parameters, e.g. "/conversations?tab=1"
  * @param path - The path to create the path with
  * @param params - The parameters to create the path with
  * @returns The path with the query parameters
@@ -256,4 +257,12 @@ export const converToMessageTypeAllTypes = (
   } else {
     return EMessageTypeAllTypes.TEXT
   }
+}
+
+export const generateInviteUrl = (inviteCode: string) => {
+  return `${process.env.NEXT_PUBLIC_SERVER_HOST_DEV}/conversations/group/invite/${inviteCode}`
+}
+
+export const checkIfGroupChatCreator = (userId: number, groupChat?: TGroupChat): boolean => {
+  return groupChat?.creatorId === userId
 }

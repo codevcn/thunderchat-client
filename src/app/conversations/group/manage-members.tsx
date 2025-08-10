@@ -9,16 +9,19 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { toaster } from "@/utils/toaster"
 import type { TGroupChatMemberWithUser } from "@/utils/types/be-api"
-import { ArrowLeft, UserPlus, UserX } from "lucide-react"
+import { ArrowLeft, Info, UserPlus, UserX } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useUser } from "@/hooks/user"
 import { AddMembersStep } from "./add-member"
+
+const MIN_GROUP_CHAT_MEMBERS: number = 2
 
 type TManageMembersPopoverProps = {
   member: TGroupChatMemberWithUser
   onOpenChange: (memberId: number, open: boolean) => void
   onRemoveMember: (member: TGroupChatMemberWithUser) => void
   activePopover?: number
+  onViewMemberDetails: (member: TGroupChatMemberWithUser) => void
 }
 
 const ManageMemberPopover = ({
@@ -26,6 +29,7 @@ const ManageMemberPopover = ({
   onOpenChange,
   onRemoveMember,
   activePopover,
+  onViewMemberDetails,
 }: TManageMembersPopoverProps) => {
   const {
     User: { Profile, id, email },
@@ -60,13 +64,20 @@ const ManageMemberPopover = ({
       onOpenChange={(open) => onOpenChange(id, open)}
       open={activePopover === id}
     >
-      <div className="bg-black py-2 rounded-lg text-white border border-white/30">
+      <div className="bg-black py-2 rounded-lg text-white border border-white/30 w-[136px]">
         <button
           onClick={() => onRemoveMember(member)}
-          className="flex items-center gap-2 py-2 px-6 text-regular-red-cl font-bold hover:bg-regular-hover-card-cl"
+          className="flex items-center justify-center gap-2 py-2 px-2 w-full text-regular-red-cl font-bold hover:bg-regular-hover-card-cl"
         >
           <UserX size={20} strokeWidth={3} />
           <span>Remove</span>
+        </button>
+        <button
+          onClick={() => onViewMemberDetails(member)}
+          className="flex items-center justify-center gap-2 py-2 px-2 w-full text-regular-white-cl font-bold hover:bg-regular-hover-card-cl"
+        >
+          <Info size={20} strokeWidth={3} />
+          <span>Details</span>
         </button>
       </div>
     </CustomPopover>
@@ -135,7 +146,10 @@ export const ManageMembers = () => {
 
   const handleRemoveMember = () => {
     if (!groupChat || !selectedMember) return
-
+    if ((groupChatMembers?.length || 0) < MIN_GROUP_CHAT_MEMBERS + 1) {
+      toaster.error("Group chat must have at least 2 members")
+      return
+    }
     const memberId = selectedMember.User.id
     groupMemberService
       .removeGroupChatMember(groupChat.id, memberId)
@@ -216,6 +230,7 @@ export const ManageMembers = () => {
                 onRemoveMember={handleShowRemoveMemberDialog}
                 member={member}
                 activePopover={activePopover}
+                onViewMemberDetails={() => {}}
               />
             ))
           )}

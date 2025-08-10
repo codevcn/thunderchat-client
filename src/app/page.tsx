@@ -14,6 +14,7 @@ import { EAuthStatus } from "@/utils/enums"
 import { getCurrentLocationPath, pureNavigator } from "@/utils/helpers"
 import { localStorageManager } from "@/utils/local-storage"
 import { toast } from "sonner"
+import { AppLoading } from "@/components/layout/app-loading"
 
 type TLoginFormProps = {
   onSetCheckUserStatus: (status: ECheckUserStatus) => void
@@ -109,43 +110,36 @@ const HomePage = () => {
     }
   }, [authStatus])
 
-  return (
+  return authStatus === EAuthStatus.UNAUTHENTICATED ? (
     <div className="flex flex-col justify-center items-center min-h-screen px-4 py-8">
-      {authStatus === EAuthStatus.UNAUTHENTICATED ? (
-        <>
-          <div className="flex flex-col items-center justify-center text-white p-4">
-            <div className="w-20 h-20 p-4 rounded-full bg-regular-violet-cl flex items-center justify-center mb-6">
-              <Image src="/images/logo.svg" alt="App Logo" width={150} height={150} />
-            </div>
+      <div className="flex flex-col items-center justify-center text-white p-4">
+        <div className="w-20 h-20 p-4 rounded-full bg-regular-violet-cl flex items-center justify-center mb-6">
+          <Image src="/images/logo.svg" alt="App Logo" width={150} height={150} />
+        </div>
 
-            <h1 className="text-4xl font-bold mb-4">Thunder Chat</h1>
+        <h1 className="text-4xl font-bold mb-4">Thunder Chat</h1>
 
-            {checkUserStatus === ECheckUserStatus.EXIST ? (
-              <LoginForm typedEmail={typedEmail} onGoBack={goBack} />
-            ) : checkUserStatus === ECheckUserStatus.NOT_EXIST ? (
-              <RegisterForm typedEmail={typedEmail} onGoBack={goBack} />
-            ) : (
-              <CheckUserForm
-                onSetCheckUserStatus={handleSetCheckUserStatus}
-                onSetTypedEmail={setTypedEmail}
-              />
-            )}
-          </div>
+        {checkUserStatus === ECheckUserStatus.EXIST ? (
+          <LoginForm typedEmail={typedEmail} onGoBack={goBack} />
+        ) : checkUserStatus === ECheckUserStatus.NOT_EXIST ? (
+          <RegisterForm typedEmail={typedEmail} onGoBack={goBack} />
+        ) : (
+          <CheckUserForm
+            onSetCheckUserStatus={handleSetCheckUserStatus}
+            onSetTypedEmail={setTypedEmail}
+          />
+        )}
+      </div>
 
-          {/* QR Code Login Link */}
-          <div className="mt-4">
-            <a href="#" className="text-[#8774E1] hover:underline">
-              LOG IN BY QR CODE
-            </a>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="w-16 h-16 border-4 border-regular-violet-cl border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-base text-white mt-5">Checking your authentication status...</p>
-        </>
-      )}
+      {/* QR Code Login Link */}
+      <div className="mt-4">
+        <a href="#" className="text-[#8774E1] hover:underline">
+          LOG IN BY QR CODE
+        </a>
+      </div>
     </div>
+  ) : (
+    <AppLoading />
   )
 }
 

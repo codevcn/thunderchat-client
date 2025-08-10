@@ -2,6 +2,7 @@ import {
   getFetchGroupChatMembers,
   getSearchGroupChatMembers,
   postAddMembersToGroupChat,
+  postLeaveGroupChat,
   removeGroupChatMember,
 } from "@/apis/group-member"
 import type { TAddMembersToGroupChatRes, TGroupChatMemberWithUser } from "@/utils/types/be-api"
@@ -30,6 +31,10 @@ class GroupMemberService {
   ): Promise<TAddMembersToGroupChatRes> {
     const { data } = await postAddMembersToGroupChat(groupChatId, memberIds)
     return data
+  }
+
+  async leaveGroupChat(groupChatId: number): Promise<void> {
+    await postLeaveGroupChat(groupChatId)
   }
 }
 

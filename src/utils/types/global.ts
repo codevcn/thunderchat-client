@@ -170,3 +170,8 @@ export type TUsePinChats = {
   isChatPinned: (chatId: number, chatType: EChatType) => boolean
   getPinnedChat: (chatId: number, chatType: EChatType) => TPinnedChat | undefined
 }
+
+export type TRemoveConversationState = {
+  conversationId: number
+  type: EChatType
+}

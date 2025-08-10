@@ -173,7 +173,7 @@ const ProfileInfo = ({
               <MessageCircleX size={24} />
               <div>
                 <h3 className="text-sm font-medium">Send messages</h3>
-                <p className="text-xs text-regular-placeholder-cl mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   This user will not be able to send messages to you.
                 </p>
               </div>
@@ -182,7 +182,7 @@ const ProfileInfo = ({
               <UserPlus size={24} />
               <div>
                 <h3 className="text-sm font-medium">Send friend invitations</h3>
-                <p className="text-xs text-regular-placeholder-cl mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   This user will not be able to send friend invitations to you.
                 </p>
               </div>

@@ -4,6 +4,8 @@ import type {
   TFetchGroupChatsData,
   TGroupChat,
   TGroupChatData,
+  TJoinGroupChatByInviteLinkRes,
+  TCreateInviteLinkRes,
   TUpdateGroupChatParams,
   TUploadGroupAvatarData,
 } from "@/utils/types/be-api"
@@ -52,3 +54,16 @@ export const getGroupMessageContext = (messageId: number) => {
 // API xoá/thu hồi tin nhắn direct chat
 export const deleteGroupMessage = (messageId: number) =>
   clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)
+
+export const getJoinGroupChatByInviteLink = (token: string) =>
+  clientAxios.get<TJoinGroupChatByInviteLinkRes>(`/group-chat/join-group-by-invite-link`, {
+    ...requestConfig,
+    params: { token },
+  })
+
+export const postCreateInviteLink = (groupChatId: number) =>
+  clientAxios.post<TCreateInviteLinkRes>(
+    `/group-chat/create-invite-link`,
+    { groupChatId },
+    requestConfig
+  )

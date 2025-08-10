@@ -1,6 +1,10 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit"
-import type { TConversationCard, TUpdateUnreadMsgCountState } from "@/utils/types/global"
-import { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
+import type {
+  TConversationCard,
+  TRemoveConversationState,
+  TUpdateUnreadMsgCountState,
+} from "@/utils/types/global"
+import type { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
 import { updateObjectByPath } from "@/utils/helpers"
 
 type TDirectChatsState = {
@@ -55,6 +59,15 @@ export const conversationsSlice = createSlice({
         }
       }
     },
+    removeConversation: (state, action: PayloadAction<TRemoveConversationState>) => {
+      const { conversationId, type } = action.payload
+      const conversations = state.conversations
+      if (conversations && conversations.length > 0) {
+        state.conversations = conversations.filter(
+          (conversation) => !(conversation.id === conversationId && conversation.type === type)
+        )
+      }
+    },
   },
 })
 
@@ -65,4 +78,5 @@ export const {
   clearConversations,
   updateSingleConversation,
   updateUnreadMsgCountOnCard,
+  removeConversation,
 } = conversationsSlice.actions

@@ -118,11 +118,8 @@ export const messagesSlice = createSlice({
         }
       }
     },
-    setDirectChat: (state, action: PayloadAction<TDirectChatData>) => {
+    setDirectChat: (state, action: PayloadAction<TDirectChatData | null>) => {
       state.directChat = action.payload
-    },
-    resetDirectChat: (state) => {
-      state.directChat = null
     },
     updateDirectChat: (
       state,
@@ -161,7 +158,7 @@ export const messagesSlice = createSlice({
     resetGroupMessages: (state) => {
       state.groupMessages = null
     },
-    setGroupChat: (state, action: PayloadAction<TGroupChatData>) => {
+    setGroupChat: (state, action: PayloadAction<TGroupChatData | null>) => {
       state.groupChat = action.payload
     },
     setBlockedUserId: (state, action: PayloadAction<number | null>) => {
@@ -176,7 +173,6 @@ export const {
   updateGroupChat,
   removeGroupChatMember,
   setDirectChat,
-  resetDirectChat,
   resetAllChatData,
   setFetchedMsgs,
   mergeMessages,

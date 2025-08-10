@@ -138,6 +138,7 @@ export type TGroupChat = {
   creatorId: number
   createdAt: string
   lastSentMessageId?: number
+  inviteCode?: string
 }
 
 export type TGroupChatMember = {
@@ -748,4 +749,13 @@ export type TPinnedChat = {
 export type TBlockedUserFullInfo = TBlockedUser & {
   UserBlocker: TUserWithProfile
   UserBlocked: TUserWithProfile
+}
+
+export type TJoinGroupChatByInviteLinkRes = {
+  groupChatId: number
+  message?: string
+}
+
+export type TCreateInviteLinkRes = {
+  inviteCode: string
 }

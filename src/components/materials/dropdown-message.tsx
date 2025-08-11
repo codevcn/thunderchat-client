@@ -27,7 +27,7 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
     e.stopPropagation()
     try {
       await navigator.clipboard.writeText(content)
-      toast.success("Copy thành công!")
+      toast.success("Copy success!")
     } catch (err) {
       // fallback
       const textarea = document.createElement("textarea")
@@ -36,7 +36,7 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
       textarea.select()
       document.execCommand("copy")
       document.body.removeChild(textarea)
-      toast.success("Copy thành công!")
+      toast.success("Copy success!")
     }
     onClose && onClose()
   }
@@ -46,15 +46,15 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
     e.stopPropagation()
     if (!messageId) return
     try {
-      const res = await directChatService.deleteMessage(messageId)
-      if (res.success) {
-        toast.success("Thu hồi tin nhắn thành công")
-        // Nếu có state quản lý messages, nên cập nhật lại UI ở đây
-      } else {
-        toast.error(res.message || "Thu hồi tin nhắn thất bại")
-      }
+      await directChatService.deleteMessage(messageId)
+      // if (res.success) {
+      //   toast.success("Thu hồi tin nhắn thành công")
+      //   // Nếu có state quản lý messages, nên cập nhật lại UI ở đây
+      // } else {
+      //   toast.error(res.message || "Thu hồi tin nhắn thất bại")
+      // }
     } catch (err: any) {
-      toast.error(err?.message || "Thu hồi tin nhắn thất bại")
+      toast.error(err?.message || "Recall message failed")
     }
     onClose && onClose()
   }
@@ -69,7 +69,7 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
           <span role="img" aria-label="copy">
             📋
           </span>
-          Copy tin nhắn
+          Copy message
         </button>
       )}
       <button
@@ -81,7 +81,7 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
         }}
       >
         <Pin size={16} fill={isPinned ? "#facc15" : "none"} />
-        {isPinned ? "Bỏ ghim tin nhắn" : "Ghim tin nhắn"}
+        {isPinned ? "Unpin message" : "Pin message"}
       </button>
       <div className="border-t border-gray-600 my-1"></div>
       {canDelete && (
@@ -92,7 +92,7 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
           <span role="img" aria-label="delete">
             🗑️
           </span>
-          Xoá (Thu hồi)
+          Delete (Recall)
         </button>
       )}
     </div>

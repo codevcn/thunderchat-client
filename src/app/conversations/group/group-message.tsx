@@ -141,10 +141,14 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
 
   if (message?.isDeleted) {
+    const messageText = message.isViolated
+      ? "This message has been recalled due to violation"
+      : "This message has been deleted"
+
     return (
       <div
         className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent("This message has been deleted") }}
+        dangerouslySetInnerHTML={{ __html: santizeMsgContent(messageText) }}
       ></div>
     )
   }
@@ -306,7 +310,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     const messageText = isViolated
       ? "This message has been recalled due to violation"
       : "This message has been deleted"
-    return <span className="text-xs rounded mt-0.5 inline-block text-gray-400">{messageText}</span>
+    return <span className="text-xs rounded mt-0.5 inline-block text-white/80">{messageText}</span>
   }
 
   // Nếu là ảnh
@@ -393,6 +397,8 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       type,
       ReplyTo,
       groupChatId,
+      isDeleted,
+      isViolated,
     } = message
 
     const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
@@ -438,7 +444,8 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
             {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi */}
             {message.ReplyTo &&
               typeof message.ReplyTo.id !== "undefined" &&
-              !message.ReplyTo.isDeleted && (
+              !message.ReplyTo.isDeleted &&
+              !message.ReplyTo.isViolated && (
                 <button
                   className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
                   onClick={() => {
@@ -521,13 +528,14 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               <div
                 className={
                   `${isNewMsg ? "animate-new-user-message -translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
-                  `${Sticker ? "" : message.isDeleted ? "bg-regular-violet-cl opacity-60 text-white italic" : "bg-regular-violet-cl"} ` +
+                  `${Sticker ? "" : message.isDeleted ? "bg-regular-violet-cl opacity-60 text-white" : "bg-regular-violet-cl"} ` +
                   "group relative max-w-[70%] w-max rounded-t-2xl rounded-bl-2xl py-1.5 pb-1 pl-2 pr-1"
                 }
               >
                 <div
                   className={
-                    (showDropdown ? "flex" : "group-hover:flex hidden") +
+                    (showDropdown ? "flex" : "hidden") +
+                    (isDeleted ? "" : " group-hover:flex") +
                     " items-end h-full absolute top-0 right-[calc(100%-5px)] pr-[20px]"
                   }
                 >
@@ -535,7 +543,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                     title="Reply to this message"
                     onClick={() => {
-                      if (message && message.type !== "PIN_NOTICE") {
+                      if (message && message.type !== EMessageTypes.PIN_NOTICE) {
                         onReply(message)
                       }
                     }}
@@ -592,7 +600,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && !message.isDeleted && (
+                {ReplyTo && !isDeleted && !isViolated && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -610,6 +618,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     </div>
                   </div>
                 )}
+
                 <Content
                   content={content}
                   stickerUrl={Sticker?.imageUrl ?? null}
@@ -647,13 +656,14 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               <div
                 className={
                   `group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
-                  `${Sticker ? "" : message.isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white italic" : "w-max bg-regular-dark-gray-cl"} ` +
+                  `${Sticker ? "" : isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white" : "w-max bg-regular-dark-gray-cl"} ` +
                   "max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative"
                 }
               >
                 <div
                   className={
-                    (showDropdown ? "flex" : "group-hover:flex hidden") +
+                    (showDropdown ? "flex" : "hidden") +
+                    (isDeleted ? "" : " group-hover:flex") +
                     " items-end h-full absolute top-0 left-[calc(100%-5px)] pl-[20px]"
                   }
                 >
@@ -661,7 +671,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className="p-1 bg-white/20 rounded hover:scale-110 transition duration-200"
                     title="Reply to this message"
                     onClick={() => {
-                      if (message && message.type !== "PIN_NOTICE") {
+                      if (message && message.type !== EMessageTypes.PIN_NOTICE) {
                         onReply(message)
                       }
                     }}
@@ -718,7 +728,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && !message.isDeleted && (
+                {ReplyTo && !isDeleted && !isViolated && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -764,7 +774,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               onClose={handleCloseDropdown}
               content={content}
               isTextMessage={type === "TEXT"}
-              canDelete={user.id === authorId && !message.isDeleted}
+              canDelete={user.id === authorId && !isDeleted && !isViolated}
               messageId={message.id}
             />
           </div>

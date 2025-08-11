@@ -80,7 +80,6 @@ export const AddMembersStep = ({ open, onOpen, groupChatId }: TAddMembersBoardPr
         pickedUsers.map(({ id }) => id)
       )
       .then((res) => {
-        console.log(">>> res 83:", res)
         onOpen(false)
         dispatch(addGroupChatMembers(res.addedMembers))
       })

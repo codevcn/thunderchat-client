@@ -141,3 +141,10 @@ export enum EGroupChatErrMsgs {
   CONV_NOT_FOUND = "Group Chat not found",
   CONVS_NOT_FOUND = "Group Chats not found",
 }
+
+export enum EGroupChatPermissions {
+  SEND_MESSAGE = "sendMessage",
+  PIN_MESSAGE = "pinMessage",
+  SHARE_INVITE_CODE = "shareInviteCode",
+  UPDATE_INFO = "updateInfo",
+}

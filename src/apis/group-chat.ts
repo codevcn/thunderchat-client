@@ -8,6 +8,8 @@ import type {
   TCreateInviteLinkRes,
   TUpdateGroupChatParams,
   TUploadGroupAvatarData,
+  TFetchGroupChatPermissionsRes,
+  TGroupChatPermissionState,
 } from "@/utils/types/be-api"
 
 export const postUploadGroupAvatar = (data: FormData) =>
@@ -67,3 +69,19 @@ export const postCreateInviteLink = (groupChatId: number) =>
     { groupChatId },
     requestConfig
   )
+
+export const putUpdateGroupChatPermissions = (
+  groupChatId: number,
+  permissions: TGroupChatPermissionState
+) =>
+  clientAxios.put<TSuccess>(
+    `/group-chat/update-permissions`,
+    { groupChatId, permissions },
+    requestConfig
+  )
+
+export const getFetchGroupChatPermissions = (groupChatId: number) =>
+  clientAxios.get<TFetchGroupChatPermissionsRes>(`/group-chat/fetch-permissions`, {
+    ...requestConfig,
+    params: { groupChatId },
+  })

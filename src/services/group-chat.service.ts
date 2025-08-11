@@ -9,6 +9,8 @@ import {
   deleteGroupMessage,
   getJoinGroupChatByInviteLink,
   postCreateInviteLink,
+  putUpdateGroupChatPermissions,
+  getFetchGroupChatPermissions,
 } from "@/apis/group-chat"
 import type {
   TGroupChat,
@@ -18,6 +20,8 @@ import type {
   TUpdateGroupChatParams,
   TUploadGroupAvatarData,
   TUserWithProfile,
+  TFetchGroupChatPermissionsRes,
+  TGroupChatPermissionState,
 } from "@/utils/types/be-api"
 import type { TConversationCard, TSuccess } from "@/utils/types/global"
 import { convertToGroupChatsUIData } from "@/utils/data-convertors/conversations-convertor"
@@ -93,6 +97,19 @@ class GroupChatService {
 
   async createInviteLink(groupChatId: number): Promise<TCreateInviteLinkRes> {
     const { data } = await postCreateInviteLink(groupChatId)
+    return data
+  }
+
+  async updateGroupChatPermissions(
+    groupChatId: number,
+    permissions: TGroupChatPermissionState
+  ): Promise<TSuccess> {
+    const { data } = await putUpdateGroupChatPermissions(groupChatId, permissions)
+    return data
+  }
+
+  async fetchGroupChatPermissions(groupChatId: number): Promise<TFetchGroupChatPermissionsRes> {
+    const { data } = await getFetchGroupChatPermissions(groupChatId)
     return data
   }
 }

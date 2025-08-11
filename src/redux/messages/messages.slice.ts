@@ -8,7 +8,9 @@ import { PayloadAction, createSlice } from "@reduxjs/toolkit"
 import type {
   TDirectChatData,
   TGroupChatData,
+  TGroupChatMember,
   TGroupChatMemberWithUser,
+  TGroupChatPermissionState,
 } from "@/utils/types/be-api"
 import { updateObjectByPath } from "@/utils/helpers"
 import type { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
@@ -21,6 +23,8 @@ type TMessagesState = {
   groupMessages: TStateMessage[] | null
   fetchedMsgs: boolean
   blockedUserId: number | null
+  groupChatPermissions: TGroupChatPermissionState | null
+  userInGroupChat: TGroupChatMember | null
 }
 
 const initialState: TMessagesState = {
@@ -30,6 +34,8 @@ const initialState: TMessagesState = {
   groupMessages: null,
   fetchedMsgs: false,
   blockedUserId: null,
+  groupChatPermissions: null,
+  userInGroupChat: null,
 }
 
 export const messagesSlice = createSlice({
@@ -164,6 +170,12 @@ export const messagesSlice = createSlice({
     setBlockedUserId: (state, action: PayloadAction<number | null>) => {
       state.blockedUserId = action.payload
     },
+    setGroupChatPermissions: (state, action: PayloadAction<TGroupChatPermissionState>) => {
+      state.groupChatPermissions = action.payload
+    },
+    setUserInGroupChat: (state, action: PayloadAction<TGroupChatMember | null>) => {
+      state.userInGroupChat = action.payload
+    },
   },
 })
 
@@ -184,4 +196,6 @@ export const {
   setGroupChat,
   addGroupChatMembers,
   setBlockedUserId,
+  setGroupChatPermissions,
+  setUserInGroupChat,
 } = messagesSlice.actions

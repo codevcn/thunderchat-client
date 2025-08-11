@@ -175,3 +175,8 @@ export type TRemoveConversationState = {
   conversationId: number
   type: EChatType
 }
+
+export type TMemberPermissionRenderingResult = {
+  hasPermission: boolean
+  message: string
+}

@@ -2,8 +2,15 @@ import dayjs from "dayjs"
 import type { TEmoji, TFormData, THighlightOffsets } from "./types/global"
 import DOMPurify from "dompurify"
 import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
-import { EMessageMediaTypes, EMessageTypeAllTypes, EMessageTypes } from "./enums"
-import type { TGroupChat } from "./types/be-api"
+import {
+  EGroupChatPermissions,
+  EGroupChatRole,
+  EMessageMediaTypes,
+  EMessageTypeAllTypes,
+  EMessageTypes,
+} from "./enums"
+import type { TGroupChat, TGroupChatMember, TGroupChatPermissionState, TUser } from "./types/be-api"
+import type { TMemberPermissionRenderingResult } from "./types/global"
 
 export const setLastSeen = (date: string) => {
   return dayjs(date).format("MM/DD/YYYY, h:mm A")
@@ -265,4 +272,42 @@ export const generateInviteUrl = (inviteCode: string) => {
 
 export const checkIfGroupChatCreator = (userId: number, groupChat?: TGroupChat): boolean => {
   return groupChat?.creatorId === userId
+}
+
+export const checkGroupChatPermission = (
+  groupChatPermissions: TGroupChatPermissionState | null,
+  user: TUser,
+  groupChatMembers: TGroupChatMember[],
+  permissionToCheck: EGroupChatPermissions
+): TMemberPermissionRenderingResult => {
+  let result: TMemberPermissionRenderingResult = {
+    hasPermission: false,
+    message: "",
+  }
+  if (groupChatMembers.find(({ userId }) => userId === user.id)?.role === EGroupChatRole.ADMIN) {
+    result.hasPermission = true
+  }
+  switch (permissionToCheck) {
+    case EGroupChatPermissions.SHARE_INVITE_CODE:
+      if (groupChatPermissions && groupChatPermissions.shareInviteCode) {
+        result.hasPermission = true
+      }
+      break
+    case EGroupChatPermissions.SEND_MESSAGE:
+      if (groupChatPermissions && groupChatPermissions.sendMessage) {
+        result.hasPermission = true
+      }
+      break
+    case EGroupChatPermissions.PIN_MESSAGE:
+      if (groupChatPermissions && groupChatPermissions.pinMessage) {
+        result.hasPermission = true
+      }
+      break
+    case EGroupChatPermissions.UPDATE_INFO:
+      if (groupChatPermissions && groupChatPermissions.updateInfo) {
+        result.hasPermission = true
+      }
+      break
+  }
+  return result
 }

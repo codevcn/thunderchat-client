@@ -161,7 +161,7 @@ export const Messages = memo(
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
     const isRenderingMessages = useRef<boolean>(false)
     const readyNewMessage = useRef<TGetMessagesMessage | null>(null)
-
+    console.log(">>> messages:", messages)
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
 
@@ -317,7 +317,29 @@ export const Messages = memo(
         return
       }
       if (newMessage.groupChatId !== groupChatId) return
-      dispatch(mergeGroupMessages([newMessage]))
+
+      // Kiểm tra xem tin nhắn đã tồn tại chưa
+      const existingMessage = messages?.find((msg) => msg.id === id)
+
+      if (existingMessage) {
+        // Cập nhật tin nhắn cũ
+        dispatch(updateGroupMessages([{ msgId: id, msgUpdates: newMessage }]))
+      } else {
+        // Nếu không tìm thấy tin nhắn trong state
+        if (
+          newMessage.isDeleted ||
+          newMessage.isViolated ||
+          newMessage.ReplyTo?.isDeleted ||
+          newMessage.ReplyTo?.isViolated
+        ) {
+          // Force update cho tin nhắn đã thu hồi/vi phạm hoặc tin nhắn reply đến tin nhắn đã thu hồi/vi phạm
+          dispatch(updateGroupMessages([{ msgId: id, msgUpdates: newMessage }]))
+        } else {
+          // Chỉ thêm tin nhắn mới thực sự
+          dispatch(mergeGroupMessages([newMessage]))
+        }
+      }
+
       dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.GROUP }))
       clientSocket.setMessageOffset(id, groupChatId)
     }

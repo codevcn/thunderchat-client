@@ -897,7 +897,7 @@ export const TypeMessageBar = memo(
 
     if (blockedUserId === user.id) {
       return (
-        <div className="flex-1 flex items-center justify-center w-full py-8">
+        <div className="flex-1 flex items-center justify-center w-full py-6">
           <div className="system-message text-center text-gray-400 py-4 w-full">
             You are blocked by this person. You cannot send a message.
           </div>
@@ -922,7 +922,7 @@ export const TypeMessageBar = memo(
 
     if (!canSend) {
       return (
-        <div className="flex-1 flex items-center justify-center w-full py-8">
+        <div className="flex-1 flex items-center justify-center w-full py-6">
           <div className="system-message text-center text-gray-400 py-4 w-full">
             This person only accepts messages from friends. You cannot send a message.
           </div>

@@ -14,7 +14,6 @@ export const usePinChats = (): TUsePinChats => {
     setLoading(true)
     try {
       const pinChats = await pinService.getPinnedChatsByUser()
-      console.log(">>> pinChats:", pinChats)
       setPinChats(pinChats)
     } catch (error) {
       toaster.error(axiosErrorHandler.handleHttpError(error).message)

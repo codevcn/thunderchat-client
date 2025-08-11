@@ -12,6 +12,7 @@ import type {
   EReportCategory,
   EViolationReportStatus,
   EBanType,
+  EGroupChatPermissions,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 import { TReportedMessageFE } from "./fe-api"
@@ -149,7 +150,7 @@ export type TGroupChatMember = {
   role: EGroupChatRole
 }
 
-export type TGroupChatMemberWithUser = Omit<TGroupChatMember, "userId"> & {
+export type TGroupChatMemberWithUser = TGroupChatMember & {
   User: TUser & {
     Profile: TProfile
   }
@@ -758,4 +759,12 @@ export type TJoinGroupChatByInviteLinkRes = {
 
 export type TCreateInviteLinkRes = {
   inviteCode: string
+}
+
+export type TGroupChatPermissionState = {
+  [key in EGroupChatPermissions]: boolean
+}
+
+export type TFetchGroupChatPermissionsRes = {
+  permissions: TGroupChatPermissionState
 }

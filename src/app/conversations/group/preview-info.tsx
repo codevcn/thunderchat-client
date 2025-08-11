@@ -1,12 +1,13 @@
 import { Spinner } from "@/components/materials"
 import { CustomTooltip } from "@/components/materials/tooltip"
-import { useAppDispatch } from "@/hooks/redux"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
+import { useUser } from "@/hooks/user"
 import { removeConversation } from "@/redux/conversations/conversations.slice"
 import { setGroupChat } from "@/redux/messages/messages.slice"
 import { groupMemberService } from "@/services/group-member.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { EChatType } from "@/utils/enums"
-import { generateInviteUrl } from "@/utils/helpers"
+import { EChatType, EGroupChatPermissions } from "@/utils/enums"
+import { checkGroupChatPermission, generateInviteUrl } from "@/utils/helpers"
 import { toaster } from "@/utils/toaster"
 import type { TGroupChatData } from "@/utils/types/be-api"
 import { LogOut, Share2 } from "lucide-react"
@@ -22,6 +23,15 @@ export const PreviewInfo = ({ groupChat }: TPreviewInfoProps) => {
   const { inviteCode } = groupChat
   const [loading, setLoading] = useState<TLoading>()
   const dispatch = useAppDispatch()
+  const { groupChatPermissions } = useAppSelector(({ messages }) => messages)
+  const user = useUser()!
+
+  const shareInviteCodePermission = checkGroupChatPermission(
+    groupChatPermissions,
+    user,
+    groupChat.Members || [],
+    EGroupChatPermissions.SHARE_INVITE_CODE
+  )
 
   const handleCopyInviteLink = (inviteCode: string) => {
     navigator.clipboard.writeText(generateInviteUrl(inviteCode))
@@ -47,7 +57,7 @@ export const PreviewInfo = ({ groupChat }: TPreviewInfoProps) => {
 
   return (
     <div className="flex flex-col gap-2 w-full mt-2 bg-regular-info-bar-bgcl px-4 py-4 text-base border-b border-gray-700">
-      {inviteCode && (
+      {inviteCode && shareInviteCodePermission.hasPermission && (
         <CustomTooltip title="Copy invite link" placement="bottom" align="center" arrow>
           <div
             onClick={() => handleCopyInviteLink(inviteCode)}

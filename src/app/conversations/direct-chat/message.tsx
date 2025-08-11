@@ -311,7 +311,7 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     const messageText = isViolated
       ? "This message has been recalled due to violation"
       : "This message has been deleted"
-    return <span className="text-xs rounded mt-0.5 inline-block text-gray-400">{messageText}</span>
+    return <span className="text-xs rounded mt-0.5 inline-block text-white/80">{messageText}</span>
   }
 
   // Nếu là ảnh
@@ -424,7 +424,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
           onPinChange(true)
         }
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || "Lỗi khi ghim/bỏ ghim"
+        const errorMessage = err?.response?.data?.message || "Error when pinning/unpinning"
         toast.error(errorMessage)
       } finally {
         setLoadingPin(false)
@@ -589,7 +589,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {
                         toast.error(
-                          "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                          "You have reached the limit of 5 pinned messages. Please unpin another message before pinning a new one."
                         )
                         return
                       }
@@ -664,7 +664,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               <div
                 className={
                   `group ${isNewMsg ? "animate-new-friend-message translate-x-[3.5rem] translate-y-[1rem] opacity-0" : ""} ` +
-                  `${Sticker ? "" : message.isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white" : "w-max bg-regular-dark-gray-cl"} ` +
+                  `${Sticker ? "" : isDeleted ? "bg-regular-dark-gray-cl opacity-60 text-white" : "w-max bg-regular-dark-gray-cl"} ` +
                   "max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative"
                 }
               >
@@ -736,7 +736,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   </button>
                 </div>
 
-                {ReplyTo && !message.isDeleted && !message.isViolated && (
+                {ReplyTo && !isDeleted && !isViolated && (
                   <div
                     data-reply-to-id={ReplyTo.id}
                     className="QUERY-reply-preview rounded-lg bg-white/20 border-l-4 border-white px-2 py-1 mb-1.5 cursor-pointer hover:bg-white/30 transition-colors"
@@ -782,7 +782,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
               onClose={handleCloseDropdown}
               content={content}
               isTextMessage={type === "TEXT"}
-              canDelete={user.id === authorId && !message.isDeleted && !message.isViolated}
+              canDelete={user.id === authorId && !isDeleted && !isViolated}
               messageId={message.id}
             />
           </div>

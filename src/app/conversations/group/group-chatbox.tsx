@@ -16,7 +16,11 @@ import { VoiceMessagePlayer } from "../../../components/voice-message/voice-mess
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
 import { useAudioMessages } from "@/hooks/voice-messages"
 import type { TStateMessage } from "@/utils/types/global"
-import { resetAllChatData, setGroupChat } from "@/redux/messages/messages.slice"
+import {
+  resetAllChatData,
+  setGroupChat,
+  setGroupChatPermissions,
+} from "@/redux/messages/messages.slice"
 import type { TPinGroupMessageEventData } from "@/utils/types/socket"
 import { pinService } from "@/services/pin.service"
 import { renderMessageContent } from "./pin-message"
@@ -25,6 +29,7 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { groupChatService } from "@/services/group-chat.service"
+import { toaster } from "@/utils/toaster"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -216,6 +221,23 @@ const Main = ({ groupChat }: TMainProps) => {
     clientSocket.socket.emit(ESocketEvents.join_group_chat_room, { groupChatId }, () => {})
   }
 
+  const fetchGroupChatPermissions = async () => {
+    try {
+      const res = await groupChatService.fetchGroupChatPermissions(groupChatId)
+      const { permissions } = res
+      dispatch(
+        setGroupChatPermissions({
+          sendMessage: permissions.sendMessage,
+          pinMessage: permissions.pinMessage,
+          shareInviteCode: permissions.shareInviteCode,
+          updateInfo: permissions.updateInfo,
+        })
+      )
+    } catch (error) {
+      toaster.error(axiosErrorHandler.handleHttpError(error).message)
+    }
+  }
+
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
     // Remove toàn bộ listener cũ trước khi đăng ký mới
@@ -258,6 +280,7 @@ const Main = ({ groupChat }: TMainProps) => {
   useEffect(() => {
     groupChatIdRef.current = groupChatId
     joinGroupChatRoom()
+    fetchGroupChatPermissions()
     if (groupChatId) {
       pinService
         .getPinnedMessages(undefined, groupChatId)

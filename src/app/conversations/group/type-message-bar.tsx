@@ -27,9 +27,21 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
-import type { TGroupChat, TSticker } from "@/utils/types/be-api"
-import type { TEmoji, TStateMessage } from "@/utils/types/global"
-import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
+import type {
+  TGroupChat,
+  TGroupChatData,
+  TGroupChatMember,
+  TGroupChatPermissionState,
+  TSticker,
+  TUser,
+} from "@/utils/types/be-api"
+import type { TEmoji, TMemberPermissionRenderingResult, TStateMessage } from "@/utils/types/global"
+import {
+  EMessageTypes,
+  EMessageTypeAllTypes,
+  EMessageMediaTypes,
+  EGroupChatRole,
+} from "@/utils/enums"
 import { toast } from "sonner"
 import {
   santizeMsgContent,
@@ -39,7 +51,7 @@ import {
 } from "@/utils/helpers"
 import { TChattingPayloadForGroup } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
-import { useAppDispatch } from "@/hooks/redux"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { removeGroupChatMember } from "@/redux/messages/messages.slice"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 
@@ -453,8 +465,31 @@ function FileTypeMenu({
   )
 }
 
+const checkSendMessagePermission = (
+  groupChatPermissions: TGroupChatPermissionState | null,
+  user: TUser,
+  groupChatMembers: TGroupChatMember[]
+): TMemberPermissionRenderingResult => {
+  if (groupChatMembers.find((member) => member.userId === user.id)?.role === EGroupChatRole.ADMIN) {
+    return {
+      hasPermission: true,
+      message: "",
+    }
+  }
+  if (groupChatPermissions && groupChatPermissions.sendMessage) {
+    return {
+      hasPermission: true,
+      message: "",
+    }
+  }
+  return {
+    hasPermission: false,
+    message: "You don't have permission to send messages.",
+  }
+}
+
 type TTypeMessageBarProps = {
-  groupChat: TGroupChat
+  groupChat: TGroupChatData
   replyMessage: TStateMessage | null
   setReplyMessage: (msg: any | null) => void
   canSend?: boolean | null
@@ -477,6 +512,22 @@ export const TypeMessageBar = memo(
     const [uploadProgress, setUploadProgress] = useState<number>(0)
     const [isGroupMember, setIsGroupMember] = useState<boolean>(true)
     const dispatch = useAppDispatch()
+    const { groupChatPermissions } = useAppSelector(({ messages }) => messages)
+
+    const sendMessagePermission = checkSendMessagePermission(
+      groupChatPermissions,
+      user,
+      groupChat.Members || []
+    )
+
+    // voice message
+    const [isRecording, setIsRecording] = useState(false)
+    const [recordTime, setRecordTime] = useState(0)
+    const timerRef = useRef<NodeJS.Timeout | null>(null)
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+    const audioChunksRef = useRef<Blob[]>([])
+    const [audioUrl, setAudioUrl] = useState<string | null>(null)
+    const isCancelledRef = useRef(false)
 
     const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
       const textField = textFieldRef.current
@@ -710,14 +761,6 @@ export const TypeMessageBar = memo(
       }
     }
 
-    // voice message
-    const [isRecording, setIsRecording] = useState(false)
-    const [recordTime, setRecordTime] = useState(0)
-    const timerRef = useRef<NodeJS.Timeout | null>(null)
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-    const audioChunksRef = useRef<Blob[]>([])
-    const [audioUrl, setAudioUrl] = useState<string | null>(null)
-    const isCancelledRef = useRef(false)
     const startRecording = async () => {
       setIsRecording(true)
       setRecordTime(0)
@@ -744,7 +787,7 @@ export const TypeMessageBar = memo(
       } catch (err) {
         setIsRecording(false)
         if (timerRef.current) clearInterval(timerRef.current)
-        alert("Không thể truy cập microphone!")
+        toast.error("Cannot access microphone!")
       }
     }
 
@@ -756,9 +799,10 @@ export const TypeMessageBar = memo(
         mediaRecorderRef.current.stop()
       }
     }
+
     const sendVoice = async () => {
       if (!audioUrl) {
-        toast.error("Chưa có dữ liệu ghi âm")
+        toast.error("No voice recording data available")
         return
       }
       setIsUploading(true)
@@ -850,9 +894,19 @@ export const TypeMessageBar = memo(
       eventEmitter.on(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, handleRemoveGroupChatMembers)
     }, [])
 
+    if (!sendMessagePermission.hasPermission) {
+      return (
+        <div className="flex-1 flex items-center justify-center w-full py-6">
+          <div className="system-message text-center text-gray-500 py-4 w-full">
+            {sendMessagePermission.message}
+          </div>
+        </div>
+      )
+    }
+
     if (!isGroupMember) {
       return (
-        <div className="flex-1 flex items-center justify-center w-full py-10">
+        <div className="flex-1 flex items-center justify-center w-full py-6">
           <div className="system-message text-center text-gray-500 py-4 w-full">
             You are not a member of this group.
           </div>
@@ -862,7 +916,7 @@ export const TypeMessageBar = memo(
 
     if (!canSend) {
       return (
-        <div className="flex-1 flex items-center justify-center w-full py-10">
+        <div className="flex-1 flex items-center justify-center w-full py-6">
           <div className="system-message text-center text-gray-500 py-4 w-full">
             This person only accepts messages from friends. You cannot send a message.
           </div>

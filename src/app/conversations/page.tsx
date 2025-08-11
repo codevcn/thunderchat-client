@@ -11,13 +11,14 @@ import { SwitchChatbox } from "./switch-chatbox"
 import type { TGetMessagesMessage, TUserWithProfile, TGroupChat } from "@/utils/types/be-api"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
+import { STATIC_CHAT_BACKGROUND_URL } from "@/utils/UI-constants"
 
 const ChatBackground = () => {
   const chatBackground = useAppSelector(({ settings }) => settings.theme.chatBackground)
   const dispatch = useAppDispatch()
 
   useEffect(() => {
-    dispatch(setChatBackground("/images/chat_bg/chat-bg-pattern-dark.ad38368a9e8140d0ac7d.webp"))
+    dispatch(setChatBackground(STATIC_CHAT_BACKGROUND_URL))
   }, [chatBackground])
 
   return (

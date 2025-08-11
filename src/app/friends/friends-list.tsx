@@ -210,13 +210,11 @@ export const FriendsList = () => {
 
   const searchUsers = debounce(() => {
     const inputValue = inputRef.current?.value.trim()
-    console.log(">>> inputValue:", inputValue)
     if (inputValue && inputValue.length > 0) {
       setIsSearchingFriends(true)
       friendService
         .searchFriendsByKeyword(inputValue)
         .then((friends) => {
-          console.log(">>> friends:", friends)
           setFriendsSearchResult(friends)
         })
         .catch((error) => {

@@ -161,7 +161,7 @@ export const Messages = memo(
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
     const isRenderingMessages = useRef<boolean>(false)
     const readyNewMessage = useRef<TGetMessagesMessage | null>(null)
-    console.log(">>> messages:", messages)
+
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
 
@@ -192,6 +192,7 @@ export const Messages = memo(
               top: msgsContainerEle.scrollHeight,
               behavior: "instant",
             })
+            scrollToQueriedMessageHandler()
           }
           // Lưu ID của tin nhắn cuối cùng
           const finalMessageData = messages[messages.length - 1]
@@ -672,6 +673,7 @@ export const Messages = memo(
       return () => {
         resetAllChatDataHandler()
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
+        eventEmitter.off(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, scrollToQueriedMessageHandler)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
         eventEmitter.off(EInternalEvents.SEND_MESSAGE_GROUP, listenSendMessage)

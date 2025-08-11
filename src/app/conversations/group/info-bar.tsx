@@ -9,7 +9,7 @@ import type { TGroupChatData, TGroupChatMemberWithUser } from "@/utils/types/be-
 import { useState } from "react"
 import { convertGrChatMemRole } from "@/utils/data-convertors/static-data-convertor"
 import { EGroupChatPermissions, EGroupChatRole } from "@/utils/enums"
-import { ManageMembers } from "./manage-members"
+import { ManageMembers } from "./member/manage-members"
 import { useUser } from "@/hooks/user"
 import { checkGroupChatPermission } from "@/utils/helpers"
 import { PreviewInfo } from "./preview-info"
@@ -115,7 +115,6 @@ export const InfoBar = () => {
   const groupChatMembers = groupChat?.Members
   const user = useUser()!
   const { groupChatPermissions } = useAppSelector(({ messages }) => messages)
-  console.log(">>> 118:", groupChatPermissions)
 
   const editGroupPermission = checkGroupChatPermission(
     groupChatPermissions,
@@ -126,6 +125,17 @@ export const InfoBar = () => {
 
   const handleOpenInfoBar = (open: boolean) => {
     dispatch(openInfoBar(open))
+  }
+
+  const shiftGroupAdminAtFirstPosition = (members: TGroupChatMemberWithUser[]) => {
+    const result: TGroupChatMemberWithUser[] = []
+    for (const member of members) {
+      if (member.role === EGroupChatRole.ADMIN) {
+        result.unshift(member)
+        break
+      }
+    }
+    return result
   }
 
   return (
@@ -161,7 +171,7 @@ export const InfoBar = () => {
             <div className="overflow-y-auto STYLE-styled-scrollbar h-full w-full bg-regular-info-bar-bgcl">
               <Avatar groupChat={groupChat} membersCount={groupChatMembers.length} />
               <PreviewInfo groupChat={groupChat} />
-              <MembersList members={groupChatMembers} />
+              <MembersList members={shiftGroupAdminAtFirstPosition(groupChatMembers)} />
             </div>
           </div>
         )}

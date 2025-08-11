@@ -21,7 +21,7 @@ export const SwitchChatbox = () => {
   const directChatId = searchParams.get("cid")
   const tempId = searchParams.get("tid")
   const groupChatId = searchParams.get("gid")
-  const prevChatIdRef = useRef<number | null>(null)
+  const prevChatInfoRef = useRef<TChatInfo | null>(null)
   const dispatch = useAppDispatch()
 
   const checkChatInfo = () => {
@@ -43,7 +43,7 @@ export const SwitchChatbox = () => {
   const handleSetChatInfo = ({ type, chatId }: TChatInfo) => {
     setChatInfo((pre) => {
       if (pre) {
-        if (pre.chatId !== chatId) {
+        if (pre.chatId !== chatId || type !== pre.type) {
           return {
             type,
             chatId,
@@ -76,13 +76,16 @@ export const SwitchChatbox = () => {
   const handleFetchChatData = () => {
     if (!chatInfo) return
     const { chatId, type } = chatInfo
-    if (chatId !== -1 && prevChatIdRef.current !== chatId) {
+    if (
+      chatId !== -1 &&
+      (prevChatInfoRef.current?.chatId !== chatId || prevChatInfoRef.current?.type !== type)
+    ) {
       if (type === EChatType.DIRECT) {
         eventEmitter.emit(EInternalEvents.FETCH_DIRECT_CHAT, chatId)
       } else if (type === EChatType.GROUP) {
         eventEmitter.emit(EInternalEvents.FETCH_GROUP_CHAT, chatId)
       }
-      prevChatIdRef.current = chatId
+      prevChatInfoRef.current = chatInfo
     }
   }
 

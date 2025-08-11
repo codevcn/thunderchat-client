@@ -21,7 +21,6 @@ type TUserCardProps = {
 }
 
 const UserCard = ({ item, loading, onSendFriendRequest }: TUserCardProps) => {
-  console.log(">>> item:", item)
   const profile = item.Profile
   const avatarSrc = profile?.avatar
   const fullName = profile.fullName

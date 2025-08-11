@@ -116,7 +116,6 @@ export const ShareMessageModal: React.FC<ShareMessageModalProps> = ({
               content: messageToShare.content,
             }
           } else if (messageToShare.type !== EMessageTypes.PIN_NOTICE) {
-            console.log(">>> msg to share:", messageToShare)
             // Các loại tin nhắn khác (IMAGE, VIDEO, AUDIO, DOCUMENT)
             payload = {
               ...payload,

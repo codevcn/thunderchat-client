@@ -7,26 +7,34 @@ import {
   postUploadGroupAvatar,
   getGroupMessageContext,
   deleteGroupMessage,
-  getJoinGroupChatByInviteLink,
+  // getJoinGroupChatByInviteLink,
   postCreateInviteLink,
   putUpdateGroupChatPermissions,
   getFetchGroupChatPermissions,
+  getFetchGroupJoiningRequests,
+  putProcessGroupJoinRequest,
+  postCreateGroupJoinRequest,
+  getFetchGroupChatByInviteCode,
 } from "@/apis/group-chat"
 import type {
   TGroupChat,
   TGroupChatData,
-  TJoinGroupChatByInviteLinkRes,
+  // TJoinGroupChatByInviteLinkRes,
   TCreateInviteLinkRes,
   TUpdateGroupChatParams,
   TUploadGroupAvatarData,
   TUserWithProfile,
   TFetchGroupChatPermissionsRes,
   TGroupChatPermissionState,
+  TGroupJoinRequestWithUser,
+  TGroupJoinRequest,
+  TGroupChatWithCreator,
 } from "@/utils/types/be-api"
 import type { TConversationCard, TSuccess } from "@/utils/types/global"
 import { convertToGroupChatsUIData } from "@/utils/data-convertors/conversations-convertor"
 import { GroupChatError } from "@/utils/custom-errors"
 import { getNewerGroupMessages } from "@/apis/direct-chat"
+import { EJoinRequestStatus } from "@/utils/enums"
 
 class GroupChatService {
   async uploadGroupAvatar(avatar: File): Promise<TUploadGroupAvatarData> {
@@ -90,10 +98,10 @@ class GroupChatService {
     return data
   }
 
-  async joinGroupChatByInviteLink(token: string): Promise<TJoinGroupChatByInviteLinkRes> {
-    const { data } = await getJoinGroupChatByInviteLink(token)
-    return data
-  }
+  // async joinGroupChatByInviteLink(token: string): Promise<TJoinGroupChatByInviteLinkRes> {
+  //   const { data } = await getJoinGroupChatByInviteLink(token)
+  //   return data
+  // }
 
   async createInviteLink(groupChatId: number): Promise<TCreateInviteLinkRes> {
     const { data } = await postCreateInviteLink(groupChatId)
@@ -110,6 +118,33 @@ class GroupChatService {
 
   async fetchGroupChatPermissions(groupChatId: number): Promise<TFetchGroupChatPermissionsRes> {
     const { data } = await getFetchGroupChatPermissions(groupChatId)
+    return data
+  }
+
+  async fetchGroupJoiningRequests(
+    groupChatId: number,
+    status?: EJoinRequestStatus
+  ): Promise<TGroupJoinRequestWithUser[]> {
+    const { data } = await getFetchGroupJoiningRequests(groupChatId, status)
+    return data
+  }
+
+  async processGroupJoinRequest(
+    joinRequestId: number,
+    status: EJoinRequestStatus,
+    groupChatId: number
+  ): Promise<TGroupJoinRequestWithUser> {
+    const { data } = await putProcessGroupJoinRequest(joinRequestId, status, groupChatId)
+    return data
+  }
+
+  async createGroupJoinRequest(groupChatId: number): Promise<TGroupJoinRequest> {
+    const { data } = await postCreateGroupJoinRequest(groupChatId)
+    return data
+  }
+
+  async fetchGroupChatByInviteCode(inviteCode: string): Promise<TGroupChatWithCreator | null> {
+    const { data } = await getFetchGroupChatByInviteCode(inviteCode)
     return data
   }
 }

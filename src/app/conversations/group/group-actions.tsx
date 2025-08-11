@@ -9,6 +9,7 @@ import {
   Users,
   ArrowLeft,
   Check,
+  UserCheck,
 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import type {
@@ -28,6 +29,7 @@ import { QRCodeCanvas } from "qrcode.react"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EGroupChatPermissions } from "@/utils/enums"
+import { ApproveMembersBoard } from "./member/approve-members"
 
 type TInviteQRCodeProps = {
   inviteUrl: string
@@ -326,6 +328,7 @@ type TGroupActionsProps = {
 export const GroupActions = ({ groupChat, members }: TGroupActionsProps) => {
   const [openShareGroupDialog, setOpenShareGroupDialog] = useState<boolean>(false)
   const [openGroupChatPermissionsBoard, setOpenGroupChatPermissionsBoard] = useState<boolean>(false)
+  const [openApproveMembersBoard, setOpenApproveMembersBoard] = useState<boolean>(false)
 
   const handleOpenManageMembers = () => {
     eventEmitter.emit(EInternalEvents.OPEN_MANAGE_MEMBERS, groupChat.id)
@@ -344,8 +347,21 @@ export const GroupActions = ({ groupChat, members }: TGroupActionsProps) => {
             <Users className="h-5 w-5 text-zinc-400" color="currentColor" />
           </div>
           <div className="flex-1 space-y-1">
-            <h3 className="font-medium">Members</h3>
+            <h3 className="font-medium">Manage Members</h3>
             <p className="text-zinc-400">{members.length}</p>
+          </div>
+        </button>
+        {/* Permissions */}
+        <button
+          onClick={() => setOpenApproveMembersBoard(true)}
+          className="flex items-center gap-x-4 hover:bg-regular-hover-card-cl rounded-md p-2 w-full text-left"
+        >
+          <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">
+            <UserCheck className="h-5 w-5 text-zinc-400" color="currentColor" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <h3 className="font-medium">Manage Join Requests</h3>
+            <p className="text-zinc-400">Manage join requests to the group</p>
           </div>
         </button>
         {/* Permissions */}
@@ -393,6 +409,12 @@ export const GroupActions = ({ groupChat, members }: TGroupActionsProps) => {
       <GroupChatPermissionsBoard
         open={openGroupChatPermissionsBoard}
         onOpen={setOpenGroupChatPermissionsBoard}
+        groupChat={groupChat}
+      />
+
+      <ApproveMembersBoard
+        open={openApproveMembersBoard}
+        onOpen={setOpenApproveMembersBoard}
         groupChat={groupChat}
       />
     </div>

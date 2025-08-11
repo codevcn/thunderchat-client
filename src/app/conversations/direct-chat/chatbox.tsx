@@ -432,6 +432,7 @@ export const DirectChatbox = () => {
   useEffect(() => {
     eventEmitter.on(EInternalEvents.FETCH_DIRECT_CHAT, handleFetchDirectChat)
     return () => {
+      eventEmitter.off(EInternalEvents.FETCH_DIRECT_CHAT, handleFetchDirectChat)
       fetchDirectChatAbortController.abort()
     }
   }, [])

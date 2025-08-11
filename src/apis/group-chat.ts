@@ -4,13 +4,17 @@ import type {
   TFetchGroupChatsData,
   TGroupChat,
   TGroupChatData,
-  TJoinGroupChatByInviteLinkRes,
+  // TJoinGroupChatByInviteLinkRes,
   TCreateInviteLinkRes,
   TUpdateGroupChatParams,
   TUploadGroupAvatarData,
   TFetchGroupChatPermissionsRes,
   TGroupChatPermissionState,
+  TGroupJoinRequestWithUser,
+  TGroupJoinRequest,
+  TGroupChatWithCreator,
 } from "@/utils/types/be-api"
+import { EJoinRequestStatus } from "@/utils/enums"
 
 export const postUploadGroupAvatar = (data: FormData) =>
   clientAxios.post<TUploadGroupAvatarData>("/group-chat/upload-group-avatar", data, requestConfig)
@@ -57,11 +61,11 @@ export const getGroupMessageContext = (messageId: number) => {
 export const deleteGroupMessage = (messageId: number) =>
   clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)
 
-export const getJoinGroupChatByInviteLink = (token: string) =>
-  clientAxios.get<TJoinGroupChatByInviteLinkRes>(`/group-chat/join-group-by-invite-link`, {
-    ...requestConfig,
-    params: { token },
-  })
+// export const postRequestToJoinGroupChat = (inviteCode: string) =>
+//   clientAxios.post<TJoinGroupChatByInviteLinkRes>(`/group-chat/request-to-join-group-chat`, {
+//     ...requestConfig,
+//     params: { inviteCode },
+//   })
 
 export const postCreateInviteLink = (groupChatId: number) =>
   clientAxios.post<TCreateInviteLinkRes>(
@@ -84,4 +88,38 @@ export const getFetchGroupChatPermissions = (groupChatId: number) =>
   clientAxios.get<TFetchGroupChatPermissionsRes>(`/group-chat/fetch-permissions`, {
     ...requestConfig,
     params: { groupChatId },
+  })
+
+export const getFetchGroupJoiningRequests = (groupChatId: number, status?: EJoinRequestStatus) =>
+  clientAxios.get<TGroupJoinRequestWithUser[]>(`/group-chat/fetch-join-requests`, {
+    ...requestConfig,
+    params: { groupChatId, status },
+  })
+
+export const putProcessGroupJoinRequest = (
+  joinRequestId: number,
+  status: EJoinRequestStatus,
+  groupChatId: number
+) =>
+  clientAxios.put<TGroupJoinRequestWithUser>(
+    `/group-chat/process-join-request`,
+    {
+      joinRequestId,
+      status,
+      groupChatId,
+    },
+    requestConfig
+  )
+
+export const postCreateGroupJoinRequest = (groupChatId: number) =>
+  clientAxios.post<TGroupJoinRequest>(
+    `/group-chat/create-join-request`,
+    { groupChatId },
+    requestConfig
+  )
+
+export const getFetchGroupChatByInviteCode = (inviteCode: string) =>
+  clientAxios.get<TGroupChatWithCreator | null>(`/group-chat/fetch-group-chat-by-invite-code`, {
+    ...requestConfig,
+    params: { inviteCode },
   })

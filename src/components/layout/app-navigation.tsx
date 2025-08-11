@@ -1,10 +1,11 @@
 "use client"
 
-import { Home, Settings, MessageCircle, Users, User } from "lucide-react"
+import { Home, Settings, MessageCircle, Users } from "lucide-react"
 import Link from "next/link"
 import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
 import { useAccountModal } from "@/contexts/account-modal.context"
+import { useUser } from "@/hooks/user"
 
 type TNav = {
   label: string
@@ -32,6 +33,8 @@ const navs: TNav[] = [
 
 export const AppNavigation = memo(() => {
   const { openAccount } = useAccountModal()
+  const user = useUser()!
+  const userProfile = user.Profile
 
   return (
     <div className="screen-medium-chatting:flex hidden w-[55px] h-screen relative">
@@ -42,7 +45,13 @@ export const AppNavigation = memo(() => {
             onClick={openAccount}
           >
             <div className="m-auto">
-              <CustomAvatar fallback={<User size={30} color="white" />} />
+              <CustomAvatar
+                src={userProfile.avatar}
+                fallback={userProfile.fullName[0]}
+                alt={userProfile.fullName}
+                imgSize={40}
+                className="text-xl border border-gray-700 font-bold bg-regular-violet-cl"
+              />
             </div>
           </div>
         </CustomTooltip>

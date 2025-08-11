@@ -32,11 +32,13 @@ const PrepareNewGroup = ({
   onOpen,
   closeCreateGroupChat,
 }: TPrepareNewGroupProps) => {
-  const usersCount = pickedUsers.length
+  const usersCount = pickedUsers.length + 1 // +1 for the creator
   const [loading, setLoading] = useState<TLoading>()
   const [avatar, setAvatar] = useState<string>()
   const isCreatedRef = useRef<boolean>(false)
   const groupNameInputRef = useRef<HTMLInputElement>(null)
+  const user = useUser()!
+  const userId = user.id
 
   const closeBoard = () => {
     onOpen(false)
@@ -178,7 +180,7 @@ const PrepareNewGroup = ({
           </div>
         </div>
 
-        {pickedUsers && usersCount > 0 && (
+        {pickedUsers && usersCount > 1 && (
           <div className="grow p-4 pb-6 overflow-y-auto STYLE-styled-scrollbar bg-regular-dark-gray-cl">
             <div className="w-full">
               <p className="text-regular-violet-cl text-sm font-medium">
@@ -187,8 +189,8 @@ const PrepareNewGroup = ({
             </div>
 
             <div className="space-y-4 mt-4">
-              {pickedUsers.map(({ Profile, id, email }) => (
-                <div key={id} className="flex items-center gap-3">
+              {[user, ...pickedUsers].map(({ Profile, id, email }) => (
+                <div key={id} className="flex items-center gap-3 relative pr-[50px]">
                   <CustomAvatar
                     imgSize={48}
                     src={Profile.avatar}
@@ -206,6 +208,12 @@ const PrepareNewGroup = ({
                     </h3>
                     <p className="text-[13px] text-gray-400">{email}</p>
                   </div>
+
+                  {id === userId && (
+                    <div className="text-gray-400 text-sm font-medium absolute top-0 right-0 py-0.5 px-1 rounded-md bg-regular-hover-card-cl">
+                      Admin
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -142,6 +142,11 @@ function findMissingRanges(ids: number[]): [number, number][] {
   return missing
 }
 
+const extractMessageIdFromUrl = (): number | null => {
+  const messageId = new URLSearchParams(window.location.search).get("mid")
+  return messageId ? parseInt(messageId) : null
+}
+
 export const Messages = memo(
   ({
     directChat,
@@ -198,6 +203,7 @@ export const Messages = memo(
               top: msgsContainerEle.scrollHeight,
               behavior: "instant",
             })
+            scrollToQueriedMessageHandler()
           }
           // Lưu ID của tin nhắn cuối cùng
           const finalMessageData = messages[messages.length - 1]
@@ -537,7 +543,7 @@ export const Messages = memo(
           scrollToMessage(messageId)
         }, 200)
       } catch (err) {
-        toast.error("Không thể lấy ngữ cảnh tin nhắn")
+        toast.error(axiosErrorHandler.handleHttpError(err).message)
       }
     }
 
@@ -617,13 +623,19 @@ export const Messages = memo(
       })
     }
 
+    const handleScrollToQueriedMessageOnURLParams = () => {
+      const messageId = extractMessageIdFromUrl()
+      if (messageId) {
+        showMessageContext(messageId)
+      }
+    }
+
     const scrollToQueriedMessageHandler = (messageId?: number) => {
       if (messageId) {
         showMessageContext(messageId)
       } else {
-        const messageId = new URLSearchParams(window.location.search).get("mid")
-        if (messageId) {
-          showMessageContext(parseInt(messageId))
+        if (messages && messages.length > 0) {
+          handleScrollToQueriedMessageOnURLParams()
         }
       }
     }
@@ -678,6 +690,7 @@ export const Messages = memo(
       return () => {
         resetAllChatDataHandler()
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
+        eventEmitter.off(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, scrollToQueriedMessageHandler)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
         eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)

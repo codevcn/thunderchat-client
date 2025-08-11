@@ -13,6 +13,7 @@ import type {
   EViolationReportStatus,
   EBanType,
   EGroupChatPermissions,
+  EJoinRequestStatus,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 import { TReportedMessageFE } from "./fe-api"
@@ -162,6 +163,19 @@ export type TBlockedUser = {
   blockedUserId: number
   createdAt: Date
 }
+
+export type TGroupJoinRequest = {
+  id: number
+  createdAt: Date
+  groupChatId: number
+  userId: number
+  status: EJoinRequestStatus
+}
+
+export type TGroupJoinRequestWithUser = TGroupJoinRequest & {
+  Requester: TUserWithProfile
+}
+
 // ================================= API types =================================
 export type TLoginUserParams = {
   email: string
@@ -255,6 +269,7 @@ export type TGlobalSearchData = {
     avatarUrl?: string
     conversationName: string
     messageContent: string
+    mediaContent?: string
     highlights: string[]
     chatType: EChatType
     chatId: number
@@ -293,6 +308,10 @@ export type TGetGroupMessagesData = {
 export type TGroupChatData = TGroupChat & {
   Creator: TUserWithProfile
   Members: TGroupChatMemberWithUser[]
+}
+
+export type TGroupChatWithCreator = TGroupChat & {
+  Creator: TUserWithProfile
 }
 
 export type TGroupChatState = TGroupChat & {

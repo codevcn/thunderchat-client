@@ -421,6 +421,7 @@ export const GroupChatbox = () => {
   useEffect(() => {
     eventEmitter.on(EInternalEvents.FETCH_GROUP_CHAT, handleFetchGroupChat)
     return () => {
+      eventEmitter.off(EInternalEvents.FETCH_GROUP_CHAT, handleFetchGroupChat)
       fetchGroupChatAbortController.abort()
     }
   }, [])

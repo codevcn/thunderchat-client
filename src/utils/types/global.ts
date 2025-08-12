@@ -62,10 +62,12 @@ export type TUnknownObject = {
 
 export type TUnknownFunction<P, R> = (...args: P[]) => R
 
-export type TSendDirectMessageErrorRes = {
+export type TSocketErrorRes = {
   isError: boolean
   message: string
 }
+
+export type TSendDirectMessageErrorRes = TSocketErrorRes
 
 export type TSendMessageCallback = (data: TSendDirectMessageErrorRes | TSuccess) => void
 
@@ -180,3 +182,10 @@ export type TMemberPermissionRenderingResult = {
   hasPermission: boolean
   message: string
 }
+
+export type TUpdateUserInfoPayload = Partial<{
+  fullName: string
+  birthday: Date
+  avatar: string
+  about: string
+}>

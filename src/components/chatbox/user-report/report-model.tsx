@@ -407,11 +407,11 @@ export const ReportModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       onClick={handleBackdropClick}
     >
       <div
-        className={`bg-regular-black-cl rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col transition-all duration-300 ease-out relative overflow-hidden ${
+        className={`bg-regular-dark-gray-cl rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col transition-all duration-300 ease-out relative overflow-hidden ${
           isOpen && !isClosing ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >

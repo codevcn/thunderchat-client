@@ -9,8 +9,6 @@ import { ArrowLeft, Check } from "lucide-react"
 import { X } from "lucide-react"
 import { CustomAvatar } from "@/components/materials/avatar"
 import { Checkbox, IconButton, Skeleton, Spinner } from "@/components/materials"
-import { useAppDispatch } from "@/hooks/redux"
-import { addGroupChatMembers } from "@/redux/messages/messages.slice"
 import { groupMemberService } from "@/services/group-member.service"
 
 type TAddMembersBoardProps = {
@@ -26,7 +24,6 @@ export const AddMembersStep = ({ open, onOpen, groupChatId }: TAddMembersBoardPr
   const [loading, setLoading] = useState(false)
   const debounce = useDebounce()
   const user = useUser()!
-  const dispatch = useAppDispatch()
 
   const searchUsers = debounce(() => {
     const keyword = inputRef.current?.value
@@ -79,9 +76,8 @@ export const AddMembersStep = ({ open, onOpen, groupChatId }: TAddMembersBoardPr
         groupChatId,
         pickedUsers.map(({ id }) => id)
       )
-      .then((res) => {
+      .then(() => {
         onOpen(false)
-        dispatch(addGroupChatMembers(res.addedMembers))
       })
       .catch((err) => {
         toaster.error(axiosErrorHandler.handleHttpError(err).message)

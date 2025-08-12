@@ -12,9 +12,10 @@ import type { TGetMessagesMessage, TGroupChat } from "@/utils/types/be-api"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import { STATIC_CHAT_BACKGROUND_URL } from "@/utils/UI-constants"
-import { updateGroupChat } from "@/redux/messages/messages.slice"
+import { updateDirectChat, updateGroupChat } from "@/redux/messages/messages.slice"
 import { updateSingleConversation } from "@/redux/conversations/conversations.slice"
 import { EChatType } from "@/utils/enums"
+import type { TUpdateUserInfoPayload } from "@/utils/types/global"
 
 const ChatBackground = () => {
   const chatBackground = useAppSelector(({ settings }) => settings.theme.chatBackground)
@@ -67,6 +68,41 @@ const ConversationPage = () => {
     eventEmitter.emit(EInternalEvents.ADD_GROUP_CHAT_MEMBERS, newMemberIds, groupChat)
   }
 
+  const listenUpdateUserInfo = (
+    directChatId: number,
+    userId: number,
+    updates: TUpdateUserInfoPayload
+  ) => {
+    dispatch((dispatch, getState) => {
+      const { directChat } = getState().messages
+      if (directChat) {
+        const { id, recipientId } = directChat
+        if (id === directChatId) {
+          let userTypeInDirectChat: "Creator" | "Recipient" = "Creator"
+          if (recipientId === userId) {
+            userTypeInDirectChat = "Recipient"
+          }
+          dispatch(
+            updateDirectChat({
+              [`${userTypeInDirectChat}.Profile.avatar`]: updates.avatar,
+              [`${userTypeInDirectChat}.Profile.fullName`]: updates.fullName,
+              [`${userTypeInDirectChat}.Profile.birthday`]: updates.birthday,
+              [`${userTypeInDirectChat}.Profile.about`]: updates.about,
+            })
+          )
+        }
+      }
+    })
+    dispatch(
+      updateSingleConversation({
+        id: directChatId,
+        type: EChatType.DIRECT,
+        "avatar.src": updates.avatar,
+        title: updates.fullName,
+      })
+    )
+  }
+
   useEffect(() => {
     document.body.addEventListener("click", handleClickOnLayout)
     clientSocket.socket.on(ESocketEvents.update_group_chat_info, listenUpdateGroupChatInfo)
@@ -74,6 +110,7 @@ const ConversationPage = () => {
     clientSocket.socket.on(ESocketEvents.add_group_chat_members, listenAddGroupChatMembers)
     clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
     clientSocket.socket.on(ESocketEvents.send_message_group, listenSendGroupMessage)
+    clientSocket.socket.on(ESocketEvents.update_user_info, listenUpdateUserInfo)
     return () => {
       document.body.removeEventListener("click", handleClickOnLayout)
       clientSocket.socket.removeListener(
@@ -90,6 +127,7 @@ const ConversationPage = () => {
       )
       clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)
       clientSocket.socket.removeListener(ESocketEvents.send_message_group, listenSendGroupMessage)
+      clientSocket.socket.removeListener(ESocketEvents.update_user_info, listenUpdateUserInfo)
     }
   }, [])
 

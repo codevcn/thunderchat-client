@@ -172,6 +172,7 @@ export const Messages = memo(
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
     const isRenderingMessages = useRef<boolean>(false)
     const readyNewMessage = useRef<TGetMessagesMessage | null>(null)
+    console.log(">>> print messages 175:", { messages, directChat, directChatId })
 
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
@@ -322,6 +323,7 @@ export const Messages = memo(
 
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendMessage = (newMessage: TGetMessagesMessage) => {
+      console.log(">>> at messages 326:", { newMessage, directChat, directChatId })
       const { id } = newMessage
       if (directChatId === -1) {
         readyNewMessage.current = newMessage
@@ -614,6 +616,7 @@ export const Messages = memo(
     }
 
     const handleMessagesChange = () => {
+      console.log(">>> at messages 617")
       initMessageOffset()
       requestAnimationFrame(() => {
         scrollToBottomOnMessages()
@@ -653,6 +656,13 @@ export const Messages = memo(
     }
 
     useEffect(() => {
+      eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
+      return () => {
+        eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
+      }
+    }, [directChatId, messages])
+
+    useEffect(() => {
       handleReadyNewMessage()
     }, [directChatId])
 
@@ -683,8 +693,6 @@ export const Messages = memo(
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-      eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
-      clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendMessage)
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
       clientSocket.socket.on(ESocketEvents.message_seen_direct, handleMessageSeen)
       return () => {
@@ -693,8 +701,6 @@ export const Messages = memo(
         eventEmitter.off(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, scrollToQueriedMessageHandler)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-        eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
-        clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendMessage)
         clientSocket.socket.removeListener(
           ESocketEvents.recovered_connection,
           handleRecoverdConnection

@@ -7,7 +7,6 @@ import { robotoFont } from "@/utils/fonts"
 import { CustomAvatar } from "@/components/materials/avatar"
 import type { TGroupChat, TGroupChatData, TGroupChatMemberWithUser } from "@/utils/types/be-api"
 import { useEffect, useState } from "react"
-import { convertGrChatMemRole } from "@/utils/data-convertors/static-data-convertor"
 import { EGroupChatPermissions, EGroupChatRole } from "@/utils/enums"
 import { ManageMembers } from "./member/manage-members"
 import { useUser } from "@/hooks/user"
@@ -63,9 +62,11 @@ export const MembersList = ({ members }: TMembersProps) => {
                     <p className="text-[13px] text-gray-400">{email}</p>
                   </div>
 
-                  <div className="absolute top-1 right-2 text-xs text-regular-text-secondary-cl">
-                    {role === EGroupChatRole.ADMIN && convertGrChatMemRole(role)}
-                  </div>
+                  {role === EGroupChatRole.ADMIN && (
+                    <div className="absolute top-1/2 -translate-y-1/2 right-2 text-xs text-regular-text-secondary-cl py-0.5 px-1 rounded-md bg-regular-hover-card-cl">
+                      Admin
+                    </div>
+                  )}
                 </div>
               )
             )}

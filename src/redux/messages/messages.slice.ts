@@ -120,7 +120,7 @@ export const messagesSlice = createSlice({
       if (groupChat) {
         state.groupChat = {
           ...groupChat,
-          Members: [...(groupChat.Members || []), ...members],
+          Members: [...members, ...(groupChat.Members || [])],
         }
       }
     },

@@ -35,6 +35,7 @@ type TCustomPopoverProps = {
   align: "center" | "start" | "end"
   popoverBoard: {
     className?: string
+    style?: React.CSSProperties
   }
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -57,6 +58,7 @@ export const CustomPopover = ({
           popoverBoard?.className
         )}
         align={align}
+        style={popoverBoard?.style}
       >
         {children}
       </PopoverContent>

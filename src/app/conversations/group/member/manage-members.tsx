@@ -1,8 +1,7 @@
 import { CustomDialog, CustomPopover, IconButton, Skeleton } from "@/components/materials"
 import { CustomAvatar } from "@/components/materials"
 import { useDebounce } from "@/hooks/debounce"
-import { removeGroupChatMembers } from "@/redux/messages/messages.slice"
-import { useAppDispatch, useAppSelector } from "@/hooks/redux"
+import { useAppSelector } from "@/hooks/redux"
 import { groupMemberService } from "@/services/group-member.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
@@ -34,13 +33,14 @@ const ManageMemberPopover = ({
 }: TManageMembersPopoverProps) => {
   const {
     User: { Profile, id, email },
+    role,
   } = member
   return (
     <CustomPopover
       trigger={
         <div
           onClick={() => onOpenChange(id, true)}
-          className={`${activePopover === id ? "bg-purple-200 hover:!bg-purple-200" : ""} flex items-center gap-2 hover:bg-regular-hover-card-cl w-full cursor-pointer rounded-md p-2`}
+          className={`${activePopover === id ? "bg-purple-200 hover:!bg-purple-200" : ""} relative flex items-center gap-2 hover:bg-regular-hover-card-cl w-full cursor-pointer rounded-md p-2`}
         >
           <CustomAvatar
             imgSize={48}
@@ -60,6 +60,11 @@ const ManageMemberPopover = ({
               Email: <span>{email}</span>
             </p>
           </div>
+          {role === EGroupChatRole.ADMIN && (
+            <div className="absolute top-1/2 -translate-y-1/2 right-2 text-xs text-regular-text-secondary-cl py-0.5 px-1 rounded-md bg-regular-hover-card-cl">
+              Admin
+            </div>
+          )}
         </div>
       }
       onOpenChange={(open) => onOpenChange(id, open)}
@@ -95,7 +100,6 @@ export const ManageMembers = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const [activePopover, setActivePopover] = useState<number>()
   const [selectedMember, setSelectedMember] = useState<TGroupChatMemberWithUser>()
-  const dispatch = useAppDispatch()
   const [openAddMember, setOpenAddMember] = useState(false)
   const user = useUser()!
 
@@ -153,7 +157,6 @@ export const ManageMembers = () => {
     groupMemberService
       .removeGroupChatMember(groupChat.id, memberId)
       .then(() => {
-        dispatch(removeGroupChatMembers({ memberIds: [memberId] }))
         handleHideRemoveMemberDialog(false)
       })
       .catch((err) => {
@@ -194,10 +197,10 @@ export const ManageMembers = () => {
 
   return (
     <div
-      className={`${open ? "left-0" : "left-full"} translate-x-0 translate-y-0 absolute z-[80] top-0 transition-[left] duration-200 bg-black w-full h-screen overflow-hidden`}
+      className={`${open ? "left-0" : "left-full"} bg-regular-dark-gray-cl overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar translate-x-0 translate-y-0 absolute z-[80] top-0 transition-[left] duration-200 bg-black w-full h-screen`}
     >
-      <div className="flex flex-col gap-2 w-full h-full">
-        <div className="p-4 bg-regular-dark-gray-cl w-full">
+      <div className="flex flex-col w-full h-full relative">
+        <div className="p-4 w-full border-b-[8px] border-regular-black-cl">
           <div className="w-full">
             <IconButton onClick={closeBoard} className="w-fit pr-2.5">
               <span className="flex items-center gap-2 w-fit">
@@ -218,7 +221,7 @@ export const ManageMembers = () => {
           </div>
         </div>
 
-        <div className="grow py-4 px-2 overflow-y-auto STYLE-styled-scrollbar bg-regular-dark-gray-cl w-full">
+        <div className="grow py-4 px-2 overflow-y-auto STYLE-styled-scrollbar w-full">
           {loading ? (
             <div className="flex flex-col gap-1 justify-center items-center">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -244,33 +247,33 @@ export const ManageMembers = () => {
               />
             ))
           )}
+
+          <CustomDialog
+            open={!!selectedMember}
+            onHideShow={handleHideRemoveMemberDialog}
+            dialogBody={
+              <div className="flex flex-col gap-2">
+                <p className="my-4">
+                  <span>Are you sure you want to remove </span>
+                  <span className="font-bold">{selectedMember?.User.Profile.fullName}</span>
+                  <span> from the group?</span>
+                </p>
+              </div>
+            }
+            dialogHeader={{
+              title: "Remove Member",
+            }}
+            confirmElement={
+              <button
+                className="bg-regular-red-cl border-regular-red-cl hover:text-regular-red-cl flex gap-1 items-center w-fit border-2 text-sm border-gray-500 border-solid px-5 py-1 rounded-[5px] text-regular-white-cl hover:bg-regular-icon-btn-cl"
+                onClick={handleRemoveMember}
+              >
+                <span>Remove</span>
+              </button>
+            }
+          />
         </div>
       </div>
-
-      <CustomDialog
-        open={!!selectedMember}
-        onHideShow={handleHideRemoveMemberDialog}
-        dialogBody={
-          <div className="flex flex-col gap-2">
-            <p className="my-4">
-              <span>Are you sure you want to remove </span>
-              <span className="font-bold">{selectedMember?.User.Profile.fullName}</span>
-              <span> from the group?</span>
-            </p>
-          </div>
-        }
-        dialogHeader={{
-          title: "Remove Member",
-        }}
-        confirmElement={
-          <button
-            className="bg-regular-red-cl border-regular-red-cl hover:text-regular-red-cl flex gap-1 items-center w-fit border-2 text-sm border-gray-500 border-solid px-5 py-1 rounded-[5px] text-regular-white-cl hover:bg-regular-icon-btn-cl"
-            onClick={handleRemoveMember}
-          >
-            <span>Remove</span>
-          </button>
-        }
-      />
 
       <div id="QUERY-add-member-button" className="bottom-6 right-4 absolute z-[80]">
         <button

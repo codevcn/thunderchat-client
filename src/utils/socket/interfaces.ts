@@ -6,7 +6,12 @@ import type {
   TMessage,
   TGroupChat,
 } from "@/utils/types/be-api"
-import type { TSendDirectMessageErrorRes, TSuccess } from "../types/global"
+import type {
+  TSendDirectMessageErrorRes,
+  TSocketErrorRes,
+  TSuccess,
+  TUpdateUserInfoPayload,
+} from "../types/global"
 import { ESocketEvents, ESocketInitEvents } from "./events"
 import type {
   TChattingPayload,
@@ -67,8 +72,12 @@ export interface IListenSocketEvents {
   [ESocketEvents.add_group_chat_members]: (newMemberIds: number[], groupChat: TGroupChat) => void
   [ESocketEvents.update_group_chat_info]: (
     groupChatId: number,
-    groupChat: Partial<TGroupChat>,
-    cb: (data: TSuccess) => void
+    groupChat: Partial<TGroupChat>
+  ) => void
+  [ESocketEvents.update_user_info]: (
+    directChatId: number,
+    userId: number,
+    updates: TUpdateUserInfoPayload
   ) => void
 }
 
@@ -91,10 +100,10 @@ export interface IEmitSocketEvents {
   ) => void
   [ESocketEvents.join_direct_chat_room]: (
     payload: TJoinDirectChatRoomEmitPayload,
-    cb: (data: TSuccess) => void
+    cb: (data: TSuccess | TSocketErrorRes) => void
   ) => void
   [ESocketEvents.join_group_chat_room]: (
     payload: TJoinGroupChatRoomEmitPayload,
-    cb: (data: TSuccess) => void
+    cb: (data: TSuccess | TSocketErrorRes) => void
   ) => void
 }

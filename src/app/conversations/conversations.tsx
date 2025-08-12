@@ -1,8 +1,7 @@
 "use client"
 
-import { CustomAvatar, CustomPopover, Skeleton, PinButton } from "@/components/materials"
-import { Menu, Users } from "lucide-react"
-import dayjs from "dayjs"
+import { CustomPopover, Skeleton } from "@/components/materials"
+import { LogOut, Menu, Trash, Users } from "lucide-react"
 import type {
   TUserWithProfile,
   TMessage,
@@ -14,7 +13,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
 import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.selectors"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { checkNewConversationIsCurrentChat, santizeMsgContent } from "@/utils/helpers"
+import { checkNewConversationIsCurrentChat } from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
 import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
 import {
@@ -38,145 +37,97 @@ import { localStorageManager } from "@/utils/local-storage"
 import { pinService } from "@/services/pin.service"
 import { usePinChats } from "@/hooks/pin-chats"
 import { GlobalSearchBar, SearchSection } from "./global-search"
+import { ConversationCard } from "./conversation-card"
+import type { TPopoverPos } from "./sharings"
 
-const MAX_UNREAD_MESSAGES_COUNT: number = 9
-
-const convertSubtitleTypeToText = (
-  subtitleType: EMessageTypes,
-  subtitleContent: string
-): string => {
-  switch (subtitleType) {
-    case EMessageTypes.STICKER:
-      return "Sticker"
-    case EMessageTypes.MEDIA:
-      return "Media"
-    case EMessageTypes.PIN_NOTICE:
-      return subtitleContent
-    default:
-      return "Unknown"
-  }
-}
-
-const getPinIndexClass = (pinIndex: number): string => {
-  switch (pinIndex) {
-    case 1:
-      return "order-1"
-    case 2:
-      return "order-2"
-    case 3:
-      return "order-3"
-    default:
-      return "order-4"
-  }
-}
-
-const joinChatRoom = (chatId: number, chatType: EChatType) => {
-  if (chatType === EChatType.DIRECT) {
-    clientSocket.socket.emit(
-      ESocketEvents.join_direct_chat_room,
-      { directChatId: chatId },
-      () => {}
-    )
-  } else {
-    clientSocket.socket.emit(ESocketEvents.join_group_chat_room, { groupChatId: chatId }, () => {})
-  }
-}
-
-type TConversationCardProps = {
-  onNavToConversation: (id: number, type: EChatType) => void
-  isPinned: boolean
+type TConversationCardsMainProps = {
+  conversations: TConversationCard[]
+  navToDirectChat: (id: number, type: EChatType) => void
+  isChatPinned: (id: number, type: EChatType) => boolean
   pinLoading: boolean
-  conversationData: TConversationCard
-  onTogglePin: (directChatId?: number, groupChatId?: number) => void
+  handlePinToggle: (directChatId?: number, groupChatId?: number) => void
 }
 
-const ConversationCard = ({
-  onNavToConversation,
-  isPinned,
+const ConversationCardsMain = ({
+  conversations,
+  navToDirectChat,
+  isChatPinned,
   pinLoading,
-  conversationData,
-  onTogglePin,
-}: TConversationCardProps) => {
-  const { id, type, avatar, title, lastMessageTime, subtitle, pinIndex, unreadMessageCount } =
-    conversationData
-  const subtitleType = subtitle.type
-  const subtitleContent = subtitle.content
-  const pinIndexClass = getPinIndexClass(pinIndex)
+  handlePinToggle,
+}: TConversationCardsMainProps) => {
+  const [pickedConversation, setPickedConversation] = useState<TConversationCard>()
+  const [popoverPos, setPopoverPos] = useState<TPopoverPos>()
 
-  const handleExecuteTogglePin = () => {
-    if (type === EChatType.DIRECT) {
-      onTogglePin(id)
-    } else {
-      onTogglePin(undefined, id)
-    }
+  const openCloseContextMenu = (open: boolean) => {
+    setPickedConversation(open ? pickedConversation : undefined)
   }
 
-  useEffect(() => {
-    joinChatRoom(id, type)
-  }, [])
+  const leaveGroupChat = () => {
+    console.log("leave group chat")
+  }
+
+  const leaveDirectChat = () => {
+    console.log("leave direct chat")
+  }
 
   return (
-    <div
-      className={`group flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${pinIndexClass} group`}
-      key={`${type}-${id}`}
-      onClick={() => onNavToConversation(id, type)}
-    >
-      <div>
-        <CustomAvatar
-          src={avatar.src || undefined}
-          imgSize={50}
-          fallback={avatar.fallback.toUpperCase()}
-          fallbackClassName="bg-regular-violet-cl text-2xl"
-        />
-      </div>
-      <div className="w-[215px]">
-        <div className="flex justify-between items-center w-full gap-3">
-          <h3 className="truncate font-bold grow text-left leading-snug">{title}</h3>
-          <div className="text-[10px] w-max min-w-max text-regular-icon-cl">
-            {dayjs(lastMessageTime).format("MMM D, YYYY")}
-          </div>
-        </div>
-        <div className="flex justify-between items-center mt-1 box-border gap-3">
-          {subtitleType !== EMessageTypes.TEXT ? (
-            <p className="truncate text-regular-placeholder-cl text-sm">
-              <span className="text-regular-icon-cl italic">
-                {convertSubtitleTypeToText(subtitleType, subtitleContent)}
-              </span>
-            </p>
-          ) : (
-            <p
-              dangerouslySetInnerHTML={{
-                __html: santizeMsgContent(subtitleContent),
-              }}
-              className="truncate opacity-60 max-w-[150px] text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
-            ></p>
-          )}
-          <div className="flex items-center gap-1">
-            {unreadMessageCount > 0 && (
-              <span className="flex items-center gap-1 h-5">
-                <span className="w-min px-1 h-full bg-regular-violet-cl rounded-full leading-none">
-                  {unreadMessageCount > MAX_UNREAD_MESSAGES_COUNT
-                    ? `${MAX_UNREAD_MESSAGES_COUNT}+`
-                    : unreadMessageCount}
-                </span>
-              </span>
-            )}
-            <div className="flex items-center gap-1">
-              <div
-                className={`transition-opacity ${isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+    <>
+      {conversations.map((conversation) => {
+        return (
+          <ConversationCard
+            key={`${conversation.id}-${conversation.type}`}
+            onNavToConversation={navToDirectChat}
+            isPinned={isChatPinned(conversation.id, conversation.type)}
+            pinLoading={pinLoading}
+            conversationData={conversation}
+            onTogglePin={handlePinToggle}
+            onPickedConversation={setPickedConversation}
+            onSetPopoverPos={setPopoverPos}
+          />
+        )
+      })}
+
+      <CustomPopover
+        open={!!pickedConversation}
+        onOpenChange={openCloseContextMenu}
+        trigger={<span></span>}
+        popoverBoard={{
+          style: {
+            position: "fixed",
+            top: `${popoverPos?.top}px`,
+            left: `${popoverPos?.left}px`,
+          },
+        }}
+      >
+        <div
+          hidden={!pickedConversation}
+          className="flex flex-col gap-2 bg-regular-black-cl rounded-md py-2 border border-gray-600"
+        >
+          {pickedConversation &&
+            (pickedConversation.type === EChatType.GROUP ? (
+              <button
+                onClick={leaveGroupChat}
+                className="w-full text-regular-white-cl hover:bg-regular-dark-gray-cl outline-none border-none ring-0"
               >
-                <PinButton
-                  isPinned={isPinned}
-                  onToggle={handleExecuteTogglePin}
-                  loading={pinLoading}
-                  size={16}
-                />
-              </div>
-            </div>
-          </div>
+                <span className="flex justify-start items-center gap-2 min-w-max active:scale-95 py-1 px-4">
+                  <LogOut color="currentColor" size={16} />
+                  <span className="text-sm">Leave group chat</span>
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={leaveDirectChat}
+                className="w-full text-regular-white-cl hover:bg-regular-dark-gray-cl outline-none border-none ring-0"
+              >
+                <span className="flex justify-start items-center gap-2 min-w-max active:scale-95 py-1 px-4">
+                  <Trash color="currentColor" size={16} />
+                  <span className="text-sm">Delete this chat</span>
+                </span>
+              </button>
+            ))}
         </div>
-      </div>
-    </div>
+      </CustomPopover>
+    </>
   )
 }
 
@@ -379,7 +330,7 @@ const ConversationCards = () => {
       const lastDirectChatData = localStorageManager.getLastDirectChatData()
       if (lastDirectChatData) {
         localStorageManager.setLastDirectChatData({
-          tempId: directChat.id,
+          tempId: lastDirectChatData.tempId,
           chatData: {
             ...directChat,
             Recipient: lastDirectChatData.chatData.Recipient,
@@ -500,18 +451,13 @@ const ConversationCards = () => {
     </div>
   ) : conversations && conversations.length > 0 ? (
     <div className="flex flex-col w-full h-full mt-3 overflow-x-hidden overflow-y-auto STYLE-styled-scrollbar pr-1 pb-4">
-      {conversations.map((conversation) => {
-        return (
-          <ConversationCard
-            key={`${conversation.id}-${conversation.type}`}
-            onNavToConversation={navToDirectChat}
-            isPinned={isChatPinned(conversation.id, conversation.type)}
-            pinLoading={pinLoading}
-            conversationData={conversation}
-            onTogglePin={handlePinToggle}
-          />
-        )
-      })}
+      <ConversationCardsMain
+        conversations={conversations}
+        navToDirectChat={navToDirectChat}
+        isChatPinned={isChatPinned}
+        pinLoading={pinLoading}
+        handlePinToggle={handlePinToggle}
+      />
     </div>
   ) : (
     <div className="flex flex-col gap-2 justify-center items-center h-full px-3">

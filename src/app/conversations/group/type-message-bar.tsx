@@ -52,7 +52,7 @@ import {
 import { TChattingPayloadForGroup } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { removeGroupChatMember } from "@/redux/messages/messages.slice"
+import { removeGroupChatMembers } from "@/redux/messages/messages.slice"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 
 const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
@@ -861,7 +861,7 @@ export const TypeMessageBar = memo(
     }
 
     const handleRemoveGroupChatMembers = (memberIds: number[], fromGroupChat: TGroupChat) => {
-      dispatch(removeGroupChatMember({ memberIds }))
+      dispatch(removeGroupChatMembers({ memberIds }))
       if (memberIds.includes(user.id) && fromGroupChat.id === groupChat.id) {
         setIsGroupMember(false)
       }

@@ -5,8 +5,8 @@ import { IconButton } from "@/components/materials/icon-button"
 import { ProgressiveImage } from "@/components/materials/progressive-image"
 import { robotoFont } from "@/utils/fonts"
 import { CustomAvatar } from "@/components/materials/avatar"
-import type { TGroupChatData, TGroupChatMemberWithUser } from "@/utils/types/be-api"
-import { useState } from "react"
+import type { TGroupChat, TGroupChatData, TGroupChatMemberWithUser } from "@/utils/types/be-api"
+import { useEffect, useState } from "react"
 import { convertGrChatMemRole } from "@/utils/data-convertors/static-data-convertor"
 import { EGroupChatPermissions, EGroupChatRole } from "@/utils/enums"
 import { ManageMembers } from "./member/manage-members"
@@ -14,6 +14,11 @@ import { useUser } from "@/hooks/user"
 import { checkGroupChatPermission } from "@/utils/helpers"
 import { PreviewInfo } from "./preview-info"
 import { EditGroup } from "./edit-group"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
+import { addGroupChatMembers, removeGroupChatMembers } from "@/redux/messages/messages.slice"
+import { groupMemberService } from "@/services/group-member.service"
+import { toaster } from "@/utils/toaster"
 
 type TMembersProps = {
   members: TGroupChatMemberWithUser[]
@@ -132,11 +137,37 @@ export const InfoBar = () => {
     for (const member of members) {
       if (member.role === EGroupChatRole.ADMIN) {
         result.unshift(member)
-        break
+      } else {
+        result.push(member)
       }
     }
     return result
   }
+
+  const listenAddGroupChatMembers = (newMemberIds: number[], groupChat: TGroupChat) => {
+    groupMemberService
+      .fetchGroupChatMembers(groupChat.id, newMemberIds)
+      .then((members) => {
+        dispatch(addGroupChatMembers(members))
+      })
+      .catch((error) => {
+        console.error(">>> listen add group members failed:", error)
+        toaster.error("Update group chat in real-time failed")
+      })
+  }
+
+  const listenRemoveGroupChatMembers = (memberIds: number[], _: TGroupChat) => {
+    dispatch(removeGroupChatMembers({ memberIds }))
+  }
+
+  useEffect(() => {
+    eventEmitter.on(EInternalEvents.ADD_GROUP_CHAT_MEMBERS, listenAddGroupChatMembers)
+    eventEmitter.on(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, listenRemoveGroupChatMembers)
+    return () => {
+      eventEmitter.off(EInternalEvents.ADD_GROUP_CHAT_MEMBERS, listenAddGroupChatMembers)
+      eventEmitter.off(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, listenRemoveGroupChatMembers)
+    }
+  }, [])
 
   return (
     <div

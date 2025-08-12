@@ -1,12 +1,7 @@
 import EventEmitter from "eventemitter3"
 import type { EInternalEvents } from "./events"
 import type { TMsgContent } from "./types"
-import type {
-  TGetMessagesMessage,
-  TGetFriendRequestsData,
-  TGroupChat,
-  TUserWithProfile,
-} from "../types/be-api"
+import type { TGetMessagesMessage, TGetFriendRequestsData, TGroupChat } from "../types/be-api"
 
 interface IEventEmitter {
   [EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION]: () => void
@@ -26,12 +21,9 @@ interface IEventEmitter {
   [EInternalEvents.SEND_MESSAGE_DIRECT]: (newMessage: TGetMessagesMessage) => void
   [EInternalEvents.SEND_MESSAGE_GROUP]: (newMessage: TGetMessagesMessage) => void
   [EInternalEvents.SCROLL_TO_QUERIED_MESSAGE]: (messageId: number) => void
-  [EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS]: (
-    memberIds: number[],
-    groupChat: TGroupChat,
-    executor: TUserWithProfile
-  ) => void
+  [EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS]: (memberIds: number[], groupChat: TGroupChat) => void
   [EInternalEvents.SEND_MESSAGE]: () => void
+  [EInternalEvents.ADD_GROUP_CHAT_MEMBERS]: (newMemberIds: number[], groupChat: TGroupChat) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

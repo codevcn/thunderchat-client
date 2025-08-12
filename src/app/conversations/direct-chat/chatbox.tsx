@@ -216,6 +216,7 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
   }
 
   const joinDirectChatRoom = () => {
+    if (directChatId === -1) return
     clientSocket.socket.emit(ESocketEvents.join_direct_chat_room, { directChatId }, () => {})
   }
 

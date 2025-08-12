@@ -39,14 +39,14 @@ const RequestItem = ({ user, onApproveRejectRequest, approveLoading }: TRequestI
       </div>
       <div className="flex items-center gap-4">
         <button
-          className="flex text-sm text-white hover:text-regular-violet-cl"
+          className="flex text-sm text-white hover:text-regular-violet-cl font-bold"
           onClick={() => onApproveRejectRequest(id, EJoinRequestStatus.APPROVED)}
           disabled={approveLoading === id}
         >
           {approveLoading === id ? <Spinner size="small" className="m-auto" /> : "Approve"}
         </button>
         <button
-          className="flex text-sm text-white hover:text-regular-violet-cl"
+          className="flex text-sm text-white hover:text-regular-violet-cl font-bold"
           onClick={() => onApproveRejectRequest(id, EJoinRequestStatus.REJECTED)}
           disabled={approveLoading === id}
         >

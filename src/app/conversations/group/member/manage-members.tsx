@@ -1,7 +1,7 @@
 import { CustomDialog, CustomPopover, IconButton, Skeleton } from "@/components/materials"
 import { CustomAvatar } from "@/components/materials"
 import { useDebounce } from "@/hooks/debounce"
-import { removeGroupChatMember } from "@/redux/messages/messages.slice"
+import { removeGroupChatMembers } from "@/redux/messages/messages.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { groupMemberService } from "@/services/group-member.service"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -13,6 +13,7 @@ import { ArrowLeft, Info, UserPlus, UserX } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useUser } from "@/hooks/user"
 import { AddMembersStep } from "./add-member"
+import { EGroupChatRole } from "@/utils/enums"
 
 const MIN_GROUP_CHAT_MEMBERS: number = 2
 
@@ -88,9 +89,7 @@ export const ManageMembers = () => {
   const [open, setOpen] = useState<boolean>(false)
   const { groupChat } = useAppSelector(({ messages }) => messages)
   const groupChatMembers = groupChat?.Members
-  const [searchResults, setSearchResults] = useState<TGroupChatMemberWithUser[]>(
-    groupChatMembers || []
-  )
+  const [searchResults, setSearchResults] = useState<TGroupChatMemberWithUser[]>()
   const debounce = useDebounce()
   const inputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState<boolean>(false)
@@ -154,7 +153,7 @@ export const ManageMembers = () => {
     groupMemberService
       .removeGroupChatMember(groupChat.id, memberId)
       .then(() => {
-        dispatch(removeGroupChatMember({ memberIds: [memberId] }))
+        dispatch(removeGroupChatMembers({ memberIds: [memberId] }))
         handleHideRemoveMemberDialog(false)
       })
       .catch((err) => {
@@ -169,7 +168,17 @@ export const ManageMembers = () => {
   }
 
   const handleGroupChatMembersChange = () => {
-    setSearchResults(groupChatMembers || [])
+    if (groupChatMembers) {
+      const membersList: TGroupChatMemberWithUser[] = []
+      for (const member of groupChatMembers) {
+        if (member.role === EGroupChatRole.ADMIN) {
+          membersList.unshift(member)
+        } else {
+          membersList.push(member)
+        }
+      }
+      setSearchResults(membersList)
+    }
   }
 
   useEffect(() => {
@@ -223,6 +232,7 @@ export const ManageMembers = () => {
               ))}
             </div>
           ) : (
+            searchResults &&
             searchResults.map((member) => (
               <ManageMemberPopover
                 key={member.id}

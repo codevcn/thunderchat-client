@@ -38,11 +38,11 @@ export const conversationsSlice = createSlice({
       action: PayloadAction<TDeepPartial<THierarchyKeyObject<TConversationCard>>>
     ) => {
       const updates = action.payload
-      const id = updates.id
+      const { id, type } = updates
       const conversations = state.conversations
       if (id && conversations) {
         for (const conversation of conversations) {
-          if (conversation.id === id) {
+          if (conversation.id === id && conversation.type === type) {
             updateObjectByPath(conversation, updates)
           }
         }

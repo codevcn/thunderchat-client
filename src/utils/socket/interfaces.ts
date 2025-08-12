@@ -63,10 +63,12 @@ export interface IListenSocketEvents {
     userId: number,
     onlineStatus: EOnlineStatus
   ) => void
-  [ESocketEvents.remove_group_chat_members]: (
-    memberIds: number[],
-    groupChat: TGroupChat,
-    executor: TUserWithProfile
+  [ESocketEvents.remove_group_chat_members]: (memberIds: number[], groupChat: TGroupChat) => void
+  [ESocketEvents.add_group_chat_members]: (newMemberIds: number[], groupChat: TGroupChat) => void
+  [ESocketEvents.update_group_chat_info]: (
+    groupChatId: number,
+    groupChat: Partial<TGroupChat>,
+    cb: (data: TSuccess) => void
   ) => void
 }
 

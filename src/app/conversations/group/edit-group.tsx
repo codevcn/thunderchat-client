@@ -37,6 +37,7 @@ export const EditGroup = ({ open, onClose, groupChat, members, user }: TEditGrou
   const [updateFields, setUpdateFields] = useState<TUpdateFields[]>([])
   const dispatch = useAppDispatch()
   const formRef = useRef<HTMLFormElement>(null)
+  const groupNameInputRef = useRef<HTMLInputElement>(null)
 
   const isGroupChatCreator = checkIfGroupChatCreator(user.id, groupChat)
 
@@ -125,6 +126,19 @@ export const EditGroup = ({ open, onClose, groupChat, members, user }: TEditGrou
     }
   }
 
+  const handleGroupChatDataUpdated = () => {
+    const groupNameInput = groupNameInputRef.current
+    if (!groupNameInput) return
+    const { name } = groupChat
+    if (name !== groupNameInput.value) {
+      groupNameInput.value = name
+    }
+  }
+
+  useEffect(() => {
+    handleGroupChatDataUpdated()
+  }, [groupChat])
+
   useEffect(() => {
     const form = formRef.current
     const handleSubmit = (e: Event) => {
@@ -211,6 +225,7 @@ export const EditGroup = ({ open, onClose, groupChat, members, user }: TEditGrou
             defaultValue={name}
             onChange={handleChangeGroupName}
             name="group-name"
+            ref={groupNameInputRef}
           />
         </form>
 

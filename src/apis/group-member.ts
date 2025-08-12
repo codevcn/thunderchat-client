@@ -8,13 +8,14 @@ export const getSearchGroupChatMembers = (groupChatId: number, keyword: string) 
     params: { groupChatId, keyword },
   })
 
-export const getFetchGroupChatMembers = (groupChatId: number) =>
-  clientAxios.get<TGroupChatMemberWithUser[]>("/group-member/fetch-group-chat-members", {
-    ...requestConfig,
-    params: { groupChatId },
-  })
+export const getFetchGroupChatMembers = (groupChatId: number, memberIds: number[]) =>
+  clientAxios.post<TGroupChatMemberWithUser[]>(
+    "/group-member/fetch-group-chat-members",
+    { groupChatId, memberIds },
+    requestConfig
+  )
 
-export const removeGroupChatMember = (groupChatId: number, memberId: number) =>
+export const deleteRemoveGroupChatMember = (groupChatId: number, memberId: number) =>
   clientAxios.delete<TSuccess>("/group-member/remove-group-chat-member", {
     ...requestConfig,
     params: { groupChatId, memberId },

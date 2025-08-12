@@ -104,7 +104,7 @@ export const messagesSlice = createSlice({
         updateObjectByPath(groupChat, updates)
       }
     },
-    removeGroupChatMember: (state, action: PayloadAction<TRemoveGroupChatMemberState>) => {
+    removeGroupChatMembers: (state, action: PayloadAction<TRemoveGroupChatMemberState>) => {
       const { memberIds } = action.payload
       const groupChat = state.groupChat
       if (groupChat) {
@@ -183,7 +183,7 @@ export const {
   updateMessages,
   updateGroupMessages,
   updateGroupChat,
-  removeGroupChatMember,
+  removeGroupChatMembers,
   setDirectChat,
   resetAllChatData,
   setFetchedMsgs,

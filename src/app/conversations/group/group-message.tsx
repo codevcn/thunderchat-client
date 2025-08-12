@@ -399,6 +399,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       groupChatId,
       isDeleted,
       isViolated,
+      Author,
     } = message
 
     const msgTime = dayjs(createdAt).format(ETimeFormats.HH_mm)
@@ -660,6 +661,9 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   "max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative"
                 }
               >
+                <div className="text-xs text-regular-violet-cl font-bold pb-1">
+                  {Author.Profile.fullName}
+                </div>
                 <div
                   className={
                     (showDropdown ? "flex" : "hidden") +

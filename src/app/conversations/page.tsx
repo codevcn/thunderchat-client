@@ -8,10 +8,13 @@ import { AppNavigation } from "@/components/layout/app-navigation"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { SwitchChatbox } from "./switch-chatbox"
-import type { TGetMessagesMessage, TUserWithProfile, TGroupChat } from "@/utils/types/be-api"
+import type { TGetMessagesMessage, TGroupChat } from "@/utils/types/be-api"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
 import { STATIC_CHAT_BACKGROUND_URL } from "@/utils/UI-constants"
+import { updateGroupChat } from "@/redux/messages/messages.slice"
+import { updateSingleConversation } from "@/redux/conversations/conversations.slice"
+import { EChatType } from "@/utils/enums"
 
 const ChatBackground = () => {
   const chatBackground = useAppSelector(({ settings }) => settings.theme.chatBackground)
@@ -30,6 +33,8 @@ const ChatBackground = () => {
 }
 
 const ConversationPage = () => {
+  const dispatch = useAppDispatch()
+
   const handleClickOnLayout = (e: MouseEvent) => {
     eventEmitter.emit(EInternalEvents.CLICK_ON_LAYOUT, e)
   }
@@ -42,26 +47,49 @@ const ConversationPage = () => {
     eventEmitter.emit(EInternalEvents.SEND_MESSAGE_GROUP, newMessage)
   }
 
-  const listenRemoveGroupChatMembers = (
-    memberIds: number[],
-    groupChat: TGroupChat,
-    executor: TUserWithProfile
-  ) => {
-    eventEmitter.emit(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, memberIds, groupChat, executor)
+  const listenUpdateGroupChatInfo = (groupChatId: number, groupChat: Partial<TGroupChat>) => {
+    dispatch(updateGroupChat(groupChat))
+    dispatch(
+      updateSingleConversation({
+        id: groupChatId,
+        type: EChatType.GROUP,
+        "avatar.src": groupChat.avatarUrl,
+        title: groupChat.name,
+      })
+    )
+  }
+
+  const listenRemoveGroupChatMembers = (memberIds: number[], groupChat: TGroupChat) => {
+    eventEmitter.emit(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, memberIds, groupChat)
+  }
+
+  const listenAddGroupChatMembers = (newMemberIds: number[], groupChat: TGroupChat) => {
+    eventEmitter.emit(EInternalEvents.ADD_GROUP_CHAT_MEMBERS, newMemberIds, groupChat)
   }
 
   useEffect(() => {
     document.body.addEventListener("click", handleClickOnLayout)
+    clientSocket.socket.on(ESocketEvents.update_group_chat_info, listenUpdateGroupChatInfo)
     clientSocket.socket.on(ESocketEvents.remove_group_chat_members, listenRemoveGroupChatMembers)
+    clientSocket.socket.on(ESocketEvents.add_group_chat_members, listenAddGroupChatMembers)
     clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
     clientSocket.socket.on(ESocketEvents.send_message_group, listenSendGroupMessage)
     return () => {
       document.body.removeEventListener("click", handleClickOnLayout)
       clientSocket.socket.removeListener(
+        ESocketEvents.update_group_chat_info,
+        listenUpdateGroupChatInfo
+      )
+      clientSocket.socket.removeListener(
         ESocketEvents.remove_group_chat_members,
         listenRemoveGroupChatMembers
       )
+      clientSocket.socket.removeListener(
+        ESocketEvents.add_group_chat_members,
+        listenAddGroupChatMembers
+      )
       clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)
+      clientSocket.socket.removeListener(ESocketEvents.send_message_group, listenSendGroupMessage)
     }
   }, [])
 

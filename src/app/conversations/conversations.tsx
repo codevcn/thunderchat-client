@@ -70,6 +70,18 @@ const getPinIndexClass = (pinIndex: number): string => {
   }
 }
 
+const joinChatRoom = (chatId: number, chatType: EChatType) => {
+  if (chatType === EChatType.DIRECT) {
+    clientSocket.socket.emit(
+      ESocketEvents.join_direct_chat_room,
+      { directChatId: chatId },
+      () => {}
+    )
+  } else {
+    clientSocket.socket.emit(ESocketEvents.join_group_chat_room, { groupChatId: chatId }, () => {})
+  }
+}
+
 type TConversationCardProps = {
   onNavToConversation: (id: number, type: EChatType) => void
   isPinned: boolean
@@ -98,6 +110,10 @@ const ConversationCard = ({
       onTogglePin(undefined, id)
     }
   }
+
+  useEffect(() => {
+    joinChatRoom(id, type)
+  }, [])
 
   return (
     <div
@@ -132,7 +148,7 @@ const ConversationCard = ({
               dangerouslySetInnerHTML={{
                 __html: santizeMsgContent(subtitleContent),
               }}
-              className="truncate opacity-60 text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
+              className="truncate opacity-60 max-w-[150px] text-regular-white-cl text-sm leading-normal STYLE-conversation-subtitle"
             ></p>
           )}
           <div className="flex items-center gap-1">

@@ -56,6 +56,7 @@ const TypingIndicator = ({ users }: TTypingIndicatorProps) => {
           <div className="flex items-center gap-0.5">
             {users.map((user) => (
               <CustomAvatar
+                key={user.id}
                 src={user.Profile.avatar}
                 imgSize={16}
                 fallbackClassName="bg-regular-violet-cl text-xs"

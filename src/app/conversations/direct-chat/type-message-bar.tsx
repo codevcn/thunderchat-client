@@ -1,42 +1,27 @@
 "use client"
 
-import { CustomTooltip, IconButton, CircularProgress, Spinner } from "@/components/materials"
+import { CustomTooltip, CircularProgress, Spinner } from "@/components/materials"
 import {
   FileVideo,
   Mic,
   Paperclip,
   Reply,
   Send,
-  Smile,
-  Sticker,
   Trash,
   X,
   Image as ImageIcon,
   FileText,
-  BarChart2,
-  MapPin,
 } from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
-import { AutoResizeTextField } from "@/components/materials"
-import { memo, useEffect, useRef, useState, Suspense, lazy } from "react"
-import { useRootLayoutContext } from "@/hooks/layout"
-import { createPortal } from "react-dom"
-import { renderToStaticMarkup } from "react-dom/server"
+import { memo, useEffect, useRef, useState } from "react"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
-import type { TDirectChat, TSticker } from "@/utils/types/be-api"
-import type { TEmoji, TStateMessage } from "@/utils/types/global"
+import type { TDirectChat } from "@/utils/types/be-api"
+import type { TStateMessage } from "@/utils/types/global"
 import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
 import { toast } from "sonner"
-import {
-  santizeMsgContent,
-  extractEmojisFromMessage,
-  unescapeHtml,
-  converToMessageTypeAllTypes,
-} from "@/utils/helpers"
+import { santizeMsgContent, converToMessageTypeAllTypes } from "@/utils/helpers"
 import { TChattingPayload } from "@/utils/types/socket"
 import { FileService } from "@/services/file.service"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
@@ -45,419 +30,22 @@ import { userService } from "@/services/user.service"
 import { setBlockedUserId } from "@/redux/messages/messages.slice"
 import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-
-const LazyEmojiPicker = lazy(() => import("../../../components/materials/emoji-picker"))
-const LazyStickerPicker = lazy(() => import("../../../components/materials/sticker-picker"))
-
-const Fallback = () => (
-  <div className="rounded-lg overflow-hidden w-full h-inside-expression-picker"></div>
-)
-
-const EmojiImg = ({ name, src }: TEmoji) => {
-  return <img className="STYLE-emoji-img" src={src} alt={name} />
-}
-
-type TExpressionCategory = "emoji" | "sticker"
-
-type TExpressionPickerProps = {
-  textFieldRef: React.RefObject<HTMLDivElement | null>
-  expressionPopoverRef: React.RefObject<HTMLDivElement | null>
-  directChat: TDirectChat
-}
-
-const ExpressionPicker = ({
-  textFieldRef,
-  expressionPopoverRef,
-  directChat,
-}: TExpressionPickerProps) => {
-  const [showPicker, setShowPicker] = useState<boolean>(false)
-  const [category, setCategory] = useState<TExpressionCategory>("emoji")
-  const addEmojiBtnRef = useRef<HTMLButtonElement>(null)
-  const appRootEle = useRootLayoutContext().appRootRef!.current!
-  const user = useUser()!
-  const { recipientId, creatorId } = directChat
-  const handleSelectEmoji = (emojiObject: TEmoji) => {
-    const textField = textFieldRef.current
-    if (textField) {
-      const emojiInString = renderToStaticMarkup(
-        <EmojiImg name={emojiObject.name} src={emojiObject.src} />
-      )
-      eventEmitter.emit(EInternalEvents.MSG_TEXTFIELD_EDITED, { content: emojiInString })
-    }
-  }
-
-  const handleSelectSticker = (sticker: TSticker) => {
-    chattingService.sendMessage(
-      EMessageTypeAllTypes.STICKER,
-      {
-        content: `${sticker.id}`,
-        receiverId: user.id === recipientId ? creatorId : recipientId,
-        token: chattingService.getMessageToken(),
-        timestamp: new Date(),
-      },
-      (data) => {
-        if ("success" in data && data.success) {
-          chattingService.recursiveSendingQueueMessages()
-        } else if ("isError" in data && data.isError) {
-          toast.error(data?.message || "Error when sending message")
-        }
-      }
-    )
-  }
-
-  const toggleEmojiPicker = () => {
-    setShowPicker((prev) => !prev)
-  }
-
-  const detectCollisionAndAdjust = () => {
-    const addEmojiBtn = addEmojiBtnRef.current
-    const addEmojiPopover = expressionPopoverRef.current
-    if (addEmojiBtn && addEmojiPopover) {
-      const buttonRect = addEmojiBtn.getBoundingClientRect()
-      const popoverRect = addEmojiPopover.getBoundingClientRect()
-
-      const conversationsListRect = (
-        appRootEle.querySelector("#QUERY-conversations-list") as HTMLElement
-      ).getBoundingClientRect()
-
-      let top: number = buttonRect.top - popoverRect.height - 25
-      let left: number = buttonRect.left + buttonRect.width / 2 - popoverRect.width / 2
-      const conversationsListRight = conversationsListRect.right
-
-      top = top < 0 ? 10 : top
-      left = left < conversationsListRight + 10 ? conversationsListRight + 10 : left
-
-      addEmojiPopover.style.cssText = `top: ${top}px; left: ${left}px; position: fixed; z-index: 99;`
-
-      requestAnimationFrame(() => {
-        addEmojiPopover.classList.add("animate-scale-up", "origin-bottom")
-      })
-    }
-  }
-
-  const handleClickOutside = (e: MouseEvent) => {
-    const addEmojiPopover = expressionPopoverRef.current
-    if (addEmojiPopover) {
-      if (
-        !addEmojiPopover.contains(e.target as Node) &&
-        !addEmojiBtnRef.current?.contains(e.target as Node)
-      ) {
-        setShowPicker(false)
-      }
-    }
-  }
-
-  useEffect(() => {
-    eventEmitter.on(EInternalEvents.CLICK_ON_LAYOUT, handleClickOutside)
-    return () => {
-      eventEmitter.off(EInternalEvents.CLICK_ON_LAYOUT, handleClickOutside)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (showPicker) {
-      detectCollisionAndAdjust()
-    }
-  }, [showPicker])
-
-  return (
-    <div className="flex text-regular-icon-cl hover:text-regular-violet-cl relative bottom-0 left-0 cursor-pointer">
-      {showPicker &&
-        createPortal(
-          <div
-            ref={expressionPopoverRef}
-            className="fixed top-0 left-0 rounded-lg h-expression-picker w-expression-picker bg-expression-picker-bgcl"
-          >
-            <Suspense fallback={<Fallback />}>
-              {category === "emoji" ? (
-                <LazyEmojiPicker onSelectEmoji={handleSelectEmoji} />
-              ) : (
-                <LazyStickerPicker onSelectSticker={handleSelectSticker} />
-              )}
-            </Suspense>
-            <div className="flex items-center justify-center gap-3 w-full h-nav-expression-picker px-2 pt-0 pb-2.5">
-              <IconButton title={{ text: "Emoji" }} onClick={() => setCategory("emoji")}>
-                <Smile className="h-6 w-6 text-regular-icon-cl" />
-              </IconButton>
-              <IconButton title={{ text: "Sticker" }} onClick={() => setCategory("sticker")}>
-                <Sticker className="h-6 w-6 text-regular-icon-cl" />
-              </IconButton>
-            </div>
-          </div>,
-          document.body
-        )}
-      <button ref={addEmojiBtnRef} onClick={toggleEmojiPicker}>
-        <Smile />
-      </button>
-    </div>
-  )
-}
-
-const INDICATE_TYPING_DELAY: number = 200
-
-type TTypingFlags = "typing" | "stop"
-
-// Hàm custom debounce ngăn chặn việc gửi nhiều request trong 1 khoảng thời gian delay
-// Sẽ không ngăn chặn nếu 2 request kế tiếp nhau là khác loại với nhau (VD: pre req là "typing" còn next req là "blur")
-const useCustomDebounce = (typingFlagRef: React.RefObject<TTypingFlags | undefined>) => {
-  const timer = useRef<NodeJS.Timeout>(undefined)
-  return (handler: (type: TTypingFlags) => void, delayInMs: number) => {
-    return (type: TTypingFlags) => {
-      if (!timer.current || typingFlagRef.current !== type) {
-        typingFlagRef.current = type
-        handler(type)
-      }
-      clearTimeout(timer.current)
-      timer.current = setTimeout(() => {
-        timer.current = undefined
-      }, delayInMs)
-    }
-  }
-}
-
-type TMessageTextFieldProps = {
-  directChat: TDirectChat
-  setHasContent: (hasContent: boolean) => void
-  hasContent: boolean
-  textFieldRef: React.RefObject<HTMLDivElement | null>
-  textFieldContainerRef: React.RefObject<HTMLDivElement | null>
-  expressionPopoverRef: React.RefObject<HTMLDivElement | null>
-  replyMessage: any | null
-  setReplyMessage: (msg: any | null) => void
-}
-
-const MessageTextField = ({
-  directChat,
-  setHasContent,
-  hasContent,
-  textFieldRef,
-  textFieldContainerRef,
-  expressionPopoverRef,
-  replyMessage,
-  setReplyMessage,
-}: TMessageTextFieldProps) => {
-  const { recipientId, creatorId } = directChat
-  const user = useUser()!
-  const typingFlagRef = useRef<TTypingFlags | undefined>(undefined)
-  const debounce = useCustomDebounce(typingFlagRef)
-
-  const indicateUserIsTyping = debounce((type: TTypingFlags) => {
-    clientSocket.socket.emit(ESocketEvents.typing_direct, {
-      receiverId: recipientId === user.id ? creatorId : recipientId,
-      isTyping: type === "typing",
-      directChatId: directChat.id,
-    })
-  }, INDICATE_TYPING_DELAY)
-
-  const handleTyping = (msg: string) => {
-    // Clean up message: loại bỏ link tags và decode HTML
-    const cleanedMsg = cleanMessageContent(msg)
-    // Kiểm tra emoji trong message đã clean
-    const emojis = extractEmojisFromMessage(cleanedMsg)
-    if (msg.trim() && msg.length > 0) {
-      setHasContent(true)
-    } else {
-      setHasContent(false)
-    }
-
-    indicateUserIsTyping("typing")
-  }
-
-  // Hàm clean up nội dung message
-  const cleanMessageContent = (message: string): string => {
-    // Decode HTML entities
-    let cleaned = unescapeHtml(message)
-
-    // Loại bỏ link tags
-    cleaned = cleaned.replace(/<link[^>]*>/g, "")
-
-    // Loại bỏ whitespace thừa
-    cleaned = cleaned.trim()
-
-    return cleaned
-  }
-
-  // Xử lý paste event để đảm bảo emoji hiển thị đúng
-  const handlePaste = (e: ClipboardEvent) => {
-    const textField = textFieldRef.current
-    if (!textField) return
-
-    // Đợi một chút để DOM được cập nhật
-    setTimeout(() => {
-      const content = textField.innerHTML
-
-      // Clean up content trước khi xử lý
-      const cleanedContent = cleanMessageContent(content)
-
-      // Kiểm tra xem có emoji img tags không
-      const emojis = extractEmojisFromMessage(cleanedContent)
-
-      if (emojis.length > 0) {
-        // Thay thế nội dung encoded bằng nội dung đã clean để hiển thị emoji
-        if (content !== cleanedContent) {
-          textField.innerHTML = cleanedContent
-          // Điều chỉnh kích thước sau khi thay thế nội dung
-          setTimeout(() => {
-            if (textField) {
-              // Reset kích thước để tính toán lại
-              textField.style.height = "auto"
-              textField.style.width = "auto"
-
-              // Tính toán kích thước mới
-              const newHeight = Math.min(
-                Math.max(textField.scrollHeight, 21), // min height
-                300 // max height
-              )
-
-              // Tính toán chiều rộng mới (giới hạn tối đa 100% container)
-              const containerWidth = textField.parentElement?.clientWidth || 1000
-              const newWidth = Math.min(textField.scrollWidth, containerWidth)
-
-              // Áp dụng kích thước mới
-              textField.style.height = `${newHeight}px`
-              textField.style.width = `${newWidth}px`
-
-              // Thêm overflow nếu cần
-              textField.style.overflowY = textField.scrollHeight > 300 ? "auto" : "hidden"
-              textField.style.overflowX = textField.scrollWidth > newWidth ? "auto" : "hidden"
-
-              // Di chuyển con trỏ đến cuối text
-              const range = document.createRange()
-              const selection = window.getSelection()
-              range.selectNodeContents(textField)
-              range.collapse(false) // false để đặt con trỏ ở cuối, true để đặt ở đầu
-              if (selection) {
-                selection.removeAllRanges()
-                selection.addRange(range)
-              }
-
-              // Focus vào textfield
-              textField.focus()
-            }
-          }, 0)
-        }
-      }
-    }, 10)
-  }
-
-  const sendMessage = (msgToSend: string) => {
-    if (!msgToSend || !msgToSend.trim() || msgToSend.includes("QUERY-empty-placeholder")) {
-      toast.error("Message cannot be empty")
-      return
-    }
-
-    const payload: TChattingPayload["msgPayload"] = {
-      content: msgToSend,
-      receiverId: user.id === recipientId ? creatorId : recipientId,
-      token: chattingService.getMessageToken(),
-      timestamp: new Date(),
-    }
-
-    if (replyMessage && replyMessage.id) {
-      payload.replyToId = replyMessage.id
-    }
-
-    chattingService.sendMessage(EMessageTypeAllTypes.TEXT, payload, (data) => {
-      if ("success" in data && data.success) {
-        chattingService.recursiveSendingQueueMessages()
-      } else if ("isError" in data && data.isError) {
-        toast.error(data?.message || "Error when sending message")
-      }
-    })
-    setReplyMessage(null)
-  }
-
-  const handleCatchEnter = (msg: string) => {
-    sendMessage(msg)
-  }
-
-  const handleBlur = () => {
-    textFieldContainerRef.current?.classList.remove("outline-regular-violet-cl")
-    if (!textFieldRef.current?.innerHTML) {
-      setHasContent(false)
-    }
-  }
-
-  const handleClickOnLayout = (e: MouseEvent) => {
-    if (
-      !expressionPopoverRef.current?.contains(e.target as Node) &&
-      !textFieldContainerRef.current?.contains(e.target as Node) &&
-      typingFlagRef.current === "typing"
-    ) {
-      indicateUserIsTyping("stop")
-    }
-  }
-
-  const sendMessageOnEventHandler = () => {
-    const textFieldEle = textFieldRef.current
-    if (textFieldEle) {
-      const event = new KeyboardEvent("keydown", {
-        key: "Enter",
-        code: "Enter",
-        keyCode: 13, // Một số trình duyệt cũ vẫn cần
-        which: 13,
-        bubbles: true,
-        cancelable: true,
-      })
-      textFieldEle.dispatchEvent(event)
-    }
-  }
-
-  useEffect(() => {
-    eventEmitter.on(EInternalEvents.SEND_MESSAGE, sendMessageOnEventHandler)
-    eventEmitter.on(EInternalEvents.CLICK_ON_LAYOUT, handleClickOnLayout)
-
-    // Thêm paste event listener
-    const textField = textFieldRef.current
-    if (textField) {
-      textField.addEventListener("paste", handlePaste)
-    }
-
-    return () => {
-      eventEmitter.off(EInternalEvents.CLICK_ON_LAYOUT, handleClickOnLayout)
-      if (textField) {
-        textField.removeEventListener("paste", handlePaste)
-      }
-    }
-  }, [])
-
-  return (
-    <div className="relative bg-regular-dark-gray-cl grow py-[15.5px] px-2">
-      <AutoResizeTextField
-        className="block bg-transparent outline-none w-full hover:bg-transparent whitespace-pre-wrap break-all leading-tight focus:bg-transparent z-10 STYLE-styled-scrollbar border-transparent text-white hover:border-transparent focus:border-transparent focus:shadow-none"
-        onEnterPress={handleCatchEnter}
-        onContentChange={handleTyping}
-        maxHeight={300}
-        lineHeight={1.5}
-        textFieldRef={textFieldRef}
-        onBlur={handleBlur}
-        initialHeight={21}
-        textSize={14}
-        id="STYLE-type-msg-bar"
-      />
-      <span
-        className={`${hasContent ? "animate-hide-placeholder" : "animate-grow-placeholder"} leading-tight left-2.5 z-0 absolute top-1/2 -translate-y-1/2 text-regular-placeholder-cl`}
-      >
-        Message...
-      </span>
-    </div>
-  )
-}
+import { MessageTextField } from "./message-textfield"
+import { ExpressionPicker } from "./expression-picker"
+import { clientSocket } from "@/utils/socket/client-socket"
+import { ESocketEvents } from "@/utils/socket/events"
 
 const fileOptions = [
   { icon: <ImageIcon size={20} />, label: "Photo or video", value: "photo" },
   { icon: <FileText size={20} />, label: "Document", value: "document" },
-  { icon: <BarChart2 size={20} />, label: "Create poll", value: "poll" },
-  { icon: <MapPin size={20} />, label: "Location", value: "location" },
 ]
 
-function FileTypeMenu({
-  onSelect,
-  onClose,
-}: {
+type TFileTypeMenuProps = {
   onSelect: (type: string) => void
   onClose: () => void
-}) {
+}
+
+function FileTypeMenu({ onSelect, onClose }: TFileTypeMenuProps) {
   return (
     <div className="absolute bottom-12 left-0 z-50 bg-regular-dark-gray-cl shadow-lg rounded-lg p-2 w-56 border border-gray-700">
       {fileOptions.map((opt) => (
@@ -511,6 +99,16 @@ export const TypeMessageBar = memo(
     const { blockedUserId } = useAppSelector((state) => state.messages)
     const dispatch = useAppDispatch()
     const [isUnblocking, setIsUnblocking] = useState<boolean>(false)
+    const [disableMessage, setDisableMessage] = useState<string>("")
+
+    // voice message
+    const [isRecording, setIsRecording] = useState(false)
+    const [recordTime, setRecordTime] = useState(0)
+    const timerRef = useRef<NodeJS.Timeout | null>(null)
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+    const audioChunksRef = useRef<Blob[]>([])
+    const [audioUrl, setAudioUrl] = useState<string | null>(null)
+    const isCancelledRef = useRef(false)
 
     const handleClickOnTextFieldContainer = (e: React.MouseEvent<HTMLElement>) => {
       const textField = textFieldRef.current
@@ -747,14 +345,6 @@ export const TypeMessageBar = memo(
       }
     }
 
-    // voice message
-    const [isRecording, setIsRecording] = useState(false)
-    const [recordTime, setRecordTime] = useState(0)
-    const timerRef = useRef<NodeJS.Timeout | null>(null)
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-    const audioChunksRef = useRef<Blob[]>([])
-    const [audioUrl, setAudioUrl] = useState<string | null>(null)
-    const isCancelledRef = useRef(false)
     const startRecording = async () => {
       setIsRecording(true)
       setRecordTime(0)
@@ -872,6 +462,19 @@ export const TypeMessageBar = memo(
         })
     }
 
+    const listenDeleteDirectChat = (directChatId: number, deleter: TUserWithProfile) => {
+      if (directChatId === directChat.id) {
+        setDisableMessage(`This conversation has been deleted by ${deleter.Profile.fullName}`)
+      }
+    }
+
+    useEffect(() => {
+      clientSocket.socket.on(ESocketEvents.delete_direct_chat, listenDeleteDirectChat)
+      return () => {
+        clientSocket.socket.off(ESocketEvents.delete_direct_chat, listenDeleteDirectChat)
+      }
+    }, [])
+
     useEffect(() => {
       if (isRecording) {
         timerRef.current = setInterval(() => {
@@ -894,6 +497,16 @@ export const TypeMessageBar = memo(
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl, isRecording])
+
+    if (disableMessage) {
+      return (
+        <div className="flex-1 flex items-center justify-center w-full py-6">
+          <div className="system-message text-center text-gray-400 py-4 w-full">
+            {disableMessage}
+          </div>
+        </div>
+      )
+    }
 
     if (blockedUserId === user.id) {
       return (

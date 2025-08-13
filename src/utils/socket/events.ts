@@ -26,4 +26,7 @@ export enum ESocketEvents {
   add_group_chat_members = "add_group_chat_members",
   update_group_chat_info = "update_group_chat_info",
   update_user_info = "update_user_info",
+  delete_direct_chat = "delete_direct_chat",
+  delete_group_chat = "delete_group_chat",
+  member_leave_group_chat = "member_leave_group_chat",
 }

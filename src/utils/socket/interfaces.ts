@@ -79,6 +79,9 @@ export interface IListenSocketEvents {
     userId: number,
     updates: TUpdateUserInfoPayload
   ) => void
+  [ESocketEvents.delete_direct_chat]: (directChatId: number, deleter: TUserWithProfile) => void
+  [ESocketEvents.delete_group_chat]: (groupChatId: number) => void
+  [ESocketEvents.member_leave_group_chat]: (groupChatId: number, memberId: number) => void
 }
 
 export interface IEmitSocketEvents {

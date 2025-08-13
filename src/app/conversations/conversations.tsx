@@ -1,7 +1,7 @@
 "use client"
 
 import { CustomPopover, Skeleton } from "@/components/materials"
-import { LogOut, Menu, Trash, Users } from "lucide-react"
+import { Menu, Users } from "lucide-react"
 import type {
   TUserWithProfile,
   TMessage,
@@ -39,6 +39,7 @@ import { usePinChats } from "@/hooks/pin-chats"
 import { GlobalSearchBar, SearchSection } from "./global-search"
 import { ConversationCard } from "./conversation-card"
 import type { TPopoverPos } from "./sharings"
+import { ConversationContextMenu } from "./conversation-context-menu"
 
 type TConversationCardsMainProps = {
   conversations: TConversationCard[]
@@ -62,14 +63,6 @@ const ConversationCardsMain = ({
     setPickedConversation(open ? pickedConversation : undefined)
   }
 
-  const leaveGroupChat = () => {
-    console.log("leave group chat")
-  }
-
-  const leaveDirectChat = () => {
-    console.log("leave direct chat")
-  }
-
   return (
     <>
       {conversations.map((conversation) => {
@@ -83,50 +76,19 @@ const ConversationCardsMain = ({
             onTogglePin={handlePinToggle}
             onPickedConversation={setPickedConversation}
             onSetPopoverPos={setPopoverPos}
+            isPicked={
+              `${conversation.id}-${conversation.type}` ===
+              `${pickedConversation?.id || ""}-${pickedConversation?.type || ""}`
+            }
           />
         )
       })}
 
-      <CustomPopover
-        open={!!pickedConversation}
-        onOpenChange={openCloseContextMenu}
-        trigger={<span></span>}
-        popoverBoard={{
-          style: {
-            position: "fixed",
-            top: `${popoverPos?.top}px`,
-            left: `${popoverPos?.left}px`,
-          },
-        }}
-      >
-        <div
-          hidden={!pickedConversation}
-          className="flex flex-col gap-2 bg-regular-black-cl rounded-md py-2 border border-gray-600"
-        >
-          {pickedConversation &&
-            (pickedConversation.type === EChatType.GROUP ? (
-              <button
-                onClick={leaveGroupChat}
-                className="w-full text-regular-white-cl hover:bg-regular-dark-gray-cl outline-none border-none ring-0"
-              >
-                <span className="flex justify-start items-center gap-2 min-w-max active:scale-95 py-1 px-4">
-                  <LogOut color="currentColor" size={16} />
-                  <span className="text-sm">Leave group chat</span>
-                </span>
-              </button>
-            ) : (
-              <button
-                onClick={leaveDirectChat}
-                className="w-full text-regular-white-cl hover:bg-regular-dark-gray-cl outline-none border-none ring-0"
-              >
-                <span className="flex justify-start items-center gap-2 min-w-max active:scale-95 py-1 px-4">
-                  <Trash color="currentColor" size={16} />
-                  <span className="text-sm">Delete this chat</span>
-                </span>
-              </button>
-            ))}
-        </div>
-      </CustomPopover>
+      <ConversationContextMenu
+        pickedConversation={pickedConversation}
+        openCloseContextMenu={openCloseContextMenu}
+        popoverPos={popoverPos}
+      />
     </>
   )
 }
@@ -326,6 +288,7 @@ const ConversationCards = () => {
     newMessage: TMessage | null,
     sender: TUserWithProfile
   ) => {
+    console.log(">>> listen New Conversation:", { directChat, groupChat, type, newMessage, sender })
     if (type === EChatType.DIRECT && directChat) {
       const lastDirectChatData = localStorageManager.getLastDirectChatData()
       if (lastDirectChatData) {
@@ -494,7 +457,7 @@ const FloatingMenu = ({ onOpenGroupChat, openGroupChat }: TFloatingMenuProps) =>
         <div className="flex flex-col gap-2 bg-regular-black-cl rounded-md py-2">
           <button
             onClick={startCreateNewGroupChat}
-            className="w-full text-regular-white-cl hover:bg-regular-dark-gray-cl"
+            className="w-full text-regular-white-cl hover:bg-gray-600/50"
           >
             <span className="flex justify-start items-center gap-2 min-w-max active:scale-95 py-1 px-4">
               <Users color="currentColor" size={16} />

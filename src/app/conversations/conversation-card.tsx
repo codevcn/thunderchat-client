@@ -47,7 +47,11 @@ const joinChatRoom = (chatId: number, chatType: EChatType) => {
     clientSocket.socket.emit(
       ESocketEvents.join_direct_chat_room,
       { directChatId: chatId },
-      () => {}
+      (data) => {
+        if (data && "isError" in data) {
+          toaster.error(data.message)
+        }
+      }
     )
   } else {
     clientSocket.socket.emit(
@@ -70,6 +74,7 @@ type TConversationCardProps = {
   onTogglePin: (directChatId?: number, groupChatId?: number) => void
   onPickedConversation: (conversation: TConversationCard) => void
   onSetPopoverPos: (pos: TPopoverPos) => void
+  isPicked: boolean
 }
 
 export const ConversationCard = ({
@@ -80,6 +85,7 @@ export const ConversationCard = ({
   onTogglePin,
   onPickedConversation,
   onSetPopoverPos,
+  isPicked,
 }: TConversationCardProps) => {
   const { id, type, avatar, title, lastMessageTime, subtitle, pinIndex, unreadMessageCount } =
     conversationData
@@ -107,7 +113,7 @@ export const ConversationCard = ({
 
   return (
     <div
-      className={`group flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${pinIndexClass} group`}
+      className={`${isPicked ? "bg-violet-600/30" : ""} group flex gap-2 items-center px-3 py-2 w-full cursor-pointer hover:bg-regular-hover-card-cl rounded-lg ${pinIndexClass} group`}
       key={`${type}-${id}`}
       onClick={() => onNavToConversation(id, type)}
       onContextMenu={handleOpenContextMenu}

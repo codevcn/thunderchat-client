@@ -492,11 +492,10 @@ type TTypeMessageBarProps = {
   groupChat: TGroupChatData
   replyMessage: TStateMessage | null
   setReplyMessage: (msg: any | null) => void
-  canSend?: boolean | null
 }
 
 export const TypeMessageBar = memo(
-  ({ groupChat, replyMessage, setReplyMessage, canSend = true }: TTypeMessageBarProps) => {
+  ({ groupChat, replyMessage, setReplyMessage }: TTypeMessageBarProps) => {
     const user = useUser()!
     const textFieldRef = useRef<HTMLDivElement | null>(null)
     const [hasContent, setHasContent] = useState<boolean>(false)
@@ -513,6 +512,7 @@ export const TypeMessageBar = memo(
     const [isGroupMember, setIsGroupMember] = useState<boolean>(true)
     const dispatch = useAppDispatch()
     const { groupChatPermissions } = useAppSelector(({ messages }) => messages)
+    const [disableMessage, setDisableMessage] = useState<string>("")
 
     const sendMessagePermission = checkSendMessagePermission(
       groupChatPermissions,
@@ -867,6 +867,12 @@ export const TypeMessageBar = memo(
       }
     }
 
+    const listenDeleteGroupChat = (groupChatId: number) => {
+      if (groupChatId === groupChat.id) {
+        setDisableMessage(`This group has been deleted by the creator`)
+      }
+    }
+
     useEffect(() => {
       if (isRecording) {
         timerRef.current = setInterval(() => {
@@ -892,6 +898,11 @@ export const TypeMessageBar = memo(
 
     useEffect(() => {
       eventEmitter.on(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, handleRemoveGroupChatMembers)
+      clientSocket.socket.on(ESocketEvents.delete_group_chat, listenDeleteGroupChat)
+      return () => {
+        eventEmitter.off(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, handleRemoveGroupChatMembers)
+        clientSocket.socket.off(ESocketEvents.delete_group_chat, listenDeleteGroupChat)
+      }
     }, [])
 
     if (!sendMessagePermission.hasPermission) {
@@ -914,11 +925,11 @@ export const TypeMessageBar = memo(
       )
     }
 
-    if (!canSend) {
+    if (disableMessage) {
       return (
         <div className="flex-1 flex items-center justify-center w-full py-6">
           <div className="system-message text-center text-gray-500 py-4 w-full">
-            This person only accepts messages from friends. You cannot send a message.
+            {disableMessage}
           </div>
         </div>
       )

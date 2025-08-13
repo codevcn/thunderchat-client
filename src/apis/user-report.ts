@@ -47,14 +47,9 @@ export const userReportAPI = {
 
       // Add image files
       if (reportImages && reportImages.length > 0) {
-        reportImages.forEach((image, index) => {
+        reportImages.forEach((image) => {
           formData.append("reportImages", image)
         })
-      }
-
-      console.log("🔍 [DEBUG] FormData entries:")
-      for (const [key, value] of formData.entries()) {
-        console.log(`  ${key}: ${value}`)
       }
 
       const response = await clientAxios.post<TCreateViolationReportResponse>(

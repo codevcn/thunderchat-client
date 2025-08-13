@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, ReactNode } from "react"
-import AccountPage from "@/app/(account)/page"
+import { AccountPage } from "@/components/account/page"
 
 type AccountModalContextType = {
   showAccount: boolean

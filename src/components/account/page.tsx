@@ -17,7 +17,7 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { pureNavigator } from "@/utils/helpers"
 import { clientSocket } from "@/utils/socket/client-socket"
 
-const AccountPage = ({
+export const AccountPage = ({
   showBackButton = false,
   onBack,
 }: {
@@ -238,5 +238,3 @@ const AccountPage = ({
     </div>
   )
 }
-
-export default AccountPage

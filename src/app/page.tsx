@@ -132,11 +132,11 @@ const HomePage = () => {
       </div>
 
       {/* QR Code Login Link */}
-      <div className="mt-4">
+      {/* <div className="mt-4">
         <a href="#" className="text-[#8774E1] hover:underline">
           LOG IN BY QR CODE
         </a>
-      </div>
+      </div> */}
     </div>
   ) : (
     <AppLoading />

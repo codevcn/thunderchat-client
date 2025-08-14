@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react"
 import { AppNavigation } from "@/components/layout/app-navigation"
 import { UserCog } from "lucide-react"
 import { userSettingService } from "@/services/user-setting.service"
-import { toast } from "sonner"
 import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 
@@ -47,10 +46,10 @@ const PrivacyContent = ({
   handleTogglePrivacy,
 }: TPrivacyContentProps) => {
   return (
-    <div className="flex-1 flex justify-center bg-regular-black-cl min-h-screen px-16 py-8">
-      <div className="w-full h-fit bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl p-8 shadow-lg overflow-auto">
+    <div className="flex-1 flex justify-center bg-regular-black-cl min-h-screen px-4 py-6 screen-medium-chatting:px-12">
+      <div className="w-full h-fit bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl px-6 py-4 shadow-lg overflow-auto">
         <div className="font-bold text-xl text-regular-white-cl">Privacy</div>
-        <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-8 mt-6">
+        <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-8 mt-4">
           <div>
             <h3 className="text-base text-regular-white-cl font-medium">
               Block messages from strangers
@@ -136,6 +135,7 @@ export default function UserSettingsPage() {
         fontFamily: "inherit",
         letterSpacing: 0.1,
       }}
+      className="pl-[55px] screen-medium-chatting:pl-0"
     >
       {/* AppNavigation ngoài cùng bên trái */}
       <AppNavigation />

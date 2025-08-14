@@ -8,6 +8,7 @@ import reportMessagesSlice, { reportMessagesSliceName } from "./messages/report-
 import { settingsSlice } from "./settings/settings.slice"
 import { searchSlice } from "./search/search.slice"
 import profileSlice from "./user/profile.slice"
+import { layoutSlice } from "./layout/layout.slice"
 
 const store = configureStore({
   reducer: {
@@ -20,6 +21,7 @@ const store = configureStore({
     [settingsSlice.name]: settingsSlice.reducer,
     [searchSlice.name]: searchSlice.reducer,
     profile: profileSlice,
+    [layoutSlice.name]: layoutSlice.reducer,
   },
 })
 

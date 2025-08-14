@@ -1,5 +1,3 @@
-import { useSearchParams } from "next/navigation"
-import validator from "validator"
 import { useState, useEffect, useRef } from "react"
 import { DirectChatbox } from "./direct-chat/chatbox"
 import { GroupChatbox } from "./group/group-chatbox"
@@ -9,6 +7,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { useAppDispatch } from "@/hooks/redux"
 import { setDirectChat } from "@/redux/messages/messages.slice"
+import { useConversation } from "@/hooks/conversation"
 
 type TChatInfo = {
   type: EChatType
@@ -17,25 +16,22 @@ type TChatInfo = {
 
 export const SwitchChatbox = () => {
   const [chatInfo, setChatInfo] = useState<TChatInfo>()
-  const searchParams = useSearchParams()
-  const directChatId = searchParams.get("cid")
-  const tempId = searchParams.get("tid")
-  const groupChatId = searchParams.get("gid")
+  const { directChatId, tempId, groupChatId } = useConversation()
   const prevChatInfoRef = useRef<TChatInfo | null>(null)
   const dispatch = useAppDispatch()
 
   const checkChatInfo = () => {
-    if (directChatId && validator.isNumeric(directChatId)) {
+    if (directChatId) {
       handleSetChatInfo({
         type: EChatType.DIRECT,
-        chatId: parseInt(directChatId),
+        chatId: directChatId,
       })
-    } else if (tempId && validator.isNumeric(tempId)) {
-      handleLastDirectChatData(parseInt(tempId))
-    } else if (groupChatId && validator.isNumeric(groupChatId)) {
+    } else if (tempId) {
+      handleLastDirectChatData(tempId)
+    } else if (groupChatId) {
       handleSetChatInfo({
         type: EChatType.GROUP,
-        chatId: parseInt(groupChatId),
+        chatId: groupChatId,
       })
     }
   }
@@ -60,7 +56,7 @@ export const SwitchChatbox = () => {
 
   const handleLastDirectChatData = (tempId: number) => {
     const lastDirectChatData = localStorageManager.getLastDirectChatData()
-    if (lastDirectChatData && tempId === lastDirectChatData.tempId) {
+    if (lastDirectChatData && tempId && tempId === lastDirectChatData.tempId) {
       const { chatData } = lastDirectChatData
       const chatId = chatData.id
       if (chatId === -1) {

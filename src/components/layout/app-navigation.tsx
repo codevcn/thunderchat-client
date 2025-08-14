@@ -6,6 +6,7 @@ import { memo, JSX } from "react"
 import { CustomAvatar, CustomTooltip } from "../materials"
 import { useAccountModal } from "@/contexts/account-modal.context"
 import { useUser } from "@/hooks/user"
+import { useAppSelector } from "@/hooks/redux"
 
 type TNav = {
   label: string
@@ -35,9 +36,13 @@ export const AppNavigation = memo(() => {
   const { openAccount } = useAccountModal()
   const user = useUser()!
   const userProfile = user.Profile
+  const openConvsList = useAppSelector((state) => state.layout.openConvsList)
 
   return (
-    <div className="screen-medium-chatting:flex hidden w-[55px] h-screen relative">
+    <div
+      style={{ left: openConvsList ? "0" : "-55px" }}
+      className="flex top-0 left-0 fixed screen-medium-chatting:static z-[99] w-[55px] h-screen transition-[left] duration-200"
+    >
       <div className="flex justify-between flex-col gap-4 bg-regular-dark-gray-cl pt-6 pb-3 w-[inherit] h-[inherit]">
         <CustomTooltip title="Account" placement="right">
           <div

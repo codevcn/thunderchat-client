@@ -92,13 +92,13 @@ const ProfileInfo = ({
   }
 
   return (
-    <div className="flex flex-col gap-2 px-2 pt-[0.87rem] pb-[0.87rem]">
+    <div className="flex flex-col gap-2 px-2 pt-[0.87rem] pb-[0.87rem] w-full">
       {about && (
-        <div className="flex gap-4 items-center px-4 py-2">
+        <div className="flex gap-4 items-center px-4 py-2 w-full">
           <div className="text-regular-icon-cl">
             <Info color="currentColor" />
           </div>
-          <div className="w-info-bar">
+          <div className="grow">
             <p className="text-base leading-5 w-full">{about}</p>
             <p className="text-regular-text-secondary-cl mt-1">Bio</p>
           </div>
@@ -106,22 +106,22 @@ const ProfileInfo = ({
       )}
 
       {email && (
-        <div className="flex gap-4 items-center px-4 py-2">
+        <div className="flex gap-4 items-center px-4 py-2 w-full">
           <div className="text-regular-icon-cl">
             <Mail color="currentColor" />
           </div>
-          <div className="w-info-bar">
+          <div className="grow">
             <p className="text-base leading-5 w-full">{email}</p>
             <p className="text-regular-text-secondary-cl mt-1">Email</p>
           </div>
         </div>
       )}
 
-      <div className="flex gap-4 items-center px-4 py-2">
+      <div className="flex gap-4 items-center px-4 py-2 w-full">
         <div className="text-red-500">
           <AlertTriangle color="currentColor" />
         </div>
-        <div className="w-info-bar">
+        <div className="grow">
           <button
             onClick={handleOpenReportModal}
             className="text-base leading-5 w-full text-left text-red-500 hover:text-red-400 transition-colors"
@@ -133,7 +133,7 @@ const ProfileInfo = ({
 
       <div
         onClick={openBlockUserDialog}
-        className={`${isBlocking ? "opacity-90 cursor-not-allowed" : "cursor-pointer hover:bg-red-600/20"} flex gap-4 items-center px-4 py-2 rounded-md transition-colors relative`}
+        className={`${isBlocking ? "opacity-90 cursor-not-allowed" : "cursor-pointer hover:bg-red-600/20"} flex gap-4 items-center px-4 py-2 rounded-md transition-colors relative w-full`}
       >
         {isBlocking && (
           <div className="flex absolute top-0 left-0 w-full h-full bg-black/40 rounded-md">
@@ -145,7 +145,7 @@ const ProfileInfo = ({
         <div className="text-red-500">
           <Ban color="currentColor" />
         </div>
-        <div className="w-full">
+        <div className="grow">
           <div className="text-base leading-5 w-full text-left text-red-500">Block user</div>
         </div>
       </div>
@@ -240,11 +240,11 @@ export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
           <Avatar recipient={friendInfo} />
           {blockedUserId ? (
             blockedUserId === friendInfo.id ? (
-              <div className="flex items-center gap-2 px-4 py-2 mt-4">
+              <div className="flex items-center gap-2 px-4 py-2 mt-4 w-full">
                 <div className="text-red-500">
                   <Ban size={24} color="currentColor" />
                 </div>
-                <div className="w-info-bar text-red-500">
+                <div className="grow text-red-500">
                   <p className="text-base leading-5 w-full">
                     You blocked this user. You two will not be able to send messages to each other.
                   </p>
@@ -252,11 +252,11 @@ export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
               </div>
             ) : (
               user.id === blockedUserId && (
-                <div className="flex items-center gap-2 px-4 py-2 mt-4">
+                <div className="flex items-center gap-2 px-4 py-2 mt-4 w-full">
                   <div className="text-red-500">
                     <Ban size={24} color="currentColor" />
                   </div>
-                  <div className="w-info-bar text-red-500">
+                  <div className="grow text-red-500">
                     <p className="text-base leading-5 w-full">
                       You are blocked by this user. You will not be able to send messages to them.
                     </p>

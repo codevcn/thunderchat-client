@@ -14,6 +14,10 @@ export const ScrollToBottomMessageBtn = memo(() => {
     eventEmitter.emit(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION)
   }
 
+  const listenUnreadMessagesCount = (count: number) => {
+    setUnreadMessagesCount(count)
+  }
+
   useEffect(() => {
     eventEmitter.on(EInternalEvents.SCROLL_OUT_OF_BOTTOM, () => {
       setShowScrollBtn(true)
@@ -21,13 +25,11 @@ export const ScrollToBottomMessageBtn = memo(() => {
     eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_UI, () => {
       setShowScrollBtn(false)
     })
-    eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, (count: number) => {
-      setUnreadMessagesCount(count)
-    })
+    eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     return () => {
       eventEmitter.removeAllListeners(EInternalEvents.SCROLL_OUT_OF_BOTTOM)
       eventEmitter.removeAllListeners(EInternalEvents.SCROLL_TO_BOTTOM_MSG_UI)
-      eventEmitter.removeAllListeners(EInternalEvents.UNREAD_MESSAGES_COUNT)
+      eventEmitter.removeListener(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     }
   }, [])
 

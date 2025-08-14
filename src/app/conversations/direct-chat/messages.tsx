@@ -172,7 +172,6 @@ export const Messages = memo(
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
     const isRenderingMessages = useRef<boolean>(false)
     const readyNewMessage = useRef<TGetMessagesMessage | null>(null)
-    console.log(">>> print messages 175:", { messages, directChat, directChatId })
 
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
@@ -323,7 +322,6 @@ export const Messages = memo(
 
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendMessage = (newMessage: TGetMessagesMessage) => {
-      console.log(">>> at messages 326:", { newMessage, directChat, directChatId })
       const { id } = newMessage
       if (directChatId === -1) {
         readyNewMessage.current = newMessage
@@ -384,7 +382,7 @@ export const Messages = memo(
     }
 
     // Kiểm tra và setup tin nhắn chưa đọc khi dữ liệu danh sách tin nhắn thay đổi
-    const checkUnreadMessage = () => {
+    const checkUnreadMessages = () => {
       const msgsContainerEle = messagesContainer.current
       if (
         msgsContainerEle &&
@@ -450,7 +448,7 @@ export const Messages = memo(
       const msgsContainerEle = e.currentTarget as HTMLElement
       const unreadMessageEles =
         msgsContainerEle.querySelectorAll<HTMLElement>(".QUERY-unread-message")
-      if (unreadMessageEles && unreadMessageEles.length > 0) {
+      if (unreadMessageEles) {
         for (const msg of unreadMessageEles) {
           handleUnreadMsgInVisibleView(
             msgsContainerEle,
@@ -616,11 +614,10 @@ export const Messages = memo(
     }
 
     const handleMessagesChange = () => {
-      console.log(">>> at messages 617")
       initMessageOffset()
       requestAnimationFrame(() => {
         scrollToBottomOnMessages()
-        checkUnreadMessage()
+        checkUnreadMessages()
         updateMessagesCount()
         isRenderingMessages.current = false
       })

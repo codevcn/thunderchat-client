@@ -1,7 +1,7 @@
 "use client"
 
 import { CustomPopover, Skeleton } from "@/components/materials"
-import { Menu, Users } from "lucide-react"
+import { ChevronLeft, Menu, Users } from "lucide-react"
 import type {
   TUserWithProfile,
   TMessage,
@@ -40,6 +40,7 @@ import { GlobalSearchBar, SearchSection } from "./global-search"
 import { ConversationCard } from "./conversation-card"
 import type { TPopoverPos } from "./sharings"
 import { ConversationContextMenu } from "./conversation-context-menu"
+import { setOpenConvsList } from "@/redux/layout/layout.slice"
 
 type TConversationCardsMainProps = {
   conversations: TConversationCard[]
@@ -343,12 +344,13 @@ const ConversationCards = () => {
   useEffect(() => {
     fetchPinChatsByUserId()
     clientSocket.socket.on(ESocketEvents.new_conversation, listenNewConversation)
-    eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
+    // @ts-ignore
+    eventEmitter.addListener(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
     return () => {
       clientSocket.socket.off(ESocketEvents.new_conversation, listenNewConversation)
-      eventEmitter.off(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
-      eventEmitter.off(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
+      eventEmitter.removeListener(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
+      eventEmitter.removeListener(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
     }
   }, [])
 
@@ -470,17 +472,53 @@ const FloatingMenu = ({ onOpenGroupChat, openGroupChat }: TFloatingMenuProps) =>
   )
 }
 
+type THideShowConvsListButtonProps = {
+  openConvsList: boolean
+}
+
+const HideShowConvsListButton = ({ openConvsList }: THideShowConvsListButtonProps) => {
+  const { directChat, groupChat } = useAppSelector(({ messages }) => messages)
+  const dispatch = useAppDispatch()
+
+  const handleCloseConvsList = () => {
+    dispatch(setOpenConvsList(false))
+  }
+
+  return (
+    (directChat || groupChat) &&
+    openConvsList && (
+      <div className="absolute bottom-8 -right-4 z-50 text-gray-400 bg-regular-dark-gray-cl screen-medium-chatting:hidden">
+        <button
+          className="rounded-full p-1 hover:bg-gray-600/50 border border-gray-600/50"
+          onClick={handleCloseConvsList}
+        >
+          <ChevronLeft
+            size={22}
+            color="currentColor"
+            className="-translate-x-0.5"
+            strokeWidth={3}
+          />
+        </button>
+      </div>
+    )
+  )
+}
+
 export const Conversations = () => {
   const [inputFocused, setInputFocused] = useState<boolean>(false)
   const [isSearching, setIsSearching] = useState<boolean>(false)
   const [openGroupChat, setOpenGroupChat] = useState<boolean>(false)
   const globalSearchInputRef = useRef<HTMLInputElement>(null)
+  const openConvsList = useAppSelector((state) => state.layout.openConvsList)
 
   return (
-    <div className="relative w-convs-list h-full overflow-hidden">
+    <div
+      style={{ left: openConvsList ? "55px" : "-19rem" }}
+      className="w-convs-list h-full flex top-0 fixed screen-medium-chatting:static z-[99] transition-[left] duration-200"
+    >
       <div
         id="QUERY-conversations-list"
-        className={`${openGroupChat ? "pointer-events-none" : ""} screen-medium-chatting:flex flex-col relative hidden w-full py-3 box-border h-full bg-regular-dark-gray-cl border-regular-hover-card-cl border-r`}
+        className={`flex flex-col relative w-full h-full overflow-hidden py-3 box-border bg-regular-dark-gray-cl border-regular-hover-card-cl border-r`}
       >
         <GlobalSearchBar
           setInputFocused={setInputFocused}
@@ -501,9 +539,11 @@ export const Conversations = () => {
         </div>
 
         <FloatingMenu onOpenGroupChat={setOpenGroupChat} openGroupChat={openGroupChat} />
+
+        <AddMembersBoard open={openGroupChat} onOpen={setOpenGroupChat} />
       </div>
 
-      <AddMembersBoard open={openGroupChat} onOpen={setOpenGroupChat} />
+      <HideShowConvsListButton openConvsList={openConvsList} />
     </div>
   )
 }

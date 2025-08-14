@@ -5,7 +5,7 @@ import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./group-messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useEffect, useState, useRef } from "react"
-import { Search, Phone, MoreVertical, Pin } from "lucide-react"
+import { Search, Phone, MoreVertical, Pin, Menu } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { TypeMessageBar } from "./type-message-bar"
@@ -30,6 +30,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { groupChatService } from "@/services/group-chat.service"
 import { toaster } from "@/utils/toaster"
+import { setOpenConvsList } from "@/redux/layout/layout.slice"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -94,6 +95,11 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
   const { avatarUrl, id: groupChatId, name: groupChatName } = groupChat
   const [typingUsers, setTypingUsers] = useState<TTypingUsers>(initialTypingUsers)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const dispatch = useAppDispatch()
+
+  const handleOpenConvsList = () => {
+    dispatch(setOpenConvsList(true))
+  }
 
   const handleTypingMessage = (typing: boolean, groupChatId: number, user: TUserWithProfile) => {
     if (groupChatId !== groupChatId) return
@@ -139,7 +145,12 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
 
   return (
     <div className="flex justify-between gap-2 px-6 py-1.5 bg-regular-dark-gray-cl w-full box-border h-header">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
+        <div className="block screen-medium-chatting:hidden pr-2">
+          <IconButton onClick={handleOpenConvsList} className="text-regular-icon-cl">
+            <Menu size={28} />
+          </IconButton>
+        </div>
         <CustomAvatar
           src={avatarUrl}
           imgSize={45}
@@ -171,11 +182,11 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
           </div>
         </CustomTooltip>
 
-        <CustomTooltip title="Call" placement="bottom" align="end">
+        {/* <CustomTooltip title="Call" placement="bottom" align="end">
           <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
             <Phone />
           </IconButton>
-        </CustomTooltip>
+        </CustomTooltip> */}
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
           <div>

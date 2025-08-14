@@ -20,7 +20,7 @@ const BlockedUserCard = ({ user, onUnblockUser, unblockLoading }: TBlockedUserCa
   const { fullName, avatar } = Profile
 
   return (
-    <div className="flex items-center justify-between gap-x-8 gap-y-2 bg-regular-modal-board-bgcl rounded-md py-2 px-4 mt-4">
+    <div className="flex items-center justify-between gap-x-8 gap-y-2 bg-regular-modal-board-bgcl rounded-md py-2 px-4">
       <div className="flex items-center gap-2">
         <CustomAvatar
           src={avatar}
@@ -85,7 +85,7 @@ export const Blocked = () => {
   }, [])
 
   return (
-    <div className="mt-2 border-t border-regular-hover-card-cl border-solid pt-3">
+    <div className="mt-2 border-t border-regular-hover-card-cl border-solid pt-4">
       {loading ? (
         <div className="flex justify-center items-center h-full">
           <Spinner />

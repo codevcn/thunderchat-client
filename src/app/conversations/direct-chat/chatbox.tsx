@@ -5,7 +5,7 @@ import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useEffect, useMemo, useState, useRef } from "react"
-import { Search, Phone, MoreVertical, Pin } from "lucide-react"
+import { Search, Phone, MoreVertical, Pin, Menu } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { TypeMessageBar } from "./type-message-bar"
@@ -28,6 +28,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EOnlineStatus } from "@/utils/socket/enums"
 import { userService } from "@/services/user.service"
+import { setOpenConvsList } from "@/redux/layout/layout.slice"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -70,6 +71,11 @@ const Header = ({
   const [isTyping, setIsTyping] = useState<boolean>(false)
   const [friendOnlineStatus, setFriendOnlineStatus] = useState<EOnlineStatus>(EOnlineStatus.OFFLINE)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const dispatch = useAppDispatch()
+
+  const handleOpenConvsList = () => {
+    dispatch(setOpenConvsList(true))
+  }
 
   const handleTypingMessage = (typing: boolean, directChatId: number) => {
     if (directChatId !== directChatId) return
@@ -115,7 +121,12 @@ const Header = ({
 
   return (
     <div className="flex justify-between gap-2 px-6 py-1.5 bg-regular-dark-gray-cl w-full box-border h-header">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
+        <div className="block screen-medium-chatting:hidden pr-2">
+          <IconButton onClick={handleOpenConvsList} className="text-regular-icon-cl">
+            <Menu size={28} />
+          </IconButton>
+        </div>
         <CustomAvatar
           src={Profile.avatar}
           imgSize={45}
@@ -155,22 +166,13 @@ const Header = ({
           </div>
         </CustomTooltip>
 
-        <CustomTooltip title="Call" placement="bottom" align="end">
+        {/* <CustomTooltip title="Call" placement="bottom" align="end">
           <div style={canSend === false ? { opacity: 0.5, pointerEvents: "none" } : {}}>
-            <IconButton
-              className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
-              onClick={
-                canSend === false
-                  ? undefined
-                  : () => {
-                      /* logic gọi */
-                    }
-              }
-            >
+            <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
               <Phone />
             </IconButton>
           </div>
-        </CustomTooltip>
+        </CustomTooltip> */}
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
           <div>
@@ -312,7 +314,7 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
   }, [friendInfo.id])
 
   return (
-    <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative">
+    <div className="screen-medium-chatting:w-chat-n-info-container flex w-full box-border overflow-hidden relative z-[98]">
       <div className="flex flex-col items-center w-full box-border h-screen bg-no-repeat bg-transparent bg-cover bg-center relative">
         <Header
           infoBarIsOpened={infoBarIsOpened}

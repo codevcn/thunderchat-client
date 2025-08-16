@@ -57,7 +57,7 @@ const ImageModal = ({
     e.stopPropagation()
     try {
       const response = await fetch(imageUrl)
-      if (!response.ok) throw new Error("Không thể tải ảnh")
+      if (!response.ok) throw new Error("Unable to download image")
       const blob = await response.blob()
       const blobUrl = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
@@ -554,7 +554,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   {/* Nút chia sẻ */}
                   <button
                     className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
-                    title="Chia sẻ tin nhắn"
+                    title="Share message"
                     onClick={() => setShowShareModal(true)}
                   >
                     <Share2 size={14} />
@@ -573,15 +573,15 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-purple-400/80 text-purple-700" : "bg-white/20"}`}
                     title={
                       isPinned
-                        ? "Bỏ ghim tin nhắn"
+                        ? "Unpin message"
                         : pinnedCount >= 5
-                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                          : "Ghim tin nhắn"
+                          ? "You have reached the limit of 5 pinned messages."
+                          : "Pin message"
                     }
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {
                         toast.error(
-                          "Đã đạt giới hạn 5 tin nhắn ghim. Vui lòng bỏ ghim một tin nhắn khác trước khi ghim tin nhắn mới."
+                          "You have reached the limit of 5 pinned messages. Please unpin another message before pinning a new one."
                         )
                         return
                       }
@@ -685,7 +685,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   {/* Nút chia sẻ */}
                   <button
                     className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
-                    title="Chia sẻ tin nhắn"
+                    title="Share message"
                     onClick={() => setShowShareModal(true)}
                   >
                     <Share2 size={14} />
@@ -704,10 +704,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-regular-violet-cl text-regular-white-cl" : "bg-white/20"}`}
                     title={
                       isPinned
-                        ? "Bỏ ghim tin nhắn"
+                        ? "Unpin message"
                         : pinnedCount >= 5
-                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                          : "Ghim tin nhắn"
+                          ? "You have reached the limit of 5 pinned messages."
+                          : "Pin message"
                     }
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {

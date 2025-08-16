@@ -433,8 +433,6 @@ const MessageTextField = ({
 const fileOptions = [
   { icon: <ImageIcon size={20} />, label: "Photo or video", value: "photo" },
   { icon: <FileText size={20} />, label: "Document", value: "document" },
-  { icon: <BarChart2 size={20} />, label: "Create poll", value: "poll" },
-  { icon: <MapPin size={20} />, label: "Location", value: "location" },
 ]
 
 function FileTypeMenu({
@@ -557,7 +555,7 @@ export const TypeMessageBar = memo(
         }, 0)
       } else if (type === "document") {
         setFileAccept(
-          ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+          ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.odt,.ods,.odp,.zip,.rar,.7z,.gz,.tar,.html,.json,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/rtf,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/zip,application/x-rar-compressed,application/x-7z-compressed,application/gzip,application/x-tar,text/html,application/json,text/markdown"
         )
         setFileMode("document")
         setFileInputKey((prev) => prev + 1)
@@ -577,9 +575,11 @@ export const TypeMessageBar = memo(
       // Kiểm tra loại file hợp lệ theo mode
       const validFiles = files.filter((file) => {
         if (fileMode === "media") {
+          // Hỗ trợ tất cả image và video types
           return file.type.startsWith("image/") || file.type.startsWith("video/")
         }
         if (fileMode === "document") {
+          // Hỗ trợ tất cả document types bao gồm cả archive
           return (
             file.type === "application/pdf" ||
             file.type === "application/msword" ||
@@ -591,12 +591,46 @@ export const TypeMessageBar = memo(
             file.type ===
               "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
             file.type === "text/plain" ||
-            [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
-              file.name.endsWith(ext)
-            )
+            file.type === "text/csv" ||
+            file.type === "application/rtf" ||
+            file.type === "application/vnd.oasis.opendocument.text" ||
+            file.type === "application/vnd.oasis.opendocument.spreadsheet" ||
+            file.type === "application/vnd.oasis.opendocument.presentation" ||
+            file.type === "application/zip" ||
+            file.type === "application/x-rar-compressed" ||
+            file.type === "application/x-7z-compressed" ||
+            file.type === "application/gzip" ||
+            file.type === "application/x-tar" ||
+            file.type === "text/html" ||
+            file.type === "application/json" ||
+            file.type === "text/markdown" ||
+            // Kiểm tra extension cho các file không có MIME type rõ ràng
+            [
+              ".pdf",
+              ".doc",
+              ".docx",
+              ".xls",
+              ".xlsx",
+              ".ppt",
+              ".pptx",
+              ".txt",
+              ".csv",
+              ".rtf",
+              ".odt",
+              ".ods",
+              ".odp",
+              ".zip",
+              ".rar",
+              ".7z",
+              ".gz",
+              ".tar",
+              ".html",
+              ".json",
+              ".md",
+            ].some((ext) => file.name.endsWith(ext))
           )
         }
-        // fallback: cho phép cả hai
+        // fallback: cho phép tất cả các loại file được hỗ trợ
         return (
           file.type.startsWith("image/") ||
           file.type.startsWith("video/") ||
@@ -609,14 +643,49 @@ export const TypeMessageBar = memo(
           file.type ===
             "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
           file.type === "text/plain" ||
-          [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].some((ext) =>
-            file.name.endsWith(ext)
-          )
+          file.type === "text/csv" ||
+          file.type === "application/rtf" ||
+          file.type === "application/vnd.oasis.opendocument.text" ||
+          file.type === "application/vnd.oasis.opendocument.spreadsheet" ||
+          file.type === "application/vnd.oasis.opendocument.presentation" ||
+          file.type === "application/zip" ||
+          file.type === "application/x-rar-compressed" ||
+          file.type === "application/x-7z-compressed" ||
+          file.type === "application/gzip" ||
+          file.type === "application/x-tar" ||
+          file.type === "text/html" ||
+          file.type === "application/json" ||
+          file.type === "text/markdown" ||
+          [
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+            ".txt",
+            ".csv",
+            ".rtf",
+            ".odt",
+            ".ods",
+            ".odp",
+            ".zip",
+            ".rar",
+            ".7z",
+            ".gz",
+            ".tar",
+            ".html",
+            ".json",
+            ".md",
+          ].some((ext) => file.name.endsWith(ext))
         )
       })
 
       if (validFiles.length === 0) {
-        toast.error("Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT)")
+        toast.error(
+          "Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT, CSV, RTF, OpenDocument, ZIP, RAR, 7Z, HTML, JSON, Markdown)"
+        )
         return
       }
 

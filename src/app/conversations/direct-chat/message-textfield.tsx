@@ -45,6 +45,7 @@ type TMessageTextFieldProps = {
   expressionPopoverRef: React.RefObject<HTMLDivElement | null>
   replyMessage: any | null
   setReplyMessage: (msg: any | null) => void
+  onTextContentChange?: (content: string) => void
 }
 
 export const MessageTextField = ({
@@ -56,6 +57,7 @@ export const MessageTextField = ({
   expressionPopoverRef,
   replyMessage,
   setReplyMessage,
+  onTextContentChange,
 }: TMessageTextFieldProps) => {
   const { recipientId, creatorId } = directChat
   const user = useUser()!
@@ -76,6 +78,9 @@ export const MessageTextField = ({
     } else {
       setHasContent(false)
     }
+
+    // Notify parent component about text content change
+    onTextContentChange?.(msg)
 
     indicateUserIsTyping("typing")
   }

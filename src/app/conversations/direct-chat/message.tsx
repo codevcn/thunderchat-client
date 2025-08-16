@@ -562,7 +562,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   {/* Nút chia sẻ */}
                   <button
                     className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
-                    title="Chia sẻ tin nhắn"
+                    title="Share message"
                     onClick={() => setShowShareModal(true)}
                   >
                     <Share2 size={14} />
@@ -581,10 +581,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-purple-400/80 text-purple-700" : "bg-white/20"}`}
                     title={
                       isPinned
-                        ? "Bỏ ghim tin nhắn"
+                        ? "Unpin message"
                         : pinnedCount >= 5
-                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                          : "Ghim tin nhắn"
+                          ? "You have reached the limit of 5 pinned messages"
+                          : "Pin message"
                     }
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {
@@ -689,7 +689,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   {/* Nút chia sẻ */}
                   <button
                     className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
-                    title="Chia sẻ tin nhắn"
+                    title="Share message"
                     onClick={() => setShowShareModal(true)}
                   >
                     <Share2 size={14} />
@@ -708,10 +708,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-regular-violet-cl text-regular-white-cl" : "bg-white/20"}`}
                     title={
                       isPinned
-                        ? "Bỏ ghim tin nhắn"
+                        ? "Unpin message"
                         : pinnedCount >= 5
-                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                          : "Ghim tin nhắn"
+                          ? "You have reached the limit of 5 pinned messages"
+                          : "Pin message"
                     }
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {

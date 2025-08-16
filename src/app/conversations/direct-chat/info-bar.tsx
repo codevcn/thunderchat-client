@@ -14,7 +14,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
 import { ProgressiveImage } from "@/components/materials/progressive-image"
 import { robotoFont } from "@/utils/fonts"
-import type { TUserWithProfile } from "@/utils/types/be-api"
+import type { TUser, TUserWithProfile } from "@/utils/types/be-api"
 import MediaPanel from "../../../components/conversation-media/media-panel"
 import { ReportModal } from "../../../components/chatbox/user-report/report-model"
 import { useState } from "react"
@@ -25,6 +25,48 @@ import { CustomDialog, Spinner } from "@/components/materials"
 import { setBlockedUserId } from "@/redux/messages/messages.slice"
 import { useUser } from "@/hooks/user"
 import { DeleteDirectChatDialog } from "../delete-chat-dialogs"
+import { friendRequestService } from "@/services/friend-request.service"
+
+type TAddFriendDialogProps = {
+  recipient: TUser
+}
+
+const AddFriendDialog = ({ recipient }: TAddFriendDialogProps) => {
+  const [isAddingFriend, setIsAddingFriend] = useState<boolean>(false)
+  const user = useUser()!
+
+  const addFriend = async () => {
+    setIsAddingFriend(true)
+    try {
+      await friendRequestService.sendFriendRequest(user.id, recipient.id)
+    } catch (error) {
+      toaster.error(axiosErrorHandler.handleHttpError(error).message)
+    } finally {
+      setIsAddingFriend(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={addFriend}
+      className={`${isAddingFriend ? "opacity-90 cursor-not-allowed" : "cursor-pointer hover:bg-white/20"} flex gap-4 items-center px-4 py-2 rounded-md transition-colors relative w-full`}
+    >
+      {isAddingFriend && (
+        <div className="flex absolute top-0 left-0 w-full h-full bg-black/40 rounded-md">
+          <div className="flex items-center gap-2 m-auto">
+            <Spinner size="small" />
+          </div>
+        </div>
+      )}
+      <div className="text-regular-icon-cl">
+        <UserPlus color="currentColor" />
+      </div>
+      <div className="grow">
+        <div className="text-base leading-5 w-full text-left text-regular-white-cl">Add friend</div>
+      </div>
+    </div>
+  )
+}
 
 type TBlockUserDialogProps = {
   recipient: TUserWithProfile
@@ -201,6 +243,8 @@ const ProfileInfo = ({
           </div>
         </div>
       )}
+
+      <AddFriendDialog recipient={recipient} />
 
       <div className="flex gap-4 items-center px-4 py-2 w-full">
         <div className="text-red-500">

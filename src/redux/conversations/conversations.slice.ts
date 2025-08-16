@@ -49,11 +49,11 @@ export const conversationsSlice = createSlice({
       }
     },
     updateUnreadMsgCountOnCard: (state, action: PayloadAction<TUpdateUnreadMsgCountState>) => {
-      const { count, conversationId } = action.payload
+      const { count, conversationId, type } = action.payload
       const conversations = state.conversations
       if (conversations) {
         for (const conversation of conversations) {
-          if (conversation.id === conversationId) {
+          if (conversation.id === conversationId && conversation.type === type) {
             conversation.unreadMessageCount = count
           }
         }

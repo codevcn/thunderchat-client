@@ -309,8 +309,12 @@ const ConversationCards = () => {
     }
   }
 
-  const listenUnreadMessagesCount = (unreadMessageCount: number, conversationId: number) => {
-    dispatch(updateUnreadMsgCountOnCard({ count: unreadMessageCount, conversationId }))
+  const listenUnreadMessagesCount = (
+    unreadMessageCount: number,
+    conversationId: number,
+    type: EChatType
+  ) => {
+    dispatch(updateUnreadMsgCountOnCard({ count: unreadMessageCount, conversationId, type }))
   }
 
   const handleUpdateLastSentMessage = (newMessage: TGetMessagesMessage) => {
@@ -335,6 +339,7 @@ const ConversationCards = () => {
           updateUnreadMsgCountOnCard({
             count: currentUnreadCount > 0 ? currentUnreadCount + 1 : 1,
             conversationId: convId,
+            type: newMessage.directChatId ? EChatType.DIRECT : EChatType.GROUP,
           })
         )
       }
@@ -345,7 +350,7 @@ const ConversationCards = () => {
     fetchPinChatsByUserId()
     clientSocket.socket.on(ESocketEvents.new_conversation, listenNewConversation)
     // @ts-ignore
-    eventEmitter.addListener(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
+    eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
     return () => {
       clientSocket.socket.off(ESocketEvents.new_conversation, listenNewConversation)

@@ -371,7 +371,8 @@ export const Messages = memo(
         eventEmitter.emit(
           EInternalEvents.UNREAD_MESSAGES_COUNT,
           unreadMessagesRef.current.count,
-          directChatId
+          directChatId,
+          EChatType.DIRECT
         )
       }
     }
@@ -407,7 +408,8 @@ export const Messages = memo(
           eventEmitter.emit(
             EInternalEvents.UNREAD_MESSAGES_COUNT,
             unreadMessagesRef.current.count,
-            directChatId
+            directChatId,
+            EChatType.DIRECT
           )
         }
       }
@@ -430,7 +432,12 @@ export const Messages = memo(
         const unreadMessages = unreadMessagesRef.current
         if (unreadMessages.count > 0) unreadMessages.count -= 1
         unreadMessages.firstUnreadMsgEle = null
-        eventEmitter.emit(EInternalEvents.UNREAD_MESSAGES_COUNT, unreadMessages.count, directChatId)
+        eventEmitter.emit(
+          EInternalEvents.UNREAD_MESSAGES_COUNT,
+          unreadMessages.count,
+          directChatId,
+          EChatType.DIRECT
+        )
         clientSocket.socket.emit(ESocketEvents.message_seen_direct, {
           messageId: msgId,
           receiverId: recipientId === user.id ? creatorId : recipientId,

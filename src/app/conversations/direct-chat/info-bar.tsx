@@ -1,4 +1,14 @@
-import { X, Info, Mail, AlertTriangle, Ban, MessageCircleX, Check, UserPlus } from "lucide-react"
+import {
+  X,
+  Info,
+  Mail,
+  AlertTriangle,
+  Ban,
+  MessageCircleX,
+  Check,
+  UserPlus,
+  Trash2,
+} from "lucide-react"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { IconButton } from "@/components/materials/icon-button"
@@ -14,6 +24,96 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { CustomDialog, Spinner } from "@/components/materials"
 import { setBlockedUserId } from "@/redux/messages/messages.slice"
 import { useUser } from "@/hooks/user"
+import { DeleteDirectChatDialog } from "../delete-chat-dialogs"
+
+type TBlockUserDialogProps = {
+  recipient: TUserWithProfile
+}
+
+const BlockUserDialog = ({ recipient }: TBlockUserDialogProps) => {
+  const [isBlocking, setIsBlocking] = useState<boolean>(false)
+  const [openBlockModal, setOpenBlockModal] = useState<boolean>(false)
+  const dispatch = useAppDispatch()
+
+  const openBlockUserDialog = async () => {
+    setOpenBlockModal(true)
+  }
+
+  const blockUser = async () => {
+    setIsBlocking(true)
+    try {
+      await userService.blockUser(recipient.id)
+      setOpenBlockModal(false)
+      dispatch(setBlockedUserId(recipient.id))
+    } catch (error) {
+      toaster.error(axiosErrorHandler.handleHttpError(error).message)
+    } finally {
+      setIsBlocking(false)
+    }
+  }
+
+  return (
+    <CustomDialog
+      open={openBlockModal}
+      onHideShow={setOpenBlockModal}
+      trigger={
+        <div
+          onClick={openBlockUserDialog}
+          className={`${isBlocking ? "opacity-90 cursor-not-allowed" : "cursor-pointer hover:bg-red-600/20"} flex gap-4 items-center px-4 py-2 rounded-md transition-colors relative w-full`}
+        >
+          {isBlocking && (
+            <div className="flex absolute top-0 left-0 w-full h-full bg-black/40 rounded-md">
+              <div className="flex items-center gap-2 m-auto">
+                <Spinner size="small" />
+              </div>
+            </div>
+          )}
+          <div className="text-red-500">
+            <Ban color="currentColor" />
+          </div>
+          <div className="grow">
+            <div className="text-base leading-5 w-full text-left text-red-500">Block user</div>
+          </div>
+        </div>
+      }
+      dialogHeader={{
+        title: `Blocking user "${recipient.Profile.fullName}"`,
+        description: "When blocked, this user cannot:",
+      }}
+      dialogBody={
+        <div className="flex flex-col min-w-[400px] gap-2 my-3">
+          <div className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer">
+            <MessageCircleX size={24} />
+            <div>
+              <h3 className="text-sm font-medium">Send messages</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                This user will not be able to send messages to you.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer">
+            <UserPlus size={24} />
+            <div>
+              <h3 className="text-sm font-medium">Send friend invitations</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                This user will not be able to send friend invitations to you.
+              </p>
+            </div>
+          </div>
+        </div>
+      }
+      confirmElement={
+        <button
+          onClick={blockUser}
+          className="flex gap-2 items-center bg-regular-red-cl text-regular-white-cl px-3 py-1.5 border-2 border-regular-red-cl rounded-md hover:bg-transparent hover:text-regular-red-cl"
+        >
+          <Check size={16} color="currentColor" />
+          <span>Confirm</span>
+        </button>
+      }
+    />
+  )
+}
 
 type TAvatarProps = {
   recipient: TUserWithProfile
@@ -62,9 +162,7 @@ const ProfileInfo = ({
   const { Profile, email } = recipient
   const { about } = Profile
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
-  const [isBlocking, setIsBlocking] = useState<boolean>(false)
-  const [openBlockModal, setOpenBlockModal] = useState<boolean>(false)
-  const dispatch = useAppDispatch()
+  const [openDeleteChatDialog, setOpenDeleteChatDialog] = useState(false)
 
   const handleOpenReportModal = () => {
     setIsReportModalOpen(true)
@@ -74,21 +172,8 @@ const ProfileInfo = ({
     setIsReportModalOpen(false)
   }
 
-  const blockUser = async () => {
-    setIsBlocking(true)
-    try {
-      await userService.blockUser(recipient.id)
-      setOpenBlockModal(false)
-      dispatch(setBlockedUserId(recipient.id))
-    } catch (error) {
-      toaster.error(axiosErrorHandler.handleHttpError(error).message)
-    } finally {
-      setIsBlocking(false)
-    }
-  }
-
-  const openBlockUserDialog = async () => {
-    setOpenBlockModal(true)
+  const handleOpenDeleteChatDialog = () => {
+    setOpenDeleteChatDialog(true)
   }
 
   return (
@@ -131,24 +216,26 @@ const ProfileInfo = ({
         </div>
       </div>
 
+      {/* Block Modal */}
+      <BlockUserDialog recipient={recipient} />
+
       <div
-        onClick={openBlockUserDialog}
-        className={`${isBlocking ? "opacity-90 cursor-not-allowed" : "cursor-pointer hover:bg-red-600/20"} flex gap-4 items-center px-4 py-2 rounded-md transition-colors relative w-full`}
+        onClick={handleOpenDeleteChatDialog}
+        className="flex gap-4 items-center px-4 py-2 rounded-md transition-colors relative w-full cursor-pointer hover:bg-red-600/20"
       >
-        {isBlocking && (
-          <div className="flex absolute top-0 left-0 w-full h-full bg-black/40 rounded-md">
-            <div className="flex items-center gap-2 m-auto">
-              <Spinner size="small" />
-            </div>
-          </div>
-        )}
         <div className="text-red-500">
-          <Ban color="currentColor" />
+          <Trash2 color="currentColor" />
         </div>
         <div className="grow">
-          <div className="text-base leading-5 w-full text-left text-red-500">Block user</div>
+          <div className="text-base leading-5 w-full text-left text-red-500">Delete this chat</div>
         </div>
       </div>
+
+      <DeleteDirectChatDialog
+        open={openDeleteChatDialog}
+        onHideShow={setOpenDeleteChatDialog}
+        directChatId={directChatId}
+      />
 
       {/* Report Modal */}
       <ReportModal
@@ -158,59 +245,18 @@ const ProfileInfo = ({
         conversationId={directChatId}
         conversationType="direct"
       />
-
-      {/* Block Modal */}
-      <CustomDialog
-        open={openBlockModal}
-        onHideShow={setOpenBlockModal}
-        dialogHeader={{
-          title: `Blocking user "${Profile.fullName}"`,
-          description: "When blocked, this user cannot:",
-        }}
-        dialogBody={
-          <div className="flex flex-col min-w-[400px] gap-2 my-3">
-            <div className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer">
-              <MessageCircleX size={24} />
-              <div>
-                <h3 className="text-sm font-medium">Send messages</h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  This user will not be able to send messages to you.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 hover:bg-[#454545] transition-colors rounded-md p-2 cursor-pointer">
-              <UserPlus size={24} />
-              <div>
-                <h3 className="text-sm font-medium">Send friend invitations</h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  This user will not be able to send friend invitations to you.
-                </p>
-              </div>
-            </div>
-          </div>
-        }
-        confirmElement={
-          <button
-            onClick={blockUser}
-            className="flex gap-2 items-center bg-regular-red-cl text-regular-white-cl px-3 py-1.5 border-2 border-regular-red-cl rounded-md hover:bg-transparent hover:text-regular-red-cl"
-          >
-            <Check size={16} color="currentColor" />
-            <span>Confirm</span>
-          </button>
-        }
-      />
     </div>
   )
 }
 
 type TInfoBarProps = {
   friendInfo: TUserWithProfile
-  directChatId?: number
 }
 
-export const InfoBar = ({ friendInfo, directChatId }: TInfoBarProps) => {
+export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
   const { infoBarIsOpened } = useAppSelector(({ conversations }) => conversations)
-  const { blockedUserId } = useAppSelector(({ messages }) => messages)
+  const { blockedUserId, directChat } = useAppSelector(({ messages }) => messages)
+  const { id: directChatId } = directChat || {}
   const dispatch = useAppDispatch()
   const user = useUser()!
 

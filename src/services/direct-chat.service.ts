@@ -6,7 +6,7 @@ import {
   getNewerDirectMessages,
   checkCanSendDirectMessage,
   deleteDirectMessage,
-  deleteDirectChat,
+  deleteDeleteDirectChat,
 } from "@/apis/direct-chat"
 import { DirectChatError } from "@/utils/custom-errors"
 import { convertToDirectChatsUIData } from "@/utils/data-convertors/conversations-convertor"
@@ -64,7 +64,7 @@ class DirectChatService {
   }
 
   async deleteDirectChat(directChatId: number): Promise<TSuccess> {
-    const { data } = await deleteDirectChat(directChatId)
+    const { data } = await deleteDeleteDirectChat(directChatId)
     return data
   }
 }

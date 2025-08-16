@@ -30,6 +30,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EGroupChatPermissions } from "@/utils/enums"
 import { ApproveMembersBoard } from "./member/approve-members"
+import { DeleteGroupChatDialog } from "../delete-chat-dialogs"
 
 type TInviteQRCodeProps = {
   inviteUrl: string
@@ -329,6 +330,7 @@ export const GroupActions = ({ groupChat, members }: TGroupActionsProps) => {
   const [openShareGroupDialog, setOpenShareGroupDialog] = useState<boolean>(false)
   const [openGroupChatPermissionsBoard, setOpenGroupChatPermissionsBoard] = useState<boolean>(false)
   const [openApproveMembersBoard, setOpenApproveMembersBoard] = useState<boolean>(false)
+  const [openDeleteGroupDialog, setOpenDeleteGroupDialog] = useState<boolean>(false)
 
   const handleOpenManageMembers = () => {
     eventEmitter.emit(EInternalEvents.OPEN_MANAGE_MEMBERS, groupChat.id)
@@ -389,7 +391,10 @@ export const GroupActions = ({ groupChat, members }: TGroupActionsProps) => {
             <p className="text-zinc-400">Share the group link with others</p>
           </div>
         </button>
-        <button className="flex items-center gap-x-4 w-full justify-start rounded-md hover:bg-red-500/20 hover:text-red-400 p-2 h-auto">
+        <button
+          onClick={() => setOpenDeleteGroupDialog(true)}
+          className="flex items-center gap-x-4 w-full justify-start rounded-md hover:bg-red-500/20 hover:text-red-400 p-2 h-auto"
+        >
           <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">
             <Trash2 className="h-5 w-5 text-zinc-400" color="#ef4444" />
           </div>
@@ -416,6 +421,12 @@ export const GroupActions = ({ groupChat, members }: TGroupActionsProps) => {
         open={openApproveMembersBoard}
         onOpen={setOpenApproveMembersBoard}
         groupChat={groupChat}
+      />
+
+      <DeleteGroupChatDialog
+        open={openDeleteGroupDialog}
+        onHideShow={setOpenDeleteGroupDialog}
+        groupChatId={groupChat.id}
       />
     </div>
   )

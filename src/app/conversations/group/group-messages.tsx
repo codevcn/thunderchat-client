@@ -532,7 +532,7 @@ export const Messages = memo(
           scrollToMessage(messageId)
         }, 200)
       } catch (err) {
-        toast.error("Không thể lấy ngữ cảnh tin nhắn")
+        toast.error(axiosErrorHandler.handleHttpError(err).message)
       }
     }
 
@@ -593,7 +593,7 @@ export const Messages = memo(
           if (contextEndId) setContextEndId(null)
         }
       } catch (err) {
-        toast.error("Không thể lấy thêm tin nhắn mới hơn")
+        toast.error(axiosErrorHandler.handleHttpError(err).message)
       }
     }
 
@@ -714,9 +714,8 @@ export const Messages = memo(
         if ("success" in response && response.success) {
           setPinnedMessages((prev) => prev.filter((m) => m.id !== msgId))
         }
-      } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || "Lỗi khi bỏ ghim tin nhắn"
-        toast.error(errorMessage)
+      } catch (err) {
+        toast.error(axiosErrorHandler.handleHttpError(err).message)
       }
     }
 

@@ -14,7 +14,7 @@ import type {
 } from "@/utils/types/be-api"
 import { updateObjectByPath } from "@/utils/helpers"
 import type { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
-import { EChatType } from "@/utils/enums"
+import { EChatType, EGroupChatPermissions } from "@/utils/enums"
 
 type TMessagesState = {
   directChat: TDirectChatData | null
@@ -34,7 +34,12 @@ const initialState: TMessagesState = {
   groupMessages: null,
   fetchedMsgs: false,
   blockedUserId: null,
-  groupChatPermissions: null,
+  groupChatPermissions: {
+    [EGroupChatPermissions.SEND_MESSAGE]: true,
+    [EGroupChatPermissions.PIN_MESSAGE]: true,
+    [EGroupChatPermissions.SHARE_INVITE_CODE]: true,
+    [EGroupChatPermissions.UPDATE_INFO]: true,
+  },
   userInGroupChat: null,
 }
 

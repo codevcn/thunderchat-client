@@ -1,5 +1,6 @@
 import React from "react"
-import { Pin } from "lucide-react"
+import { Clipboard, Pin } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { directChatService } from "@/services/direct-chat.service"
 
@@ -67,7 +68,7 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
           onClick={handleCopy}
         >
           <span role="img" aria-label="copy">
-            📋
+            <Clipboard size={16} />
           </span>
           Copy message
         </button>
@@ -86,11 +87,11 @@ export const DropdownMessage: React.FC<DropdownMessageProps> = ({
       <div className="border-t border-gray-600 my-1"></div>
       {canDelete && (
         <button
-          className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-400 hover:bg-[#35363A] text-sm"
+          className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-500 hover:bg-red-600/30 text-sm"
           onClick={handleDelete}
         >
           <span role="img" aria-label="delete">
-            🗑️
+            <Trash2 size={16} />
           </span>
           Delete (Recall)
         </button>

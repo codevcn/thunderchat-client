@@ -123,3 +123,9 @@ export const getFetchGroupChatByInviteCode = (inviteCode: string) =>
     ...requestConfig,
     params: { inviteCode },
   })
+
+export const deleteDeleteGroupChat = (groupChatId: number) =>
+  clientAxios.delete<TSuccess>(`/group-chat/delete-group-chat`, {
+    ...requestConfig,
+    params: { groupChatId },
+  })

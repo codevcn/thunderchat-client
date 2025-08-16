@@ -48,8 +48,8 @@ export const checkCanSendDirectMessage = (receiverId: number) =>
 export const deleteDirectMessage = (messageId: number) =>
   clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)
 
-export const deleteDirectChat = (directChatId: number) =>
-  clientAxios.delete<TSuccess>(`/direct-chat/delete`, {
+export const deleteDeleteDirectChat = (directChatId: number) =>
+  clientAxios.delete<TSuccess>(`/direct-chat/delete-direct-chat`, {
     ...requestConfig,
     params: { directChatId },
   })

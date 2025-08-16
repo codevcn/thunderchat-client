@@ -456,7 +456,7 @@ const FloatingMenu = ({ onOpenGroupChat, openGroupChat }: TFloatingMenuProps) =>
         }
         open={openGroupChat === true ? false : undefined}
       >
-        <div className="flex flex-col gap-2 bg-regular-black-cl rounded-md py-2">
+        <div className="flex flex-col gap-2 bg-regular-black-cl rounded-md py-2 outline-1 outline outline-gray-600">
           <button
             onClick={startCreateNewGroupChat}
             className="w-full text-regular-white-cl hover:bg-gray-600/50"

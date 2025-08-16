@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom"
-import { Check, LogOut, Trash, Trash2 } from "lucide-react"
+import { Check, LogOut, Trash } from "lucide-react"
 import { CustomDialog, CustomPopover, Spinner } from "@/components/materials"
 import { EChatType } from "@/utils/enums"
 import type { TConversationCard } from "@/utils/types/global"
@@ -7,85 +7,8 @@ import type { TPopoverPos } from "./sharings"
 import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { useEffect, useState } from "react"
-import { directChatService } from "@/services/direct-chat.service"
-import { useAppDispatch } from "@/hooks/redux"
-import { removeConversation } from "@/redux/conversations/conversations.slice"
-import { resetDirectMessages, setDirectChat } from "@/redux/messages/messages.slice"
 import { groupMemberService } from "@/services/group-member.service"
-
-type TDeleteDirectChatDialogProps = {
-  open: boolean
-  onHideShow: (open: boolean) => void
-  pickedConversation?: TConversationCard
-}
-
-const DeleteDirectChatDialog = ({
-  open,
-  onHideShow,
-  pickedConversation,
-}: TDeleteDirectChatDialogProps) => {
-  const [isDeleting, setIsDeleting] = useState<boolean>(false)
-  const dispatch = useAppDispatch()
-
-  const deleteChat = async () => {
-    if (!pickedConversation) return
-    setIsDeleting(true)
-    try {
-      await directChatService.deleteDirectChat(pickedConversation.id)
-      onHideShow(false)
-      dispatch(
-        removeConversation({ conversationId: pickedConversation.id, type: EChatType.DIRECT })
-      )
-      dispatch(resetDirectMessages())
-      dispatch(setDirectChat(null))
-    } catch (err) {
-      toaster.error(axiosErrorHandler.handleHttpError(err).message)
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
-  return (
-    <CustomDialog
-      open={open}
-      onHideShow={onHideShow}
-      dialogHeader={{
-        title: "Delete this chat",
-        description: "Delete this chat will:",
-      }}
-      dialogBody={
-        <div className="flex flex-col min-w-[400px] gap-2 my-3">
-          <div className="flex items-center gap-3 rounded-md p-2">
-            <Trash2 size={24} />
-            <div>
-              <h3 className="text-sm font-medium">Delete all messages of this chat</h3>
-              <p className="text-xs text-gray-400 mt-1">
-                All messages between you and this user will be deleted. This action cannot be
-                undone.
-              </p>
-            </div>
-          </div>
-        </div>
-      }
-      confirmElement={
-        isDeleting ? (
-          <div className="flex h-8">
-            <Spinner size="small" className="text-gray-600 m-auto" />
-          </div>
-        ) : (
-          <button
-            onClick={deleteChat}
-            className="flex gap-2 items-center bg-regular-red-cl text-regular-white-cl outline-none ring-0 px-3 h-8 border-2 border-regular-red-cl rounded-md hover:bg-transparent hover:text-regular-red-cl"
-          >
-            <Check size={16} color="currentColor" />
-            <span>Confirm</span>
-          </button>
-        )
-      }
-      cancelElement={isDeleting ? <span></span> : undefined}
-    />
-  )
-}
+import { DeleteDirectChatDialog } from "./delete-chat-dialogs"
 
 type TDeleteGroupChatDialogProps = {
   open: boolean
@@ -238,7 +161,7 @@ export const ConversationContextMenu = ({
       <DeleteDirectChatDialog
         open={openDeleteChatDialog}
         onHideShow={setOpenDeleteChatDialog}
-        pickedConversation={conversation}
+        directChatId={conversation?.id}
       />
     </>
   )

@@ -13,7 +13,14 @@ import {
 } from "@/apis/user"
 import { EPaginations } from "@/utils/enums"
 import type { TSuccess } from "@/utils/types/global"
-import { postChangePassword, postBlockUser, postUnblockUser } from "@/apis/user"
+import {
+  postChangePassword,
+  postBlockUser,
+  postUnblockUser,
+  postPasswordForgot,
+  postPasswordVerifyOtp,
+  postPasswordReset,
+} from "@/apis/user"
 
 class UserService {
   async searchUsers(keyword: string): Promise<TSearchUsersData[]> {
@@ -36,6 +43,22 @@ class UserService {
 
   async changePassword(oldPassword: string, newPassword: string) {
     const { data } = await postChangePassword({ oldPassword, newPassword })
+    return data
+  }
+
+  // Forgot password flow
+  async passwordForgot(email: string) {
+    const { data } = await postPasswordForgot(email)
+    return data
+  }
+
+  async passwordVerifyOtp(email: string, otp: string): Promise<{ resetToken: string }> {
+    const { data } = await postPasswordVerifyOtp({ email, otp })
+    return data
+  }
+
+  async passwordReset(resetToken: string, newPassword: string) {
+    const { data } = await postPasswordReset({ resetToken, newPassword })
     return data
   }
 

@@ -75,7 +75,7 @@ export const PreviewInfo = ({ groupChat }: TPreviewInfoProps) => {
       )}
       <div
         onClick={leaveGroup}
-        className={`${loading === "leave-group" ? "cursor-not-allowed bg-red-600/20" : "cursor-pointer"} flex items-center text-red-600 w-full gap-2 justify-start rounded-md hover:bg-red-600/20 hover:text-red-500 p-3 h-auto`}
+        className={`${loading === "leave-group" ? "cursor-not-allowed bg-red-600/20" : "cursor-pointer"} flex items-center text-red-600 w-full gap-2 justify-start rounded-md hover:bg-red-600/20 hover:text-red-500 px-3 h-12`}
       >
         {loading === "leave-group" ? (
           <Spinner size="medium" className="m-auto" />

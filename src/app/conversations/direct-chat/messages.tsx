@@ -4,13 +4,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useRef, useState, useEffect, memo } from "react"
 import type { TGetMessagesMessage, TSticker, TUserWithoutPassword } from "@/utils/types/be-api"
 import { Spinner } from "@/components/materials/spinner"
-import {
-  EChatType,
-  EMessageTypes,
-  EMessageTypeAllTypes,
-  EPaginations,
-  ESortTypes,
-} from "@/utils/enums"
+import { EChatType, EMessageTypeAllTypes, EPaginations, ESortTypes } from "@/utils/enums"
 import { ScrollToBottomMessageBtn } from "../scroll-to-bottom-msg-btn"
 import { createPortal } from "react-dom"
 import { useUser } from "@/hooks/user"
@@ -207,19 +201,20 @@ export const Messages = memo(
           }
           // Lưu ID của tin nhắn cuối cùng
           const finalMessageData = messages[messages.length - 1]
-          if (finalMessageId.current !== finalMessageData.id) {
-            // Nếu tin nhắn mới là PIN_NOTICE thì không cuộn xuống cuối
-            if (finalMessageData.type === EMessageTypes.PIN_NOTICE) {
-              finalMessageId.current = finalMessageData.id
-              return
-            }
+          const finalId = finalMessageData.id
+          if (finalMessageId.current !== finalId) {
             // Chỉ cuộn xuống dưới khi có tin nhắn mới từ user hoặc friend
-            finalMessageId.current = finalMessageData.id
+            finalMessageId.current = finalId
+            const finalMessageEle = msgsContainerEle.querySelector(
+              `.QUERY-message-container-${finalId}`
+            ) as HTMLElement
             if (
               msgsContainerEle.scrollTop + msgsContainerEle.clientHeight >
-              msgsContainerEle.scrollHeight - SCROLL_ON_MESSAGES_THRESHOLD
+              msgsContainerEle.scrollHeight -
+                SCROLL_ON_MESSAGES_THRESHOLD -
+                finalMessageEle.clientHeight
             ) {
-              // Cuộn khi màn hình chỉ đang cách mép dưới 100px
+              // Cuộn khi màn hình chỉ đang cách tin nhắn cuối cùng từ 0 đến 100px
               msgsContainerEle.scrollTo({
                 top: msgsContainerEle.scrollHeight,
                 behavior: "smooth",

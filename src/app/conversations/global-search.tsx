@@ -456,12 +456,14 @@ export const GlobalSearchBar = ({
           ref={globalSearchInputRef}
         />
 
-        <IconButton
-          className="flex justify-center items-center right-1 h-[35px] w-[35px] absolute top-1/2 -translate-y-1/2 z-20"
-          onClick={clearInput}
-        >
-          <X color="currentColor" />
-        </IconButton>
+        {inputFocused && (
+          <IconButton
+            className="flex justify-center items-center right-1 h-[35px] w-[35px] absolute top-1/2 -translate-y-1/2 z-20"
+            onClick={clearInput}
+          >
+            <X color="currentColor" />
+          </IconButton>
+        )}
       </div>
     </div>
   )

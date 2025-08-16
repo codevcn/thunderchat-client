@@ -45,7 +45,7 @@ const Main = () => {
   }
 
   return (
-    <div className="w-full px-5 pt-5 pb-3 relative pl-[75px] screen-medium-chatting:pl-0">
+    <div className="w-full px-5 pt-5 pb-3 relative pl-[75px] screen-medium-chatting:pl-6">
       <div className="h-fit w-full">
         <Tabs defaultValue={ETabs.FRIENDS_LIST} onValueChange={changeTab} value={qsAction}>
           <TabsList className="gap-1 p-0">

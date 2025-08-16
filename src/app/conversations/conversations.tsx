@@ -60,7 +60,7 @@ const ConversationCardsMain = ({
   const [pickedConversation, setPickedConversation] = useState<TConversationCard>()
   const [popoverPos, setPopoverPos] = useState<TPopoverPos>()
 
-  const openCloseContextMenu = (open: boolean) => {
+  const handleOpenCloseContextMenu = (open: boolean) => {
     setPickedConversation(open ? pickedConversation : undefined)
   }
 
@@ -87,7 +87,7 @@ const ConversationCardsMain = ({
 
       <ConversationContextMenu
         pickedConversation={pickedConversation}
-        openCloseContextMenu={openCloseContextMenu}
+        onOpenCloseContextMenu={handleOpenCloseContextMenu}
         popoverPos={popoverPos}
       />
     </>

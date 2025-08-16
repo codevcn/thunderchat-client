@@ -1,5 +1,6 @@
 import { clientAxios, requestConfig } from "@/configs/axios"
 import type { TDirectChat, TFetchDirectChatsData } from "../utils/types/be-api"
+import type { TSuccess } from "@/utils/types/global"
 
 export const getFetchDirectChat = (id: number, signal?: AbortSignal) =>
   clientAxios.get<TFetchDirectChatsData>("/direct-chat/fetch/" + id, {
@@ -46,3 +47,9 @@ export const checkCanSendDirectMessage = (receiverId: number) =>
 // API xoá/thu hồi tin nhắn direct chat
 export const deleteDirectMessage = (messageId: number) =>
   clientAxios.patch(`/delete-message/${messageId}`, undefined, requestConfig)
+
+export const deleteDirectChat = (directChatId: number) =>
+  clientAxios.delete<TSuccess>(`/direct-chat/delete`, {
+    ...requestConfig,
+    params: { directChatId },
+  })

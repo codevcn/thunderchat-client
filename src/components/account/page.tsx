@@ -85,10 +85,18 @@ export const AccountPage = ({
   }
 
   if (profileLoading)
-    return <div className="text-white flex items-center justify-center h-full">Loading...</div>
+    return (
+      <div className="text-white flex items-center justify-center h-full">
+        <Spinner size="medium" />
+      </div>
+    )
 
   if (error)
-    return <div className="text-white flex items-center justify-center h-full">Error: {error}</div>
+    return (
+      <div className="text-white flex items-center justify-center h-full">
+        Error: <span>{error}</span>
+      </div>
+    )
 
   if (!userProfile)
     return <div className="text-white flex items-center justify-center h-full">No profile data</div>

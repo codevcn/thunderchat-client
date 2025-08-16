@@ -123,6 +123,3 @@ export const getFetchGroupChatByInviteCode = (inviteCode: string) =>
     ...requestConfig,
     params: { inviteCode },
   })
-
-export const postLeaveGroupChat = (groupChatId: number) =>
-  clientAxios.post<TSuccess>(`/group-chat/leave-group-chat`, { groupChatId }, requestConfig)

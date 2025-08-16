@@ -15,7 +15,6 @@ import {
   putProcessGroupJoinRequest,
   postCreateGroupJoinRequest,
   getFetchGroupChatByInviteCode,
-  postLeaveGroupChat,
 } from "@/apis/group-chat"
 import type {
   TGroupChat,
@@ -146,11 +145,6 @@ class GroupChatService {
 
   async fetchGroupChatByInviteCode(inviteCode: string): Promise<TGroupChatWithCreator | null> {
     const { data } = await getFetchGroupChatByInviteCode(inviteCode)
-    return data
-  }
-
-  async leaveGroupChat(groupChatId: number): Promise<TSuccess> {
-    const { data } = await postLeaveGroupChat(groupChatId)
     return data
   }
 }

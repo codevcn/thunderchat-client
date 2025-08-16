@@ -28,7 +28,6 @@ import { DropdownMessage } from "@/components/materials/dropdown-message"
 import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react-dom"
 import { createPortal } from "react-dom"
 import { ShareMessageModal } from "./ShareMessageModal"
-import { useUser } from "@/hooks/user"
 import { FileService } from "@/services/file.service"
 
 type TContentProps = {
@@ -431,11 +430,64 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       }
     }
 
+    // Hàm scroll tới message theo id và highlight
+    const scrollToMessage = (msgId: string) => {
+      const el = document.querySelector(`.QUERY-message-container-${msgId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+        const overlay = el.querySelector(".QUERY-message-container-overlay")
+        if (overlay) {
+          overlay.classList.add("!opacity-100")
+          setTimeout(() => {
+            overlay.classList.remove("!opacity-100")
+          }, 1200)
+        }
+      }
+    }
+
+    const [showDropdown, setShowDropdown] = useState(false)
+    const { refs, floatingStyles, update } = useFloating({
+      placement: "bottom-end",
+      middleware: [
+        offset(4),
+        flip({ fallbackPlacements: ["top-end", "bottom-end"] }),
+        shift({ padding: 8 }),
+      ],
+      whileElementsMounted: autoUpdate,
+    })
+
+    // Đóng popup khi click ra ngoài
+    useEffect(() => {
+      if (!showDropdown) return
+      const handleClick = (e: MouseEvent) => {
+        const floatingEl = refs.floating.current
+        const referenceEl = refs.reference.current
+        const isRefEl = referenceEl instanceof HTMLElement
+        if (
+          floatingEl &&
+          !floatingEl.contains(e.target as Node) &&
+          (!isRefEl || !referenceEl.contains(e.target as Node))
+        ) {
+          setShowDropdown(false)
+        }
+      }
+      document.addEventListener("mousedown", handleClick)
+      return () => document.removeEventListener("mousedown", handleClick)
+    }, [showDropdown, refs])
+
+    const handleShowDropdown = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setShowDropdown(true)
+      setTimeout(update, 0)
+    }
+    const handleCloseDropdown = () => setShowDropdown(false)
+    const [showShareModal, setShowShareModal] = useState(false)
+
     // Hiển thị thông báo đặc biệt cho PIN_NOTICE
     if (type === EMessageTypes.PIN_NOTICE) {
       const isUnpin = content?.toLowerCase().includes("bỏ ghim")
       return (
-        <div className="w-full flex justify-center my-2">
+        <div ref={ref} className={`QUERY-message-container-${id} w-full flex justify-center my-2`}>
           <div className="flex items-center gap-2 bg-[#232323] border border-[#333] text-white px-4 py-2 rounded-full text-sm font-medium shadow">
             <span className="relative inline-block w-4 h-4">
               {isUnpin ? (
@@ -467,61 +519,6 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
         </div>
       )
     }
-
-    // Hàm scroll tới message theo id và highlight
-    const scrollToMessage = (msgId: string) => {
-      const el = document.querySelector(`.QUERY-message-container-${msgId}`)
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" })
-        const overlay = el.querySelector(".QUERY-message-container-overlay")
-        if (overlay) {
-          overlay.classList.add("!opacity-100")
-          setTimeout(() => {
-            overlay.classList.remove("!opacity-100")
-          }, 1200)
-        }
-      }
-    }
-
-    const [showDropdown, setShowDropdown] = useState(false)
-    const { refs, floatingStyles, update } = useFloating({
-      placement: "bottom-end",
-      middleware: [
-        offset(4),
-        flip({ fallbackPlacements: ["top-end", "bottom-end"] }),
-        shift({ padding: 8 }),
-      ],
-      whileElementsMounted: autoUpdate,
-    })
-    const popupRef = refs.floating
-
-    // Đóng popup khi click ra ngoài
-    useEffect(() => {
-      if (!showDropdown) return
-      const handleClick = (e: MouseEvent) => {
-        const floatingEl = refs.floating.current
-        const referenceEl = refs.reference.current
-        const isRefEl = referenceEl instanceof HTMLElement
-        if (
-          floatingEl &&
-          !floatingEl.contains(e.target as Node) &&
-          (!isRefEl || !referenceEl.contains(e.target as Node))
-        ) {
-          setShowDropdown(false)
-        }
-      }
-      document.addEventListener("mousedown", handleClick)
-      return () => document.removeEventListener("mousedown", handleClick)
-    }, [showDropdown, refs])
-
-    const handleShowDropdown = (e: React.MouseEvent) => {
-      e.stopPropagation()
-      setShowDropdown(true)
-      setTimeout(update, 0)
-    }
-    const handleCloseDropdown = () => setShowDropdown(false)
-    const [showShareModal, setShowShareModal] = useState(false)
-    const reactUser = useUser() // Đặt ở đầu component
 
     return (
       <>
@@ -658,7 +655,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
           ) : (
             // Tin nhắn của đối phương
             <div
-              className={`${isNewMsg || status === EMessageStatus.SENT ? "QUERY-unread-message" : ""} origin-left flex justify-start w-full`}
+              className={`${isNewMsg ? "QUERY-unread-message" : ""} origin-left flex justify-start w-full`}
               data-msg-id={id}
             >
               <div

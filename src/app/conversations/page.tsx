@@ -14,10 +14,15 @@ import { ESocketEvents } from "@/utils/socket/events"
 import { STATIC_CHAT_BACKGROUND_URL } from "@/utils/UI-constants"
 import {
   removeGroupChatMembers,
+  resetGroupMessages,
+  setGroupChat,
   updateDirectChat,
   updateGroupChat,
 } from "@/redux/messages/messages.slice"
-import { updateSingleConversation } from "@/redux/conversations/conversations.slice"
+import {
+  removeConversation,
+  updateSingleConversation,
+} from "@/redux/conversations/conversations.slice"
 import { EChatType } from "@/utils/enums"
 import type { TUpdateUserInfoPayload } from "@/utils/types/global"
 import { useUser } from "@/hooks/user"
@@ -67,10 +72,15 @@ const ConversationPage = () => {
   }
 
   const listenRemoveGroupChatMembers = (memberIds: number[], groupChat: TGroupChat) => {
+    console.log(">>> listen remove group chat members:", { memberIds, groupChat })
     eventEmitter.emit(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, memberIds, groupChat)
+    if (memberIds.includes(user.id)) {
+      listenMemberLeaveGroupChat(groupChat.id, user.id)
+    }
   }
 
   const listenAddGroupChatMembers = (newMemberIds: number[], groupChat: TGroupChat) => {
+    console.log(">>> listen add group chat members:", { newMemberIds, groupChat })
     eventEmitter.emit(EInternalEvents.ADD_GROUP_CHAT_MEMBERS, newMemberIds, groupChat)
   }
 
@@ -112,17 +122,24 @@ const ConversationPage = () => {
   }
 
   const listenMemberLeaveGroupChat = (groupChatId: number, memberId: number) => {
-    dispatch((dispatch, getState) => {
-      const { groupChat } = getState().messages
-      if (groupChat) {
-        const { id, Members } = groupChat
-        if (id === groupChatId) {
-          if (Members.some((member) => member.id === memberId)) {
-            dispatch(removeGroupChatMembers({ memberIds: [memberId] }))
+    console.log(">>> listen member leave group chat:", { groupChatId, memberId })
+    if (memberId === user.id) {
+      dispatch(removeConversation({ conversationId: groupChatId, type: EChatType.GROUP }))
+      dispatch(setGroupChat(null))
+      dispatch(resetGroupMessages())
+    } else {
+      dispatch((dispatch, getState) => {
+        const { groupChat } = getState().messages
+        if (groupChat) {
+          const { id, Members } = groupChat
+          if (id === groupChatId) {
+            if (Members.some((member) => member.userId === memberId)) {
+              dispatch(removeGroupChatMembers({ memberIds: [memberId] }))
+            }
           }
         }
-      }
-    })
+      })
+    }
   }
 
   useEffect(() => {

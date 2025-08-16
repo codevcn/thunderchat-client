@@ -73,16 +73,16 @@ const ManageMemberPopover = ({
       <div className="bg-black py-2 rounded-lg text-white border border-white/30 w-[136px]">
         <button
           onClick={() => onRemoveMember(member)}
-          className="flex items-center justify-center gap-2 py-2 px-2 w-full text-regular-red-cl font-bold hover:bg-regular-hover-card-cl"
+          className="flex items-center justify-center gap-2 py-2 px-2 w-full text-regular-red-cl font-bold hover:bg-red-600/30"
         >
           <UserX size={20} strokeWidth={3} />
           <span>Remove</span>
         </button>
         <button
           onClick={() => onViewMemberDetails(member)}
-          className="flex items-center justify-center gap-2 py-2 px-2 w-full text-regular-white-cl font-bold hover:bg-regular-hover-card-cl"
+          className="flex items-center justify-center gap-2 py-2 px-2 w-full text-regular-white-cl hover:bg-regular-hover-card-cl"
         >
-          <Info size={20} strokeWidth={3} />
+          <Info size={20} strokeWidth={2} />
           <span>Details</span>
         </button>
       </div>

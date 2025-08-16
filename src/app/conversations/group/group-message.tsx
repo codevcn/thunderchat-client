@@ -1,7 +1,12 @@
 import { EMessageMediaTypes, EMessageTypes, ETimeFormats } from "@/utils/enums"
 import { santizeMsgContent } from "@/utils/helpers"
 import { EMessageStatus } from "@/utils/socket/enums"
-import type { TUserWithoutPassword, TMessageFullInfo, TMessageMedia } from "@/utils/types/be-api"
+import type {
+  TUserWithoutPassword,
+  TMessageFullInfo,
+  TMessageMedia,
+  TUserWithProfile,
+} from "@/utils/types/be-api"
 import type { TStateMessage } from "@/utils/types/global"
 import dayjs from "dayjs"
 import {
@@ -378,11 +383,22 @@ type TMessageProps = {
   onPinChange: (newState: boolean) => void
   pinnedCount: number
   onReplyPreviewClick?: (replyToId: number) => void
+  navToDiretChatWithUser: (otherUser: TUserWithProfile) => void
 }
 
 export const Message = forwardRef<HTMLDivElement, TMessageProps>(
   (
-    { message, user, stickyTime, onReply, isPinned, onPinChange, pinnedCount, onReplyPreviewClick },
+    {
+      message,
+      user,
+      stickyTime,
+      onReply,
+      isPinned,
+      onPinChange,
+      pinnedCount,
+      onReplyPreviewClick,
+      navToDiretChatWithUser,
+    },
     ref
   ) => {
     const {
@@ -423,43 +439,6 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
       } finally {
         setLoadingPin(false)
       }
-    }
-
-    // Hiển thị thông báo đặc biệt cho PIN_NOTICE
-    if (type === EMessageTypes.PIN_NOTICE) {
-      const isUnpin = content?.toLowerCase().includes("bỏ ghim")
-      return (
-        <div className="w-full flex justify-center my-2">
-          <div className="flex items-center gap-2 bg-[#232323] border border-[#333] text-white px-4 py-2 rounded-full text-sm font-medium shadow">
-            <span className="relative inline-block w-4 h-4">
-              {isUnpin ? (
-                <Pin className="w-4 h-4 text-gray-400 opacity-70 rotate-[45deg]" />
-              ) : (
-                <Pin className="w-4 h-4" />
-              )}
-            </span>
-            <div
-              className="max-w-[300px] text-sm truncate"
-              dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
-            ></div>
-            {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi */}
-            {message.ReplyTo &&
-              typeof message.ReplyTo.id !== "undefined" &&
-              !message.ReplyTo.isDeleted &&
-              !message.ReplyTo.isViolated && (
-                <button
-                  className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
-                  onClick={() => {
-                    if (message.ReplyTo && onReplyPreviewClick)
-                      onReplyPreviewClick(message.ReplyTo.id)
-                  }}
-                >
-                  Xem
-                </button>
-              )}
-          </div>
-        </div>
-      )
     }
 
     // Hàm scroll tới message theo id và highlight
@@ -514,6 +493,43 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
     }
     const handleCloseDropdown = () => setShowDropdown(false)
     const [showShareModal, setShowShareModal] = useState(false)
+
+    // Hiển thị thông báo đặc biệt cho PIN_NOTICE
+    if (type === EMessageTypes.PIN_NOTICE) {
+      const isUnpin = content?.toLowerCase().includes("bỏ ghim")
+      return (
+        <div ref={ref} className={`QUERY-message-container-${id} w-full flex justify-center my-2`}>
+          <div className="flex items-center gap-2 bg-[#232323] border border-[#333] text-white px-4 py-2 rounded-full text-sm font-medium shadow">
+            <span className="relative inline-block w-4 h-4">
+              {isUnpin ? (
+                <Pin className="w-4 h-4 text-gray-400 opacity-70 rotate-[45deg]" />
+              ) : (
+                <Pin className="w-4 h-4" />
+              )}
+            </span>
+            <div
+              className="max-w-[300px] text-sm truncate"
+              dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
+            ></div>
+            {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi */}
+            {message.ReplyTo &&
+              typeof message.ReplyTo.id !== "undefined" &&
+              !message.ReplyTo.isDeleted &&
+              !message.ReplyTo.isViolated && (
+                <button
+                  className="ml-2 px-1 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
+                  onClick={() => {
+                    if (message.ReplyTo && onReplyPreviewClick)
+                      onReplyPreviewClick(message.ReplyTo.id)
+                  }}
+                >
+                  Xem
+                </button>
+              )}
+          </div>
+        </div>
+      )
+    }
 
     return (
       <>
@@ -651,7 +667,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
           ) : (
             // Tin nhắn của đối phương
             <div
-              className={`${isNewMsg || status === EMessageStatus.SENT ? "QUERY-unread-message" : ""} origin-left flex justify-start w-full`}
+              className={`${isNewMsg ? "QUERY-unread-message" : ""} origin-left flex justify-start w-full`}
               data-msg-id={id}
             >
               <div
@@ -661,7 +677,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   "max-w-[70%] rounded-t-2xl rounded-br-2xl pt-1.5 pb-1 px-2 relative"
                 }
               >
-                <div className="text-xs text-regular-violet-cl font-bold pb-1">
+                <div
+                  onClick={() => navToDiretChatWithUser(Author)}
+                  className="text-xs text-regular-violet-cl font-bold pb-1 cursor-pointer"
+                >
                   {Author.Profile.fullName}
                 </div>
                 <div

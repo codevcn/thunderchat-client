@@ -311,3 +311,44 @@ export const checkGroupChatPermission = (
   }
   return result
 }
+
+export const highlightUrlsInText = (text: string): string => {
+  // Regex để phát hiện URL (http, https, www, hoặc domain đơn giản)
+  const urlRegex = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+|[^\s<>]+\.[^\s<>]+)/gi
+
+  // Kiểm tra xem text có chứa emoji HTML không
+  const hasEmojiHtml = /<link[^>]*rel="preload"[^>]*>|<img[^>]*>/i.test(text)
+
+  if (hasEmojiHtml) {
+    // Nếu có emoji HTML, chỉ highlight URL ở những phần text thuần túy
+    // Tách text thành các phần HTML và text thuần túy
+    const parts = text.split(/(<[^>]+>)/)
+
+    return parts
+      .map((part) => {
+        if (part.startsWith("<") && part.endsWith(">")) {
+          // Đây là HTML tag, giữ nguyên
+          return part
+        } else {
+          // Đây là text thuần túy, highlight URL
+          return part.replace(urlRegex, (url) => {
+            // Thêm protocol nếu cần
+            const fullUrl = url.startsWith("http") ? url : `https://${url}`
+            return `<span class="text-white cursor-pointer underline hover:no-underline" onclick="window.open('${fullUrl}', '_blank')">${url}</span>`
+          })
+        }
+      })
+      .join("")
+  } else {
+    // Không có emoji HTML, highlight tất cả URL
+    return text.replace(urlRegex, (url) => {
+      const fullUrl = url.startsWith("http") ? url : `https://${url}`
+      return `<span class="text-white cursor-pointer underline hover:no-underline" onclick="window.open('${fullUrl}', '_blank')">${url}</span>`
+    })
+  }
+}
+
+export const processPinNoticeContent = (text: string): string => {
+  // Chỉ sanitize HTML, không highlight URL
+  return santizeMsgContent(text)
+}

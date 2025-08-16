@@ -1,5 +1,5 @@
 import { EMessageMediaTypes, EMessageTypes, ETimeFormats } from "@/utils/enums"
-import { santizeMsgContent } from "@/utils/helpers"
+import { santizeMsgContent, highlightUrlsInText, processPinNoticeContent } from "@/utils/helpers"
 import { EMessageStatus } from "@/utils/socket/enums"
 import type { TUserWithoutPassword, TMessageFullInfo, TMessageMedia } from "@/utils/types/be-api"
 import type { TStateMessage } from "@/utils/types/global"
@@ -148,7 +148,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
     return (
       <div
         className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent(messageText) }}
+        dangerouslySetInnerHTML={{ __html: highlightUrlsInText(santizeMsgContent(messageText)) }}
       ></div>
     )
   }
@@ -278,7 +278,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
     return (
       <div
         className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
+        dangerouslySetInnerHTML={{ __html: highlightUrlsInText(santizeMsgContent(content)) }}
       ></div>
     )
   }
@@ -440,7 +440,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
             </span>
             <div
               className="max-w-[300px] text-sm truncate"
-              dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
+              dangerouslySetInnerHTML={{ __html: processPinNoticeContent(content) }}
             ></div>
             {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi */}
             {message.ReplyTo &&

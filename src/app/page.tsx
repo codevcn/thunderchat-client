@@ -15,7 +15,7 @@ import { getCurrentLocationPath, pureNavigator } from "@/utils/helpers"
 import { localStorageManager } from "@/utils/local-storage"
 import { toast } from "sonner"
 import { AppLoading } from "@/components/layout/app-loading"
-import ForgotPasswordModal from "@/components/account/ForgotPasswordModal"
+import ForgotPasswordModal from "@/components/account/forgot-password-modal"
 
 type TLoginFormProps = {
   onSetCheckUserStatus: (status: ECheckUserStatus) => void

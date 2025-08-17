@@ -36,6 +36,10 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
 
   const [submitting, setSubmitting] = useState(false)
   const [resendAt, setResendAt] = useState<number | null>(null)
+  const [now, setNow] = useState<number>(Date.now())
+  const [otpAttemptsExceeded, setOtpAttemptsExceeded] = useState(false)
+  const [resendSpam, setResendSpam] = useState(false)
+  const [resending, setResending] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -54,6 +58,9 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
       setShowConfirmPassword(false)
       setSubmitting(false)
       setResendAt(null)
+      setOtpAttemptsExceeded(false)
+      setResendSpam(false)
+      setResending(false)
     }
   }, [open, defaultEmail])
 
@@ -70,16 +77,22 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
     setOtp(otpDigits.join(""))
   }, [otpDigits])
 
+  const isOtpReady = useMemo(() => {
+    return /^\d{6}$/.test(otp)
+  }, [otp])
+
   const resendLeftMs = useMemo(() => {
     if (!resendAt) return 0
-    const left = Math.max(0, resendAt - Date.now())
+    const left = Math.max(0, resendAt - now)
     return left
-  }, [resendAt])
+  }, [resendAt, now])
 
   useEffect(() => {
     if (!resendAt) return
     const id = setInterval(() => {
-      if (Date.now() >= resendAt) setResendAt(null)
+      const current = Date.now()
+      setNow(current)
+      if (current >= resendAt) setResendAt(null)
     }, 500)
     return () => clearInterval(id)
   }, [resendAt])
@@ -187,7 +200,7 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
     setSubmitting(true)
     try {
       await userService.passwordForgot(email)
-      toast.success("OTP has been sent (check email or server logs)")
+      toast.success("OTP has been sent (check email)")
       setStep("otp")
       setResendAt(Date.now() + RESEND_COOLDOWN_MS)
     } catch (err: any) {
@@ -198,17 +211,32 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
   }
 
   const handleResendOtp = async () => {
-    if (resendLeftMs > 0) return
+    if (resendLeftMs > 0) {
+      setResendSpam(true)
+      toast.info(
+        `You're doing this too fast. Please wait ${Math.ceil(resendLeftMs / 1000)}s to resend OTP.`
+      )
+      return
+    }
     if (!validateEmail()) return
     setSubmitting(true)
+    setResending(true)
     try {
       await userService.passwordForgot(email)
       toast.success("Resent OTP")
       setResendAt(Date.now() + RESEND_COOLDOWN_MS)
+      setOtpAttemptsExceeded(false)
+      setResendSpam(false)
+      setOtpDigits(Array(OTP_LENGTH).fill(""))
+      setOtpError("")
+      setTimeout(() => {
+        otpRefs.current[0]?.focus()
+      }, 0)
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to resend OTP")
     } finally {
       setSubmitting(false)
+      setResending(false)
     }
   }
 
@@ -222,7 +250,15 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
       toast.success("OTP verified")
       setStep("reset")
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Wrong or expired OTP")
+      const msg = err?.response?.data?.message || "Wrong or expired OTP"
+      toast.error(msg)
+      if (
+        typeof msg === "string" &&
+        (msg.toLowerCase().includes("vượt quá số lần thử") ||
+          msg.toLowerCase().includes("too many"))
+      ) {
+        setOtpAttemptsExceeded(true)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -269,10 +305,11 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
             </div>
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-violet-600 to-indigo-500 hover:from-violet-500 hover:to-indigo-400 transition text-white font-bold py-2.5 rounded-xl mt-2 shadow-lg shadow-violet-800/30 disabled:opacity-60"
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-500 hover:from-violet-500 hover:to-indigo-400 transition text-white font-bold py-2.5 rounded-xl mt-2 shadow-lg shadow-violet-800/30 disabled:opacity-60 inline-flex items-center justify-center gap-2"
               disabled={submitting}
             >
-              Send OTP
+              <span>Send OTP</span>
+              {submitting && <RefreshCcw className="w-4 h-4 animate-spin" />}
             </button>
           </form>
         )}
@@ -281,6 +318,37 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
           <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
             <div>
               <label className="block text-sm font-semibold mb-2 text-[#CFCFCF]">Enter OTP</label>
+              <div className="mb-3 rounded-lg bg-[#2C2E31] border border-[#35363A] px-3 py-2 text-xs text-[#CFCFCF]">
+                {!otpAttemptsExceeded && !resendSpam && (
+                  <>
+                    <span>
+                      OTP has been sent to <span className="font-semibold text-white">{email}</span>
+                      . Please check your email.
+                    </span>
+                    <span className="ml-1">
+                      {resendLeftMs > 0
+                        ? `You can resend OTP in ${Math.ceil(resendLeftMs / 1000)}s.`
+                        : "You can resend OTP now."}
+                    </span>
+                  </>
+                )}
+                {otpAttemptsExceeded && (
+                  <>
+                    <span className="text-yellow-400 font-medium">
+                      Too many wrong OTP attempts.
+                    </span>
+                    <span className="ml-1">Please resend a new OTP to continue.</span>
+                  </>
+                )}
+                {resendSpam && (
+                  <>
+                    <span className="text-yellow-400 font-medium">You're doing this too fast.</span>
+                    <span className="ml-1">
+                      Please wait {Math.ceil(resendLeftMs / 1000)}s to resend OTP.
+                    </span>
+                  </>
+                )}
+              </div>
               <div className="flex items-center justify-between gap-2" onPaste={handleOtpPaste}>
                 {otpDigits.map((d, idx) => (
                   <input
@@ -304,16 +372,16 @@ const ForgotPasswordModal = ({ open, onClose, defaultEmail }: ForgotPasswordModa
               <button
                 type="button"
                 onClick={handleResendOtp}
-                className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-[#2C2E31] hover:bg-regular-hover-bgcl transition-colors ${resendLeftMs > 0 ? "opacity-60 cursor-not-allowed" : ""}`}
-                disabled={resendLeftMs > 0 || submitting}
+                className={`inline-flex items-center justify-center gap-2 text-sm px-3 py-2 rounded-lg bg-[#2C2E31] hover:bg-regular-hover-bgcl transition-colors ${resendLeftMs > 0 ? "opacity-60 cursor-not-allowed" : ""}`}
+                disabled={resendLeftMs > 0 || submitting || resending}
               >
-                <RefreshCcw className="w-4 h-4" />
+                <RefreshCcw className={`w-4 h-4 ${resending ? "animate-spin" : ""}`} />
                 {resendLeftMs > 0 ? `Resend in ${Math.ceil(resendLeftMs / 1000)}s` : "Resend OTP"}
               </button>
               <button
                 type="submit"
                 className="bg-gradient-to-r from-violet-600 to-indigo-500 hover:from-violet-500 hover:to-indigo-400 transition text-white font-bold py-2.5 rounded-xl shadow-lg shadow-violet-800/30 px-4 disabled:opacity-60"
-                disabled={submitting}
+                disabled={submitting || !isOtpReady || otpAttemptsExceeded}
               >
                 Verify
               </button>

@@ -89,7 +89,7 @@ export const AppNavigation = memo(() => {
       style={{ left: openConvsList ? "0" : "-55px" }}
       className="flex top-0 left-0 fixed screen-medium-chatting:static z-[99] w-[55px] h-screen transition-[left] duration-200"
     >
-      <div className="flex justify-between flex-col gap-4 bg-regular-dark-gray-cl pt-6 pb-3 w-[inherit] h-[inherit]">
+      <div className="flex justify-between flex-col relative gap-4 bg-regular-dark-gray-cl pt-6 pb-3 w-[inherit] h-[inherit]">
         <CustomTooltip title="Account" placement="right">
           <div
             className="flex w-[55px] cursor-pointer transition duration-200 hover:bg-regular-hover-card-cl py-3"
@@ -136,8 +136,8 @@ export const AppNavigation = memo(() => {
             </div>
           </Link>
         </CustomTooltip>
+        <div className="absolute top-0 right-0 w-[1px] h-full bg-gray-600/20"></div>
       </div>
-      <div className="absolute top-0 right-0 min-w-[0.5px] h-full bg-regular-hover-card-cl"></div>
     </div>
   )
 })

@@ -81,7 +81,7 @@ export const renderMessageContent = (message: TStateMessage) => {
             </div>
           )}
         </div>
-        <span className="text-xs text-gray-300">Ảnh</span>
+        <span className="text-xs text-gray-300">Image</span>
       </div>
     )
   }
@@ -172,7 +172,7 @@ export const renderMessageContent = (message: TStateMessage) => {
       <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
         <Paperclip className="w-4 h-4 text-gray-400" />
       </div>
-      <span className="text-xs text-gray-300">Tệp/Media</span>
+      <span className="text-xs text-gray-300">File/Media</span>
     </div>
   )
 }
@@ -191,16 +191,16 @@ export const PinMessageModal = ({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b-2 border-[#734fd1] bg-[#8661e9] rounded-t-lg">
           <span className="font-semibold text-base text-white">
-            Danh sách ghim (<span>{pinnedMessages.length}</span>)
+            Pinned Messages (<span>{pinnedMessages.length}</span>)
           </span>
           <button className="text-sm text-white font-bold hover:underline" onClick={onClose}>
-            Thu gọn
+            Collapse
           </button>
         </div>
         {/* List */}
         <ul className="divide-y divide-gray-700">
           {pinnedMessages.length === 0 ? (
-            <li className="p-4 text-gray-400 text-sm">Chưa có tin nhắn nào được ghim.</li>
+            <li className="p-4 text-gray-400 text-sm">No messages pinned yet.</li>
           ) : (
             pinnedMessages.slice(0, 5).map((msg) => (
               <li
@@ -217,7 +217,7 @@ export const PinMessageModal = ({
                 </span>
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-white mb-1">Tin nhắn</div>
+                  <div className="font-semibold text-sm text-white mb-1">Message</div>
                   <div className="flex items-center gap-1">
                     <div className="text-xs text-gray-300">
                       <span>{msg.Author?.Profile?.fullName}</span>
@@ -234,7 +234,7 @@ export const PinMessageModal = ({
                       e.stopPropagation()
                       setOpenMenuId(openMenuId === msg.id ? null : msg.id)
                     }}
-                    title="Tùy chọn"
+                    title="Options"
                   >
                     <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="8" cy="4" r="1" />
@@ -253,7 +253,7 @@ export const PinMessageModal = ({
                           setOpenMenuId(null)
                         }}
                       >
-                        Bỏ ghim
+                        Unpin
                       </button>
                     </div>
                   )}

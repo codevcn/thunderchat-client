@@ -72,7 +72,7 @@ export default function DevPage() {
         {!isFetchingCountAllData && (
           <div className="mt-12">
             {data && (
-              <div className="text-white">
+              <div className="text-white leading-snug">
                 <pre>{data}</pre>
               </div>
             )}

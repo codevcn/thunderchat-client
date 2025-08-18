@@ -4,6 +4,12 @@ import { useEffect, useRef } from "react"
 import { localStorageManager } from "@/utils/local-storage"
 import { RootLayoutContext } from "@/contexts/root-layout.context"
 import { getPathWithQueryString } from "@/utils/helpers"
+import { usePushNotification } from "@/hooks/push-notification"
+
+const PushNotificationProvider = () => {
+  usePushNotification()
+  return <></>
+}
 
 export const AppLayoutProvider = ({ children }: { children: React.ReactNode }) => {
   const appRootRef = useRef<HTMLDivElement>(null)
@@ -18,6 +24,7 @@ export const AppLayoutProvider = ({ children }: { children: React.ReactNode }) =
 
   return (
     <div ref={appRootRef} id="App-Root" className="bg-regular-dark-gray-cl">
+      <PushNotificationProvider />
       <RootLayoutContext.Provider value={{ appRootRef }}>{children}</RootLayoutContext.Provider>
     </div>
   )

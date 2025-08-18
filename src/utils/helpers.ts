@@ -311,3 +311,8 @@ export const checkGroupChatPermission = (
   }
   return result
 }
+
+export const processPinNoticeContent = (text: string): string => {
+  // Chỉ sanitize HTML, không highlight URL
+  return santizeMsgContent(text)
+}

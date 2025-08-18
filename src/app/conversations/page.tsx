@@ -2,8 +2,7 @@
 
 import { Conversations } from "./conversations"
 import { useEffect } from "react"
-import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { setChatBackground } from "@/redux/settings/settings.slice"
+import { useAppDispatch } from "@/hooks/redux"
 import { AppNavigation } from "@/components/layout/app-navigation"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
@@ -28,16 +27,9 @@ import type { TUpdateUserInfoPayload } from "@/utils/types/global"
 import { useUser } from "@/hooks/user"
 
 const ChatBackground = () => {
-  const chatBackground = useAppSelector(({ settings }) => settings.theme.chatBackground)
-  const dispatch = useAppDispatch()
-
-  useEffect(() => {
-    dispatch(setChatBackground(STATIC_CHAT_BACKGROUND_URL))
-  }, [chatBackground])
-
   return (
     <div
-      style={chatBackground ? { backgroundImage: `url(${chatBackground})` } : {}}
+      style={{ backgroundImage: `url(${STATIC_CHAT_BACKGROUND_URL})` }}
       className="h-full w-full top-0 left-0 absolute z-10"
     ></div>
   )

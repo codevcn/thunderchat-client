@@ -1,4 +1,5 @@
 import type { THighlightOffsets } from "./types/global"
+import Linkify from "linkify-react"
 
 export function renderHighlightedContent(
   content: string,
@@ -27,4 +28,26 @@ export function renderHighlightedContent(
   }
 
   return parts
+}
+
+type THighlightUrlsInTextProps = {
+  text: string
+  className?: string
+}
+
+export const HighlightUrlsInText = ({ text, className }: THighlightUrlsInTextProps) => {
+  return (
+    <Linkify
+      options={{
+        attributes: {
+          class: className,
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+        defaultProtocol: "https",
+      }}
+    >
+      {text}
+    </Linkify>
+  )
 }

@@ -26,8 +26,10 @@ export type TGetEmojisErrRes = {
 export type TUserWithProfileFE = TUserWithoutPassword & { Profile: Omit<TProfile, "userId"> }
 
 export type TGetUserSettingsRes = TUserSettings
+
 export type TUpdateUserSettingsReq = {
   onlyReceiveFriendMessage: boolean
+  pushNotificationEnabled: boolean
 }
 
 export type TCheckCanSendDirectMessageRes = {

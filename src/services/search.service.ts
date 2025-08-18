@@ -19,6 +19,7 @@ class SearchService {
       messageSearchOffset,
       userSearchOffset
     )
+    console.log(">>> data 22:", data)
     return data
   }
 }

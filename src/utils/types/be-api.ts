@@ -176,6 +176,23 @@ export type TGroupJoinRequestWithUser = TGroupJoinRequest & {
   Requester: TUserWithProfile
 }
 
+export type TUserSettings = {
+  id: number
+  userId: number
+  onlyReceiveFriendMessage: boolean
+  pushNotificationEnabled: boolean
+}
+
+export type TPushNotificationSubscription = {
+  id: number
+  createdAt: Date
+  userId: number
+  endpoint: string
+  p256dh: string
+  auth: string
+  expirationTime: Date | null
+}
+
 // ================================= API types =================================
 export type TLoginUserParams = {
   email: string
@@ -327,12 +344,6 @@ export type TFetchGroupChatsData = TGroupChat & {
 export type TUpdateGroupChatParams = {
   groupName?: string
   avatarUrl?: string
-}
-
-export type TUserSettings = {
-  id: number
-  userId: number
-  onlyReceiveFriendMessage: boolean
 }
 
 export type TUpdateUserSettingsParams = {
@@ -786,4 +797,21 @@ export type TGroupChatPermissionState = {
 
 export type TFetchGroupChatPermissionsRes = {
   permissions: TGroupChatPermissionState
+}
+
+export type TSubscribePushNotificationParams = {
+  endpoint: string
+  expirationTime?: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+}
+
+export type TUnsubscribePushNotificationParams = {
+  endpoint: string
+}
+
+export type TGetPublicVapidKeyRes = {
+  publicKey: string
 }

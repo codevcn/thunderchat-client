@@ -1,5 +1,5 @@
 import { EMessageMediaTypes, EMessageTypes, ETimeFormats } from "@/utils/enums"
-import { santizeMsgContent } from "@/utils/helpers"
+import { santizeMsgContent, processPinNoticeContent } from "@/utils/helpers"
 import { EMessageStatus } from "@/utils/socket/enums"
 import type { TUserWithoutPassword, TMessageFullInfo, TMessageMedia } from "@/utils/types/be-api"
 import type { TStateMessage } from "@/utils/types/global"
@@ -29,6 +29,7 @@ import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react
 import { createPortal } from "react-dom"
 import { ShareMessageModal } from "./ShareMessageModal"
 import { FileService } from "@/services/file.service"
+import { HighlightUrlsInText } from "@/utils/tsx-helpers"
 
 type TContentProps = {
   content: string
@@ -146,10 +147,7 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
       : "This message has been deleted"
 
     return (
-      <div
-        className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent(messageText) }}
-      ></div>
+      <div className="max-w-full break-words whitespace-pre-wrap text-sm inline">{messageText}</div>
     )
   }
 
@@ -276,10 +274,12 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   // Hiển thị text
   if (type === EMessageTypes.TEXT && content) {
     return (
-      <div
-        className="max-w-full break-words whitespace-pre-wrap text-sm inline"
-        dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
-      ></div>
+      <div className="max-w-full break-words whitespace-pre-wrap text-sm inline">
+        <HighlightUrlsInText
+          text={santizeMsgContent(content)}
+          className="text-white cursor-pointer underline hover:no-underline"
+        />
+      </div>
     )
   }
 
@@ -498,7 +498,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
             </span>
             <div
               className="max-w-[300px] text-sm truncate"
-              dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
+              dangerouslySetInnerHTML={{ __html: processPinNoticeContent(content) }}
             ></div>
             {/* Nút xem nếu có ReplyTo và tin nhắn gốc chưa bị thu hồi/vi phạm */}
             {message.ReplyTo &&
@@ -559,7 +559,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   {/* Nút chia sẻ */}
                   <button
                     className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
-                    title="Chia sẻ tin nhắn"
+                    title="Share message"
                     onClick={() => setShowShareModal(true)}
                   >
                     <Share2 size={14} />
@@ -578,10 +578,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-purple-400/80 text-purple-700" : "bg-white/20"}`}
                     title={
                       isPinned
-                        ? "Bỏ ghim tin nhắn"
+                        ? "Unpin message"
                         : pinnedCount >= 5
-                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                          : "Ghim tin nhắn"
+                          ? "You have reached the limit of 5 pinned messages"
+                          : "Pin message"
                     }
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {
@@ -686,7 +686,7 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                   {/* Nút chia sẻ */}
                   <button
                     className="p-1 ml-1 rounded hover:scale-110 transition duration-200 bg-white/20"
-                    title="Chia sẻ tin nhắn"
+                    title="Share message"
                     onClick={() => setShowShareModal(true)}
                   >
                     <Share2 size={14} />
@@ -705,10 +705,10 @@ export const Message = forwardRef<HTMLDivElement, TMessageProps>(
                     className={`p-1 ml-1 rounded hover:scale-110 transition duration-200 ${isPinned ? "bg-regular-violet-cl text-regular-white-cl" : "bg-white/20"}`}
                     title={
                       isPinned
-                        ? "Bỏ ghim tin nhắn"
+                        ? "Unpin message"
                         : pinnedCount >= 5
-                          ? "Đã đạt giới hạn 5 tin nhắn ghim"
-                          : "Ghim tin nhắn"
+                          ? "You have reached the limit of 5 pinned messages"
+                          : "Pin message"
                     }
                     onClick={() => {
                       if (!isPinned && pinnedCount >= 5) {

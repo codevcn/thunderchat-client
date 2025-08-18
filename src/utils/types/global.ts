@@ -5,6 +5,7 @@ import type {
   TMessageFullInfo,
   TDirectChatData,
   TPinnedChat,
+  TPushNotificationSubscription,
 } from "@/utils/types/be-api"
 import type { EChatType, EMessageMediaTypes, EMessageTypes } from "../enums"
 import type { Socket } from "socket.io-client"
@@ -190,3 +191,27 @@ export type TUpdateUserInfoPayload = Partial<{
   avatar: string
   about: string
 }>
+
+export type TUsePushNotification = {
+  subscribe: () => Promise<TSubscribePushNotificationRes | null>
+  unsubscribe: () => Promise<TUnsubscribePushNotificationRes | null>
+  checkIfSupported: () => Promise<boolean>
+}
+
+export type TSettingsState = {
+  pushNotification: {
+    enabled: boolean
+  }
+  privacy: {
+    onlyReceiveFriendMessage: boolean
+  }
+}
+
+export type TSubscribePushNotificationRes = {
+  subscription: PushSubscription | null
+  subscriptionData: TPushNotificationSubscription | null
+}
+
+export type TUnsubscribePushNotificationRes = {
+  oldSubscription: PushSubscription | null
+}

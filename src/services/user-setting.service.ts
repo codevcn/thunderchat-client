@@ -1,12 +1,17 @@
-import { getUserSettings, updateUserSettings } from "@/apis/user-setting"
+import { getUserSettings, putUpdateUserSettings } from "@/apis/user-setting"
+import type { TSettingsState } from "@/utils/types/global"
+import { convertToSettingsState } from "@/utils/data-convertors/user-settings-convertor"
+import { TUpdateUserSettingsReq } from "@/utils/types/fe-api"
 
 class UserSettingService {
-  async fetchUserSettings() {
-    return await getUserSettings()
+  async fetchUserSettings(): Promise<TSettingsState> {
+    const { data } = await getUserSettings()
+    return convertToSettingsState(data)
   }
 
-  async updateOnlyReceiveFriendMessage(onlyReceiveFriendMessage: boolean) {
-    return await updateUserSettings({ onlyReceiveFriendMessage })
+  async updateUserSettings(updates: Partial<TUpdateUserSettingsReq>) {
+    const { data } = await putUpdateUserSettings(updates)
+    return convertToSettingsState(data)
   }
 }
 

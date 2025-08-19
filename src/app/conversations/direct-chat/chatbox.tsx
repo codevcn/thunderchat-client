@@ -5,7 +5,7 @@ import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useEffect, useMemo, useState, useRef } from "react"
-import { Search, Phone, MoreVertical, Pin, Menu } from "lucide-react"
+import { Search, MoreVertical, Pin, Menu } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { TypeMessageBar } from "./type-message-bar"
@@ -55,17 +55,10 @@ type THeaderProps = {
   infoBarIsOpened: boolean
   onOpenInfoBar: (open: boolean) => void
   friendInfo: TUserWithProfile
-  canSend: boolean
   directChat: TDirectChatData
 }
 
-const Header = ({
-  infoBarIsOpened,
-  onOpenInfoBar,
-  friendInfo,
-  canSend,
-  directChat,
-}: THeaderProps) => {
+const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, directChat }: THeaderProps) => {
   const { Profile, id: friendId } = friendInfo
   const { id: directChatId } = directChat
   const [isTyping, setIsTyping] = useState<boolean>(false)
@@ -320,7 +313,6 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
           infoBarIsOpened={infoBarIsOpened}
           onOpenInfoBar={handleOpenInfoBar}
           friendInfo={friendInfo}
-          canSend={canSend}
           directChat={directChat}
         />
 
@@ -401,7 +393,7 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
           </div>
         </div>
       </div>
-      <InfoBar friendInfo={friendInfo} directChatId={directChatId} />
+      <InfoBar friendInfo={friendInfo} />
     </div>
   )
 }

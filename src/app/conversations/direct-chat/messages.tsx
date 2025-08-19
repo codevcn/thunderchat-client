@@ -260,6 +260,7 @@ export const Messages = memo(
           isFirstTime,
         })
         .then((result) => {
+          console.log(">>> result:", result)
           hasMoreMessages.current = result.hasMoreMessages
           dispatch(mergeMessages(result.directMessages))
           dispatch(setFetchedMsgs(true))

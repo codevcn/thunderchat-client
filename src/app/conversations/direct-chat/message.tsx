@@ -29,7 +29,6 @@ import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/react
 import { createPortal } from "react-dom"
 import { ShareMessageModal } from "./ShareMessageModal"
 import { FileService } from "@/services/file.service"
-import { HighlightUrlsInText } from "@/utils/tsx-helpers"
 
 type TContentProps = {
   content: string
@@ -274,12 +273,10 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
   // Hiển thị text
   if (type === EMessageTypes.TEXT && content) {
     return (
-      <div className="max-w-full break-words whitespace-pre-wrap text-sm inline">
-        <HighlightUrlsInText
-          text={santizeMsgContent(content)}
-          className="text-white cursor-pointer underline hover:no-underline"
-        />
-      </div>
+      <div
+        dangerouslySetInnerHTML={{ __html: santizeMsgContent(content) }}
+        className="max-w-full break-words whitespace-pre-wrap text-sm inline"
+      ></div>
     )
   }
 

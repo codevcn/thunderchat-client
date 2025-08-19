@@ -235,7 +235,7 @@ export const UserReportHistoryModal = ({
                         {/* Show "Current" indicator if this is the current report */}
                         {currentReportId && report.id === currentReportId && (
                           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-regular-violet-cl/20 text-regular-violet-cl border border-regular-violet-cl/30">
-                            Hiện tại
+                            Current
                           </span>
                         )}
                       </div>

@@ -34,3 +34,13 @@ export const postUnblockUser = (blockedUserId: number) =>
 
 export const getBlockedUsersList = () =>
   clientAxios.get<TBlockedUserFullInfo[]>("/user/get-blocked-users-list", requestConfig)
+
+// Forgot password flow
+export const postPasswordForgot = (email: string) =>
+  clientAxios.post<TSuccess>("/user/password/forgot", { email }, requestConfig)
+
+export const postPasswordVerifyOtp = (data: { email: string; otp: string }) =>
+  clientAxios.post<{ resetToken: string }>("/user/password/verify-otp", data, requestConfig)
+
+export const postPasswordReset = (data: { resetToken: string; newPassword: string }) =>
+  clientAxios.post<TSuccess>("/user/password/reset", data, requestConfig)

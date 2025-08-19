@@ -15,6 +15,7 @@ import { getCurrentLocationPath, pureNavigator } from "@/utils/helpers"
 import { localStorageManager } from "@/utils/local-storage"
 import { toast } from "sonner"
 import { AppLoading } from "@/components/layout/app-loading"
+import ForgotPasswordModal from "@/components/account/forgot-password-modal"
 
 type TLoginFormProps = {
   onSetCheckUserStatus: (status: ECheckUserStatus) => void
@@ -90,6 +91,7 @@ const HomePage = () => {
   const [checkUserStatus, setCheckUserStatus] = useState<ECheckUserStatus>(ECheckUserStatus.UNKOWN)
   const [typedEmail, setTypedEmail] = useState<string>("")
   const { authStatus } = useAuth()
+  const [showForgot, setShowForgot] = useState(false)
 
   const handleSetCheckUserStatus = (status: ECheckUserStatus) => {
     setCheckUserStatus(status)
@@ -120,7 +122,17 @@ const HomePage = () => {
         <h1 className="text-4xl font-bold mb-4">Thunder Chat</h1>
 
         {checkUserStatus === ECheckUserStatus.EXIST ? (
-          <LoginForm typedEmail={typedEmail} onGoBack={goBack} />
+          <>
+            <LoginForm typedEmail={typedEmail} onGoBack={goBack} />
+            <div className="mt-3 text-center">
+              <button
+                className="text-[#8774E1] hover:underline text-sm"
+                onClick={() => setShowForgot(true)}
+              >
+                Forgot password?
+              </button>
+            </div>
+          </>
         ) : checkUserStatus === ECheckUserStatus.NOT_EXIST ? (
           <RegisterForm typedEmail={typedEmail} onGoBack={goBack} />
         ) : (
@@ -137,6 +149,11 @@ const HomePage = () => {
           LOG IN BY QR CODE
         </a>
       </div> */}
+      <ForgotPasswordModal
+        open={showForgot}
+        onClose={() => setShowForgot(false)}
+        defaultEmail={typedEmail}
+      />
     </div>
   ) : (
     <AppLoading />

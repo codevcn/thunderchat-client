@@ -11,6 +11,10 @@ import {
 } from "./enums"
 import type { TGroupChat, TGroupChatMember, TGroupChatPermissionState, TUser } from "./types/be-api"
 import type { TMemberPermissionRenderingResult } from "./types/global"
+import { clientSocket } from "./socket/client-socket"
+import { ESocketEvents } from "./socket/events"
+import { EChatType } from "./enums"
+import { toaster } from "./toaster"
 
 export const setLastSeen = (date: string) => {
   return dayjs(date).format("MM/DD/YYYY, h:mm A")
@@ -315,4 +319,28 @@ export const checkGroupChatPermission = (
 export const processPinNoticeContent = (text: string): string => {
   // Chỉ sanitize HTML, không highlight URL
   return santizeMsgContent(text)
+}
+
+export const joinChatRoom = (chatId: number, chatType: EChatType) => {
+  if (chatType === EChatType.DIRECT) {
+    clientSocket.socket.emit(
+      ESocketEvents.join_direct_chat_room,
+      { directChatId: chatId },
+      (data) => {
+        if (data && "isError" in data) {
+          toaster.error(data.message)
+        }
+      }
+    )
+  } else {
+    clientSocket.socket.emit(
+      ESocketEvents.join_group_chat_room,
+      { groupChatId: chatId },
+      (data) => {
+        if (data && "isError" in data) {
+          toaster.error(data.message)
+        }
+      }
+    )
+  }
 }

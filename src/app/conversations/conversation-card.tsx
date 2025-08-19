@@ -3,12 +3,9 @@
 import { CustomAvatar, PinButton } from "@/components/materials"
 import dayjs from "dayjs"
 import { useEffect } from "react"
-import { santizeMsgContent } from "@/utils/helpers"
+import { joinChatRoom, santizeMsgContent } from "@/utils/helpers"
 import { EChatType, EMessageTypes } from "@/utils/enums"
-import { toaster } from "@/utils/toaster"
-import { TConversationCard } from "@/utils/types/global"
-import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import type { TConversationCard } from "@/utils/types/global"
 import type { TPopoverPos } from "./sharings"
 
 const MAX_UNREAD_MESSAGES_COUNT: number = 9
@@ -39,30 +36,6 @@ const getPinIndexClass = (pinIndex: number): string => {
       return "order-3"
     default:
       return "order-4"
-  }
-}
-
-const joinChatRoom = (chatId: number, chatType: EChatType) => {
-  if (chatType === EChatType.DIRECT) {
-    clientSocket.socket.emit(
-      ESocketEvents.join_direct_chat_room,
-      { directChatId: chatId },
-      (data) => {
-        if (data && "isError" in data) {
-          toaster.error(data.message)
-        }
-      }
-    )
-  } else {
-    clientSocket.socket.emit(
-      ESocketEvents.join_group_chat_room,
-      { groupChatId: chatId },
-      (data) => {
-        if (data && "isError" in data) {
-          toaster.error(data.message)
-        }
-      }
-    )
   }
 }
 

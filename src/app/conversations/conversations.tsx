@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
 import { sortDirectChatsByPinned } from "@/redux/conversations/conversations.selectors"
 import axiosErrorHandler from "@/utils/axios-error-handler"
-import { checkNewConversationIsCurrentChat } from "@/utils/helpers"
+import { checkNewConversationIsCurrentChat, joinChatRoom } from "@/utils/helpers"
 import { directChatService } from "@/services/direct-chat.service"
 import { EChatType, EMessageTypes, EPaginations } from "@/utils/enums"
 import {
@@ -159,20 +159,22 @@ const ConversationCards = () => {
   }
 
   const fetchConversations = async () => {
-    const [directChats, groupChats] = await Promise.all([fetchDirectChats(), fetchGroupChats()])
-    const allChats = [...directChats, ...groupChats]
+    if (!conversations || conversations.length === 0) {
+      const [directChats, groupChats] = await Promise.all([fetchDirectChats(), fetchGroupChats()])
+      const allChats = [...directChats, ...groupChats]
 
-    // Sort using pinnedAt order from API
-    const sortedChats = allChats.sort((a, b) => {
-      // sort by message time
-      const getTimestamp = (chat: TConversationCard) => {
-        const timeToUse = chat.lastMessageTime || chat.createdAt
-        return new Date(timeToUse).getTime()
-      }
-      return getTimestamp(b) - getTimestamp(a) // Latest first
-    })
+      // Sort using pinnedAt order from API
+      const sortedChats = allChats.sort((a, b) => {
+        // sort by message time
+        const getTimestamp = (chat: TConversationCard) => {
+          const timeToUse = chat.lastMessageTime || chat.createdAt
+          return new Date(timeToUse).getTime()
+        }
+        return getTimestamp(b) - getTimestamp(a) // Latest first
+      })
 
-    dispatch(addConversations(sortedChats))
+      dispatch(addConversations(sortedChats))
+    }
   }
 
   const navToDirectChat = (id: number, type: EChatType) => {
@@ -346,6 +348,13 @@ const ConversationCards = () => {
     })
   }
 
+  const joinChatRoomForConversations = () => {
+    if (!conversations || conversations.length === 0) return
+    for (const conversation of conversations) {
+      joinChatRoom(conversation.id, conversation.type)
+    }
+  }
+
   useEffect(() => {
     fetchPinChatsByUserId()
     clientSocket.socket.on(ESocketEvents.new_conversation, listenNewConversation)
@@ -402,10 +411,25 @@ const ConversationCards = () => {
   }, [pinChats, conversations])
 
   useEffect(() => {
-    if (!conversations || conversations.length === 0) {
-      fetchConversations()
+    fetchConversations()
+    eventEmitter.on(EInternalEvents.JOIN_CHAT_ROOM_FOR_CONVERSATIONS, joinChatRoomForConversations)
+    return () => {
+      eventEmitter.removeListener(
+        EInternalEvents.JOIN_CHAT_ROOM_FOR_CONVERSATIONS,
+        joinChatRoomForConversations
+      )
     }
   }, [conversations])
+
+  const registerServiceWorker = async () => {
+    await navigator.serviceWorker.register("/service-workers/service.worker.js", {
+      type: "module",
+    })
+  }
+
+  useEffect(() => {
+    registerServiceWorker()
+  }, [user])
 
   return loading ? (
     <div className="flex flex-col gap-1 justify-center items-center">

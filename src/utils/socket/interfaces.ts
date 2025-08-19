@@ -35,6 +35,7 @@ import { EChatType } from "../enums"
 import { EOnlineStatus } from "./enums"
 
 export interface IListenSocketEvents {
+  [ESocketEvents.server_hello]: (payload: string) => void
   [ESocketInitEvents.connect]: () => void
   [ESocketInitEvents.connect_error]: (payload: unknown) => void
   [ESocketEvents.error]: (error: TWsErrorResponse) => void
@@ -85,6 +86,10 @@ export interface IListenSocketEvents {
 }
 
 export interface IEmitSocketEvents {
+  [ESocketEvents.client_hello]: (
+    payload: string,
+    cb: (data: TSuccess | TSocketErrorRes) => void
+  ) => void
   [ESocketEvents.send_message_direct]: (
     message: TChattingPayload,
     cb: (data: TSendDirectMessageErrorRes | TSendDirectMessageRes) => void

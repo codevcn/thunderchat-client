@@ -4,6 +4,8 @@ export enum ESocketInitEvents {
 }
 
 export enum ESocketEvents {
+  server_hello = "server_hello",
+  client_hello = "client_hello",
   send_message_direct = "send_message:direct",
   send_message_group = "send_message:group",
   error = "error",

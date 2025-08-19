@@ -25,6 +25,7 @@ interface IEventEmitter {
   [EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS]: (memberIds: number[], groupChat: TGroupChat) => void
   [EInternalEvents.SEND_MESSAGE]: () => void
   [EInternalEvents.ADD_GROUP_CHAT_MEMBERS]: (newMemberIds: number[], groupChat: TGroupChat) => void
+  [EInternalEvents.JOIN_CHAT_ROOM_FOR_CONVERSATIONS]: () => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

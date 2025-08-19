@@ -29,6 +29,8 @@ const arrayBufferToBase64Url = (buffer: ArrayBuffer | null): string => {
     .replace(/=+$/, "")
 }
 
+const SW_PATH = "/service-workers/service.worker.js"
+
 export function usePushNotification(): TUsePushNotification {
   // Xin quyền
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
@@ -38,78 +40,90 @@ export function usePushNotification(): TUsePushNotification {
   // Đăng ký push
   const subscribe = useCallback(async (): Promise<TSubscribePushNotificationRes | null> => {
     try {
-      const perm = await requestPermission()
-      if (perm !== "granted") return null
-
-      const registration = await navigator.serviceWorker.ready
-
-      // Kiểm tra xem đã có subscription chưa
-      let sub = await registration.pushManager.getSubscription()
-      if (sub) {
-        const subscriptionData = await pushNotificationService.getSubscription(sub.endpoint)
-        return {
-          subscription: sub,
-          subscriptionData,
-        }
+      // Unregister tất cả SW cũ
+      const regs = await navigator.serviceWorker.getRegistrations()
+      for (const r of regs) {
+        await r.unregister()
       }
 
+      // Đăng ký SW (đảm bảo có file)
+      const registration = await navigator.serviceWorker.register(SW_PATH, {
+        type: "module",
+        scope: "/service-workers/",
+      })
+
+      // Xin quyền push
+      const perm = await requestPermission()
+      if (perm !== "granted") {
+        if (perm === "denied") {
+          toaster.error(
+            "Please allow push notification in your browser settings to use this feature."
+          )
+        }
+        return null
+      }
+
+      // Lấy public key từ server
       const vapidPublicKey = await pushNotificationService.getPublicVapidKey()
 
-      sub = await registration.pushManager.subscribe({
+      // Tạo subscription mới
+      const newSub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey.publicKey),
       })
-      // Gửi subscription về server
+
+      // Gửi subscription mới lên server
       const data = await pushNotificationService.subscribe({
-        endpoint: sub.endpoint,
+        endpoint: newSub.endpoint,
         keys: {
-          p256dh: arrayBufferToBase64Url(sub.getKey("p256dh")),
-          auth: arrayBufferToBase64Url(sub.getKey("auth")),
+          p256dh: arrayBufferToBase64Url(newSub.getKey("p256dh")),
+          auth: arrayBufferToBase64Url(newSub.getKey("auth")),
         },
       })
+
       return {
-        subscription: sub,
+        subscription: newSub,
         subscriptionData: data,
       }
     } catch (err) {
+      toaster.error((err as any).message || "Failed to subscribe to push notification.")
       return null
     }
   }, [])
 
   const unsubscribe = useCallback(async (): Promise<TUnsubscribePushNotificationRes | null> => {
-    const registration = await navigator.serviceWorker.ready
-    const sub = await registration.pushManager.getSubscription()
-    if (sub) {
-      try {
-        await sub.unsubscribe()
-      } catch (error) {
-        toaster.error((error as any).message || "Failed to unsubscribe from push notification.")
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const sub = await registration.pushManager.getSubscription()
+      if (sub) {
+        try {
+          await sub.unsubscribe()
+        } catch (error) {
+          toaster.error((error as any).message || "Failed to unsubscribe from push notification.")
+          return {
+            oldSubscription: sub,
+          }
+        }
+        try {
+          await pushNotificationService.unsubscribe({ endpoint: sub.endpoint })
+        } catch (err) {
+          toaster.error(axiosErrorHandler.handleHttpError(err).message)
+          return {
+            oldSubscription: sub,
+          }
+        }
         return {
           oldSubscription: sub,
         }
       }
-      try {
-        await pushNotificationService.unsubscribe({ endpoint: sub.endpoint })
-      } catch (err) {
-        toaster.error(axiosErrorHandler.handleHttpError(err).message)
-        return {
-          oldSubscription: sub,
-        }
-      }
-      return {
-        oldSubscription: sub,
-      }
+    } catch (error) {
+      toaster.error((error as any).message || "Failed to unsubscribe from push notification.")
     }
     return null
   }, [])
 
   const checkIfSupported = useCallback(async (): Promise<boolean> => {
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      await navigator.serviceWorker.register("/service.worker.js", { type: "module" })
-      return true
-    } else {
-      return false
-    }
+    return "serviceWorker" in navigator && "PushManager" in window
   }, [])
 
   return { subscribe, unsubscribe, checkIfSupported }

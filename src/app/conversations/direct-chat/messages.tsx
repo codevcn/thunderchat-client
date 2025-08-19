@@ -166,6 +166,7 @@ export const Messages = memo(
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
     const isRenderingMessages = useRef<boolean>(false)
     const readyNewMessage = useRef<TGetMessagesMessage | null>(null)
+    console.log(">>> messages at messages.tsx:154:", { messages })
 
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
@@ -317,6 +318,7 @@ export const Messages = memo(
 
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendMessage = (newMessage: TGetMessagesMessage) => {
+      console.log(">>> new message at messages.tsx:320:", newMessage)
       const { id } = newMessage
       if (directChatId === -1) {
         readyNewMessage.current = newMessage
@@ -344,6 +346,7 @@ export const Messages = memo(
           // Chỉ thêm tin nhắn mới thực sự
           dispatch(mergeMessages([newMessage]))
         }
+        console.log(">>> merge messages at messages.tsx:349")
       }
 
       dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.DIRECT }))
@@ -712,7 +715,6 @@ export const Messages = memo(
       if (pendingFillContextId && messages) {
         const allIds = messages.map((m: TStateMessage) => m.id)
         const missingRanges = findMissingRanges(allIds)
-        //onsole.log("[DEBUG] (useEffect) Các đoạn id bị thiếu:", missingRanges)
         missingRanges.forEach(([from, to]) => {
           fetchMissingMessages(from, to)
         })

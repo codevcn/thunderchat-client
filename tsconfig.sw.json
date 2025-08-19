@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["esnext", "webworker"],
     "noEmit": false,
-    "outDir": "./public",
+    "outDir": "./public/service-workers",
     "module": "esnext",
     "moduleResolution": "bundler",
     "isolatedModules": false,

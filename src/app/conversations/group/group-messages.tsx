@@ -73,7 +73,6 @@ const NoMessagesYet = ({ groupChat }: TNoMessagesYetProps) => {
           if ("success" in data && data.success) {
             chattingService.recursiveSendingQueueMessages()
           } else if ("isError" in data && data.isError) {
-            console.log(">>> error when sending sticker:", data)
             toast.error(data.message)
           }
         }
@@ -156,9 +155,9 @@ export const Messages = memo(
     const unreadMessagesRef = useRef<TUnreadMessages>({ count: 0, firstUnreadMsgEle: null }) // Biến để lưu thông tin về tin nhắn chưa đọc
     const [pendingFillContextId, setPendingFillContextId] = useState<number | null>(null)
     const isRenderingMessages = useRef<boolean>(false)
-    const readyNewMessage = useRef<TGetMessagesMessage | null>(null)
     const navToConversation = useNavToConversation()
     const navToTempDirectChat = useNavToTempDirectChat()
+    console.log(">>> messages at group-messages.tsx:162:", { messages })
 
     // Thêm state lưu id cuối context
     const [contextEndId, setContextEndId] = useState<number | null>(null)
@@ -310,12 +309,8 @@ export const Messages = memo(
 
     // Xử lý sự kiện gửi tin nhắn từ đối phương
     const listenSendMessage = (newMessage: TGetMessagesMessage) => {
-      console.log(">>> listen send message at group messages 315:", newMessage)
+      console.log(">>> listen send message at group-messages.tsx:315:", { newMessage })
       const { id } = newMessage
-      if (groupChatId === -1) {
-        readyNewMessage.current = newMessage
-        return
-      }
       if (newMessage.groupChatId !== groupChatId) return
 
       // Kiểm tra xem tin nhắn đã tồn tại chưa
@@ -338,6 +333,7 @@ export const Messages = memo(
           // Chỉ thêm tin nhắn mới thực sự
           dispatch(mergeGroupMessages([newMessage]))
         }
+        console.log(">>> merge messages at group-messages.tsx:341")
       }
 
       dispatch(setLastSentMessage({ lastMessageId: id, chatType: EChatType.GROUP }))
@@ -634,14 +630,6 @@ export const Messages = memo(
       dispatch(resetAllChatData())
     }
 
-    const handleReadyNewMessage = () => {
-      if (readyNewMessage.current && groupChatId !== -1) {
-        const newMessage = readyNewMessage.current
-        readyNewMessage.current = null
-        dispatch(mergeGroupMessages([newMessage]))
-      }
-    }
-
     const navToDiretChatWithUser = (otherUser: TUserWithProfile) => {
       directChatService.findConversationWithOtherUser(otherUser.id).then((directChat) => {
         if (directChat) {
@@ -652,14 +640,14 @@ export const Messages = memo(
       })
     }
 
-    useEffect(() => {
-      handleReadyNewMessage()
-    }, [groupChatId])
-
     // Xử lý thay đổi danh sách tin nhắn
     useEffect(() => {
       handleMessagesChange()
-    }, [messages])
+      eventEmitter.on(EInternalEvents.SEND_MESSAGE_GROUP, listenSendMessage)
+      return () => {
+        eventEmitter.off(EInternalEvents.SEND_MESSAGE_GROUP, listenSendMessage)
+      }
+    }, [messages, groupChatId])
 
     // IntersectionObserver cho message cuối cùng
     useEffect(() => {
@@ -678,12 +666,10 @@ export const Messages = memo(
 
     useEffect(() => {
       startFetchingMessages()
-      handleReadyNewMessage()
       eventEmitter.on(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, scrollToQueriedMessageHandler)
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-      eventEmitter.on(EInternalEvents.SEND_MESSAGE_GROUP, listenSendMessage)
       clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
       clientSocket.socket.on(ESocketEvents.message_seen_group, handleMessageSeen)
       return () => {
@@ -692,7 +678,6 @@ export const Messages = memo(
         eventEmitter.off(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, scrollToQueriedMessageHandler)
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-        eventEmitter.off(EInternalEvents.SEND_MESSAGE_GROUP, listenSendMessage)
         clientSocket.socket.removeListener(
           ESocketEvents.recovered_connection,
           handleRecoverdConnection

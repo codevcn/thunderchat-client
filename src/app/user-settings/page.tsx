@@ -77,8 +77,6 @@ const Notification = () => {
         const sub = await subscribe()
         if (sub && sub.subscriptionData) {
           dispatch(setPushNotificationEnabled(true))
-        } else {
-          toaster.error("Failed to subscribe to push notification.")
         }
       } else {
         toaster.error("Push notification is not supported on this browser.")
@@ -150,7 +148,6 @@ export default function UserSettingsPage() {
       userSettingService
         .fetchUserSettings()
         .then((data) => {
-          console.log(">>> fetched user settings:", data)
           dispatch(setSettings(data))
         })
         .catch((error) => {

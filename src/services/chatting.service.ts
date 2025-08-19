@@ -24,11 +24,8 @@ class ChattingService {
     message: TChattingPayload["msgPayload"],
     callback: TSendMessageCallback
   ): Promise<void> {
-    console.log(">>> stranger 27:", message)
     if (clientSocket.socket.connected) {
-      console.log(">>> stranger 29")
       if (this.getAcknowledgmentFlag()) {
-        console.log(">>> stranger 31")
         this.setAcknowledgmentFlag(false)
         clientSocket.socket.timeout(this.MAX_TIMEOUT_MESSAGING).emit(
           ESocketEvents.send_message_direct,
@@ -37,12 +34,10 @@ class ChattingService {
             msgPayload: message,
           },
           (error, data) => {
-            console.log(">>> stranger 40:", { error, data })
             if (error) {
               console.error(">>> error when sending message & save offline message:", error)
               this.saveOfflineMessage({ type, msgPayload: message })
             } else {
-              console.log(">>> stranger 45")
               this.setAcknowledgmentFlag(true)
               if (data) {
                 if ("isError" in data) {
@@ -80,8 +75,8 @@ class ChattingService {
               console.error(">>> error when sending message & save offline message:", error)
               this.saveOfflineMessage({ type, msgPayload: message })
             } else {
+              this.setAcknowledgmentFlag(true)
               if (data) {
-                this.setAcknowledgmentFlag(true)
                 if ("isError" in data) {
                   console.error(">>> error when sending message & callback:", data)
                 }
@@ -115,6 +110,8 @@ class ChattingService {
           this.recursiveSendingQueueMessages()
         }
       })
+    } else {
+      this.setAcknowledgmentFlag(true)
     }
   }
 
@@ -123,10 +120,11 @@ class ChattingService {
     if (message) {
       this.sendMessage(message.type, message.msgPayload, (data) => {
         if ("success" in data && data.success) {
-          this.setAcknowledgmentFlag(true)
           this.recursiveSendingOfflineMessages()
         }
       })
+    } else {
+      this.setAcknowledgmentFlag(true)
     }
   }
 

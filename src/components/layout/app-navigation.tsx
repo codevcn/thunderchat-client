@@ -44,8 +44,8 @@ const navs = (unreadFriendRequestsCount: number): TNav[] => [
 
 export const AppNavigation = memo(() => {
   const { openAccount } = useAccountModal()
-  const user = useUser()!
-  const userProfile = user.Profile
+  const user = useUser()
+  const userProfile = user?.Profile
   const openConvsList = useAppSelector((state) => state.layout.openConvsList)
   const pathname = usePathname()
   const [unreadFriendRequestsCount, setUnreadFriendRequestsCount] = useState<number>(0)
@@ -97,9 +97,9 @@ export const AppNavigation = memo(() => {
           >
             <div className="m-auto">
               <CustomAvatar
-                src={userProfile.avatar}
-                fallback={userProfile.fullName[0]}
-                alt={userProfile.fullName}
+                src={userProfile?.avatar}
+                fallback={userProfile?.fullName[0] || "U"}
+                alt={userProfile?.fullName || "User"}
                 imgSize={40}
                 className="text-xl border border-gray-700 font-bold bg-regular-violet-cl"
               />

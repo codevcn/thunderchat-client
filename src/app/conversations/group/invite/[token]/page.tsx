@@ -8,8 +8,6 @@ import { TGroupChatWithCreator } from "@/utils/types/be-api"
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { STATIC_CHAT_BACKGROUND_URL } from "@/utils/UI-constants"
-import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { setChatBackground } from "@/redux/settings/settings.slice"
 import { pureNavigator } from "@/utils/helpers"
 
 export default function InvitePage() {
@@ -22,8 +20,6 @@ export default function InvitePage() {
   const groupChatCreatorEmail = groupChatCreator?.email
   const groupChatCreatorAvatar = groupChatCreatorProfile?.avatar
   const groupChatCreatorFullName = groupChatCreatorProfile?.fullName
-  const { chatBackground } = useAppSelector(({ settings }) => settings.theme)
-  const dispatch = useAppDispatch()
 
   const requestToJoinGroup = async () => {
     if (!groupChat) return
@@ -63,13 +59,9 @@ export default function InvitePage() {
     fetchGroupChat()
   }, [token])
 
-  useEffect(() => {
-    dispatch(setChatBackground(STATIC_CHAT_BACKGROUND_URL))
-  }, [chatBackground])
-
   return (
     <div
-      style={chatBackground ? { backgroundImage: `url(${chatBackground})` } : {}}
+      style={{ backgroundImage: `url(${STATIC_CHAT_BACKGROUND_URL})` }}
       className="flex flex-col justify-center items-center min-h-screen px-4 py-8 bg-regular-dark-gray-cl"
     >
       <div

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 
+const SERVER_ENDPOINT =
+  process.env.NODE_ENV === "production"
+    ? process.env.NEXT_PUBLIC_SERVER_ENDPOINT
+    : process.env.NEXT_PUBLIC_SERVER_ENDPOINT_DEV
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -13,7 +18,7 @@ export async function POST(request: NextRequest) {
     const backendFormData = new FormData()
     backendFormData.append("file", file)
 
-    const backendUrl = process.env.NEXT_PUBLIC_SERVER_ENDPOINT + "/upload"
+    const backendUrl = SERVER_ENDPOINT + "/upload"
 
     const response = await fetch(backendUrl, {
       method: "POST",

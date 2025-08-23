@@ -16,6 +16,11 @@ import { ESocketEvents } from "./socket/events"
 import { EChatType } from "./enums"
 import { toaster } from "./toaster"
 
+const NEXT_PUBLIC_SERVER_HOST =
+  process.env.NODE_ENV === "production"
+    ? process.env.NEXT_PUBLIC_SERVER_HOST
+    : process.env.NEXT_PUBLIC_SERVER_HOST_DEV
+
 export const setLastSeen = (date: string) => {
   return dayjs(date).format("MM/DD/YYYY, h:mm A")
 }
@@ -271,7 +276,7 @@ export const converToMessageTypeAllTypes = (
 }
 
 export const generateInviteUrl = (inviteCode: string) => {
-  return `${process.env.NEXT_PUBLIC_SERVER_HOST_DEV}/conversations/group/invite/${inviteCode}`
+  return `${NEXT_PUBLIC_SERVER_HOST}/conversations/group/invite/${inviteCode}`
 }
 
 export const checkIfGroupChatCreator = (userId: number, groupChat?: TGroupChat): boolean => {

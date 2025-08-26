@@ -5,6 +5,7 @@ import type {
   TDirectChat,
   TMessage,
   TGroupChat,
+  TCallRequestEmitPayload,
 } from "@/utils/types/be-api"
 import type {
   TSendDirectMessageErrorRes,
@@ -114,4 +115,5 @@ export interface IEmitSocketEvents {
     payload: TJoinGroupChatRoomEmitPayload,
     cb: (data: TSuccess | TSocketErrorRes) => void
   ) => void
+  [ESocketEvents.call_request]: (payload: TCallRequestEmitPayload) => void
 }

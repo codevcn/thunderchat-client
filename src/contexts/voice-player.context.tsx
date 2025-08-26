@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react"
+import React, { createContext, useContext, useState, useCallback, useRef } from "react"
 import type { TStateMessage } from "@/utils/types/global"
 
 // Logic preloadAudioMetadata từ VoiceMessage component

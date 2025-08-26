@@ -29,6 +29,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EOnlineStatus } from "@/utils/socket/enums"
 import { userService } from "@/services/user.service"
 import { setOpenConvsList } from "@/redux/layout/layout.slice"
+import { VoiceCall } from "./voice-call"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -56,9 +57,16 @@ type THeaderProps = {
   onOpenInfoBar: (open: boolean) => void
   friendInfo: TUserWithProfile
   directChat: TDirectChatData
+  canSend: boolean
 }
 
-const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, directChat }: THeaderProps) => {
+const Header = ({
+  infoBarIsOpened,
+  onOpenInfoBar,
+  friendInfo,
+  directChat,
+  canSend,
+}: THeaderProps) => {
   const { Profile, id: friendId } = friendInfo
   const { id: directChatId } = directChat
   const [isTyping, setIsTyping] = useState<boolean>(false)
@@ -159,13 +167,7 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, friendInfo, directChat }: THea
           </div>
         </CustomTooltip>
 
-        {/* <CustomTooltip title="Call" placement="bottom" align="end">
-          <div style={canSend === false ? { opacity: 0.5, pointerEvents: "none" } : {}}>
-            <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
-              <Phone />
-            </IconButton>
-          </div>
-        </CustomTooltip> */}
+        <VoiceCall canSend={canSend} />
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
           <div>
@@ -314,6 +316,7 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
           onOpenInfoBar={handleOpenInfoBar}
           friendInfo={friendInfo}
           directChat={directChat}
+          canSend={canSend}
         />
 
         {/* Box pinned messages ngay dưới header */}

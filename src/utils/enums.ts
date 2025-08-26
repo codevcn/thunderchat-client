@@ -154,3 +154,12 @@ export enum EJoinRequestStatus {
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",
 }
+
+export enum EVoiceCallStatus {
+  REQUESTING = "REQUESTING",
+  RINGING = "RINGING",
+  ACCEPTED = "ACCEPTED",
+  CONNECTED = "CONNECTED",
+  ENDED = "ENDED",
+  TIMEOUT = "TIMEOUT",
+}

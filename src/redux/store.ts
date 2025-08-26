@@ -9,6 +9,7 @@ import { settingsSlice } from "./settings/settings.slice"
 import { searchSlice } from "./search/search.slice"
 import profileSlice from "./user/profile.slice"
 import { layoutSlice } from "./layout/layout.slice"
+import { voiceCallSlice } from "./voice-call/layout.slice"
 
 const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ const store = configureStore({
     [searchSlice.name]: searchSlice.reducer,
     profile: profileSlice,
     [layoutSlice.name]: layoutSlice.reducer,
+    [voiceCallSlice.name]: voiceCallSlice.reducer,
   },
 })
 

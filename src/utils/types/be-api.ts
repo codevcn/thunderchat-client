@@ -14,6 +14,7 @@ import type {
   EBanType,
   EGroupChatPermissions,
   EJoinRequestStatus,
+  EVoiceCallStatus,
 } from "@/utils/enums"
 import type { EMessageStatus } from "@/utils/socket/enums"
 import { TReportedMessageFE } from "./fe-api"
@@ -67,7 +68,7 @@ export type TMessage = {
 export type TMessageMedia = {
   id: number
   type: EMessageMediaTypes
-  createdAt: Date
+  createdAt: string
   url: string
   fileSize: number
   fileName: string
@@ -161,12 +162,12 @@ export type TBlockedUser = {
   id: number
   blockerUserId: number
   blockedUserId: number
-  createdAt: Date
+  createdAt: string
 }
 
 export type TGroupJoinRequest = {
   id: number
-  createdAt: Date
+  createdAt: string
   groupChatId: number
   userId: number
   status: EJoinRequestStatus
@@ -185,12 +186,23 @@ export type TUserSettings = {
 
 export type TPushNotificationSubscription = {
   id: number
-  createdAt: Date
+  createdAt: string
   userId: number
   endpoint: string
   p256dh: string
   auth: string
-  expirationTime: Date | null
+  expirationTime?: string
+}
+
+export type TVoiceCallSession = {
+  id: number
+  directChatId?: number
+  callerUserId: number
+  calleeUserId: number
+  createdAt: string
+  endedAt?: string
+  status: EVoiceCallStatus
+  hangupReason?: string
 }
 
 // ================================= API types =================================
@@ -814,4 +826,9 @@ export type TUnsubscribePushNotificationParams = {
 
 export type TGetPublicVapidKeyRes = {
   publicKey: string
+}
+
+export type TCallRequestEmitPayload = {
+  calleeUserId: number
+  directChatId: number
 }

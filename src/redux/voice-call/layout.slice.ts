@@ -1,8 +1,10 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit"
-import { TVoiceCallSession } from "@/utils/types/be-api"
+import type { TActiveVoiceCallSession } from "@/utils/types/global"
+import { TDeepPartial, THierarchyKeyObject } from "@/utils/types/utility-types"
+import { updateObjectByPath } from "@/utils/helpers"
 
 type TVoiceCallState = {
-  callSession: TVoiceCallSession | null
+  callSession: TActiveVoiceCallSession | null
 }
 
 const initialState: TVoiceCallState = {
@@ -13,10 +15,23 @@ export const voiceCallSlice = createSlice({
   name: "voice-call",
   initialState,
   reducers: {
-    setCallSession: (state, action: PayloadAction<TVoiceCallSession | null>) => {
+    setCallSession: (state, action: PayloadAction<TActiveVoiceCallSession | null>) => {
       state.callSession = action.payload
+    },
+    updateCallSession: (
+      state,
+      action: PayloadAction<TDeepPartial<THierarchyKeyObject<TActiveVoiceCallSession>>>
+    ) => {
+      const updates = action.payload
+      const callSession = state.callSession
+      if (callSession) {
+        updateObjectByPath<TActiveVoiceCallSession>(callSession, updates)
+      }
+    },
+    resetCallSession: (state) => {
+      state.callSession = null
     },
   },
 })
 
-export const { setCallSession } = voiceCallSlice.actions
+export const { setCallSession, updateCallSession, resetCallSession } = voiceCallSlice.actions

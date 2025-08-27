@@ -1,37 +1,41 @@
-// hooks/useVoiceCall.ts
 import { useEffect, useRef } from "react"
-import { useAppSelector } from "@/hooks/redux"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { ESocketEvents } from "@/utils/socket/events"
+import type { TUnknownFunction } from "@/utils/types/global"
+import type { TCallRequestEmitRes } from "@/utils/types/socket"
+import { EHangupReason, ESDPType, EVoiceCallStatus } from "@/utils/enums"
+import {
+  resetCallSession,
+  setCallSession,
+  updateCallSession,
+} from "@/redux/voice-call/layout.slice"
+import { toaster } from "@/utils/toaster"
 
-type IcePayload = { sessionId: string; candidate: string; sdpMid?: string; sdpMLineIndex?: number }
-type SdpPayload = { sessionId: string; sdp: string; type: "offer" | "answer" }
-
-type PcBundle = {
-  pc: RTCPeerConnection
-  localStream: MediaStream | null
-}
-
-function createPeerConnection(iceServers?: RTCIceServer[]): RTCPeerConnection {
-  const pc = new RTCPeerConnection({
-    iceServers: iceServers || [{ urls: "stun:stun.l.google.com:19302" }],
-  })
-  pc.onconnectionstatechange = () => {
-    console.log(">>> [P2P Connection] state:", pc.connectionState)
-  }
-  return pc
-}
-
-async function getMicStream(): Promise<MediaStream> {
-  // Lưu ý: Autoplay policy — cần tương tác user (click) trước khi getUserMedia.
-  return navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-}
+const DEFAULT_STUN_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }]
+const AUTO_CLEANUP_TIMEOUT: number = 10000
 
 export function useVoiceCall() {
   const { callSession } = useAppSelector(({ "voice-call": voiceCall }) => voiceCall)
   const p2pConnectionRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const remoteStreamRef = useRef<MediaStream | null>(null)
+  const receivedOfferRef = useRef<boolean>(false)
+  const dispatch = useAppDispatch()
+
+  function createPeerConnection(
+    iceServers: RTCIceServer[] = DEFAULT_STUN_SERVERS
+  ): RTCPeerConnection {
+    const p2pConnection = new RTCPeerConnection({ iceServers })
+    p2pConnection.onconnectionstatechange = () => {
+      console.log(">>> [P2P Connection] state:", p2pConnection.connectionState)
+    }
+    return p2pConnection
+  }
+
+  async function getMicStream(): Promise<MediaStream> {
+    return navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+  }
 
   // Khởi tạo PC + stream
   async function ensurePeer() {
@@ -39,24 +43,26 @@ export function useVoiceCall() {
     p2pConnectionRef.current = createPeerConnection()
     remoteStreamRef.current = new MediaStream()
 
+    // Khi nhận được audio track từ peer khác, thêm vào remoteStreamRef, cho phép nghe được audio từ peer khác
     p2pConnectionRef.current.ontrack = (e) => {
-      // audio remote
-      e.streams[0].getAudioTracks().forEach((t) => {
-        if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream()
-        remoteStreamRef.current!.addTrack(t)
+      e.streams[0].getAudioTracks().forEach((track) => {
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = new MediaStream()
+        }
+        remoteStreamRef.current.addTrack(track)
       })
       // gán vào thẻ audio bên ngoài qua getter getRemoteStream()
     }
 
+    // Khi nhận được candidate từ peer khác, gửi lại cho peer
     p2pConnectionRef.current.onicecandidate = (event) => {
-      if (!event.candidate || !callSession?.id) return
-      const payload: IcePayload = {
-        sessionId: `${callSession.id}`,
+      if (!event.candidate || !callSession) return
+      clientSocket.socket.emit(ESocketEvents.call_ice, {
+        sessionId: callSession.id,
         candidate: event.candidate.candidate,
-        sdpMid: event.candidate.sdpMid ?? undefined,
-        sdpMLineIndex: event.candidate.sdpMLineIndex ?? undefined,
-      }
-      clientSocket.socket.emit(ESocketEvents.call_ice, payload)
+        sdpMid: event.candidate.sdpMid || undefined,
+        sdpMLineIndex: event.candidate.sdpMLineIndex || undefined,
+      })
     }
   }
 
@@ -77,169 +83,183 @@ export function useVoiceCall() {
   }
 
   // Gọi đi
-  async function startCall(calleeUserId: number, directChatId: number) {
+  async function startCall(
+    calleeUserId: number,
+    directChatId: number,
+    callback: TUnknownFunction<TCallRequestEmitRes, void>
+  ) {
     await ensurePeer()
     await attachMic()
-
-    // yêu cầu phiên gọi (server sẽ trả INCOMING cho callee)
-    clientSocket.socket.emit(ESocketEvents.call_request, { calleeUserId, directChatId })
-
-    setState({ status: "RINGING_OUT", peerUserId: calleeUserId, directChatId })
+    clientSocket.socket.emit(ESocketEvents.call_request, { calleeUserId, directChatId }, callback)
   }
 
-  // Nhận cuộc gọi đến (server đã emit 'CALL_VOICE/INCOMING')
-  async function acceptCall(incomingSessionId: string, fromUserId: string) {
-    if (!socket) return
+  async function sendOffer() {
+    const p2pConnection = p2pConnectionRef.current
+    if (!p2pConnection) return
+    const offer = await p2pConnection.createOffer()
+    await p2pConnection.setLocalDescription(offer)
+    const offerSdp = offer.sdp
+    if (callSession && offerSdp) {
+      clientSocket.socket.emit(ESocketEvents.call_offer_answer, {
+        sessionId: callSession.id,
+        SDP: offerSdp,
+        type: ESDPType.OFFER,
+      })
+    }
+  }
+
+  // Nhận cuộc gọi đến
+  async function acceptCall() {
+    if (!callSession) return
     await ensurePeer()
     await attachMic()
-
-    setState({ sessionId: incomingSessionId, peerUserId: fromUserId, status: "ACCEPTED" })
-    socket.emit("CALL_VOICE/ACCEPT", { sessionId: incomingSessionId })
-
-    // Tạo Answer: chờ OFFER từ caller → handle ở listener 'CALL_VOICE/OFFER'
+    dispatch(updateCallSession({ status: EVoiceCallStatus.ACCEPTED }))
+    clientSocket.socket.emit(ESocketEvents.call_accept, { sessionId: callSession.id })
   }
 
-  function rejectCall(incomingSessionId: string) {
-    if (!socket) return
-    socket.emit("CALL_VOICE/REJECT", { sessionId: incomingSessionId })
-    setState({ status: "ENDED", sessionId: undefined, peerUserId: undefined })
+  function rejectCall() {
+    if (!callSession) return
+    dispatch(updateCallSession({ status: EVoiceCallStatus.REJECTED }))
+    clientSocket.socket.emit(ESocketEvents.call_reject, { sessionId: callSession.id })
   }
 
-  async function hangup(reason: string = "NORMAL") {
-    if (!socket || !useCallStore.getState().sessionId) return
-    const sid = useCallStore.getState().sessionId!
-    socket.emit("CALL_VOICE/END", { sessionId: sid, reason })
+  async function hangupCall(reason: EHangupReason = EHangupReason.NORMAL) {
+    if (!callSession) return
+    clientSocket.socket.emit(ESocketEvents.call_hangup, { sessionId: callSession.id, reason })
     cleanup()
   }
 
   function cleanup() {
     try {
-      localRef.current?.getTracks().forEach((t) => t.stop())
-    } catch {}
-    localRef.current = null
-    remoteRef.current = null
+      localStreamRef.current?.getTracks().forEach((t) => t.stop())
+    } catch {
+      toaster.error("Failed to stop local stream, please try again later!")
+    }
+    localStreamRef.current = null
     try {
-      pcRef.current?.getSenders().forEach((s) => pcRef.current?.removeTrack(s))
-    } catch {}
-    pcRef.current?.close()
-    pcRef.current = null
-    useCallStore.getState().reset()
+      remoteStreamRef.current?.getTracks().forEach((t) => t.stop())
+    } catch {
+      toaster.error("Failed to stop remote stream, please try again later!")
+    }
+    remoteStreamRef.current = null
+    try {
+      p2pConnectionRef.current
+        ?.getSenders()
+        .forEach((s) => p2pConnectionRef.current?.removeTrack(s))
+    } catch {
+      toaster.error("Failed to remove tracks, please try again later!")
+    }
+    p2pConnectionRef.current?.close()
+    p2pConnectionRef.current = null
+    dispatch(resetCallSession())
   }
 
-  // Đăng ký listener socket
-  useEffect(() => {
-    if (!socket) return
-
-    // Server ack khi gửi REQUEST
-    socket.on(
-      "CALL_VOICE/REQUEST_ACK",
-      ({ sessionId, delivered }: { sessionId: string; delivered: boolean }) => {
-        useCallStore.getState().setState({ sessionId })
-        if (!delivered) useCallStore.getState().setState({ status: "OFFLINE" })
+  function autoCleanup() {
+    setTimeout(() => {
+      if (!receivedOfferRef.current) {
+        cleanup()
       }
-    )
+    }, AUTO_CLEANUP_TIMEOUT)
+  }
 
-    // Callee: nhận mời gọi
-    socket.on(
-      "CALL_VOICE/INCOMING",
-      ({ sessionId, fromUserId }: { sessionId: string; fromUserId: string }) => {
-        setState({ sessionId, peerUserId: fromUserId, status: "RINGING_IN" })
-      }
-    )
+  function registerSocketListeners() {
+    clientSocket.socket.on(ESocketEvents.call_request, (activeCallSession) => {
+      dispatch(setCallSession(activeCallSession))
+      clientSocket.socket.emit(ESocketEvents.callee_set_session, {
+        sessionId: activeCallSession.id,
+      })
+      autoCleanup()
+    })
 
-    // Trạng thái hệ thống (BUSY/OFFLINE/TIMEOUT/ENDED/ESTABLISHED/ACCEPTED...)
-    socket.on("CALL_VOICE/STATUS", (p: { status: string; message?: string; reason?: string }) => {
-      // gom 1 số mapping tối giản
-      const map: Record<string, any> = {
-        BUSY: "BUSY",
-        OFFLINE: "OFFLINE",
-        TIMEOUT: "TIMEOUT",
-        ENDED: "ENDED",
-        ACCEPTED: "ACCEPTED",
-        ESTABLISHED: "ESTABLISHED",
-        FAILED: "FAILED",
-        RINGING: "RINGING_OUT",
-        REJECTED: "ENDED",
-      }
-      const st = map[p.status] ?? "FAILED"
-      setState({ status: st, reason: p.reason ?? p.message })
-      if (
-        st === "ENDED" ||
-        st === "FAILED" ||
-        st === "TIMEOUT" ||
-        st === "OFFLINE" ||
-        st === "BUSY"
-      ) {
-        // dọn dẹp nếu cần
+    clientSocket.socket.on(ESocketEvents.callee_set_session, () => {
+      sendOffer()
+    })
+
+    clientSocket.socket.on(ESocketEvents.call_status, (status) => {
+      switch (status) {
+        case EVoiceCallStatus.ACCEPTED:
+          break
+        case EVoiceCallStatus.REJECTED:
+          break
+        case EVoiceCallStatus.CANCELLED:
+          break
+        case EVoiceCallStatus.BUSY:
+          break
+        case EVoiceCallStatus.OFFLINE:
+          break
+        case EVoiceCallStatus.TIMEOUT:
+          break
+        case EVoiceCallStatus.ENDED:
+          break
+        case EVoiceCallStatus.RINGING:
+          break
+        case EVoiceCallStatus.REQUESTING:
+          break
       }
     })
 
-    // === Signaling: OFFER → Callee nhận ===
-    socket.on(
-      "CALL_VOICE/OFFER",
-      async ({ sdp, type, sessionId }: SdpPayload & { sessionId: string }) => {
+    clientSocket.socket.on(ESocketEvents.call_offer_answer, async (SDP, type) => {
+      const p2pConnection = p2pConnectionRef.current
+      if (!p2pConnection || !callSession) return
+      if (type === ESDPType.OFFER) {
+        receivedOfferRef.current = true
         await ensurePeer()
         await attachMic()
-        await pcRef.current!.setRemoteDescription({ sdp, type }) // type = "offer"
-        const answer = await pcRef.current!.createAnswer()
-        await pcRef.current!.setLocalDescription(answer)
-        socket.emit("CALL_VOICE/ANSWER", { sessionId, sdp: answer.sdp!, type: "answer" })
+        await p2pConnection.setRemoteDescription({ sdp: SDP, type })
+        const answer = await p2pConnection.createAnswer()
+        await p2pConnection.setLocalDescription(answer)
+        clientSocket.socket.emit(ESocketEvents.call_offer_answer, {
+          sessionId: callSession.id,
+          SDP: answer.sdp!,
+          type: ESDPType.ANSWER,
+        })
+      } else if (type === ESDPType.ANSWER) {
+        await p2pConnection.setRemoteDescription({ sdp: SDP, type })
+        dispatch(updateCallSession({ status: EVoiceCallStatus.CONNECTED }))
+      }
+    })
+
+    clientSocket.socket.on(
+      ESocketEvents.call_ice,
+      async (candidate: string, sdpMid?: string, sdpMLineIndex?: number) => {
+        const p2pConnection = p2pConnectionRef.current
+        if (!p2pConnection) return
+        try {
+          await p2pConnection.addIceCandidate({
+            candidate,
+            sdpMid,
+            sdpMLineIndex,
+          })
+        } catch (error) {
+          toaster.error(
+            error instanceof Error
+              ? error.message
+              : "Failed to establish voice call, please try again later!"
+          )
+        }
       }
     )
-
-    // === Signaling: ANSWER → Caller nhận ===
-    socket.on("CALL_VOICE/ANSWER", async ({ sdp, type }: SdpPayload) => {
-      if (!pcRef.current) return
-      await pcRef.current.setRemoteDescription({ sdp, type }) // type = "answer"
-      useCallStore.getState().setState({ status: "ESTABLISHED" })
-    })
-
-    // === Signaling: ICE (cả 2 chiều) ===
-    socket.on("CALL_VOICE/ICE", async (dto: IcePayload) => {
-      if (!pcRef.current) return
-      try {
-        await pcRef.current.addIceCandidate({
-          candidate: dto.candidate,
-          sdpMid: dto.sdpMid,
-          sdpMLineIndex: dto.sdpMLineIndex,
-        })
-      } catch (e) {
-        console.warn("[ICE] addIceCandidate error", e)
-      }
-    })
-
-    return () => {
-      socket.off("CALL_VOICE/REQUEST_ACK")
-      socket.off("CALL_VOICE/INCOMING")
-      socket.off("CALL_VOICE/STATUS")
-      socket.off("CALL_VOICE/OFFER")
-      socket.off("CALL_VOICE/ANSWER")
-      socket.off("CALL_VOICE/ICE")
-    }
-  }, [socket, setState])
-
-  // Caller tạo OFFER sau khi callee ACCEPT
-  async function sendOfferIfCaller() {
-    if (!pcRef.current) await ensurePeer()
-    await attachMic()
-    const offer = await pcRef.current!.createOffer()
-    await pcRef.current!.setLocalDescription(offer)
-    if (sessionId) {
-      // gửi lên server
-      socket?.emit("CALL_VOICE/OFFER", { sessionId, sdp: offer.sdp!, type: "offer" })
-    }
   }
 
+  useEffect(() => {
+    registerSocketListeners()
+
+    return () => {
+      clientSocket.socket.off(ESocketEvents.call_request)
+      clientSocket.socket.off(ESocketEvents.callee_set_session)
+      clientSocket.socket.off(ESocketEvents.call_status)
+      clientSocket.socket.off(ESocketEvents.call_offer_answer)
+      clientSocket.socket.off(ESocketEvents.call_ice)
+    }
+  }, [])
+
   return {
-    status,
-    sessionId,
-    peerUserId,
     startCall,
     acceptCall,
     rejectCall,
-    hangup,
+    hangupCall,
     cleanup,
-    sendOfferIfCaller,
+    sendOffer,
     getLocalStream,
     getRemoteStream,
   }

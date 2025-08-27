@@ -1,6 +1,11 @@
 import type { HttpStatusCode } from "axios"
 import type { EMessageStatus, EOnlineStatus } from "../socket/enums"
-import type { EFriendRequestStatus, EMessageTypeAllTypes } from "@/utils/enums"
+import type {
+  EFriendRequestStatus,
+  EHangupReason,
+  EMessageTypeAllTypes,
+  ESDPType,
+} from "@/utils/enums"
 import type { TSuccess } from "./global"
 import type { TMessage } from "./be-api"
 
@@ -98,4 +103,43 @@ export type TJoinDirectChatRoomEmitPayload = {
 
 export type TJoinGroupChatRoomEmitPayload = {
   groupChatId: number
+}
+
+export type TCallRequestEmitPayload = {
+  calleeUserId: number
+  directChatId: number
+}
+
+export type TCallRequestEmitRes = {
+  sessionId: string
+}
+
+export type TCallOfferAnswerEmitPayload = {
+  sessionId: string
+  SDP: string
+  type: ESDPType
+}
+
+export type TCallAcceptEmitPayload = {
+  sessionId: string
+}
+
+export type TCallRejectEmitPayload = {
+  sessionId: string
+}
+
+export type TCallHangupEmitPayload = {
+  sessionId: string
+  reason: EHangupReason
+}
+
+export type TCallIceEmitPayload = {
+  sessionId: string
+  candidate: string
+  sdpMid?: string
+  sdpMLineIndex?: number
+}
+
+export type TCallCalleeSetSessionEmitPayload = {
+  sessionId: string
 }

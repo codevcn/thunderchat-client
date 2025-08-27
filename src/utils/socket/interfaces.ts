@@ -5,15 +5,15 @@ import type {
   TDirectChat,
   TMessage,
   TGroupChat,
-  TCallRequestEmitPayload,
 } from "@/utils/types/be-api"
 import type {
+  TActiveVoiceCallSession,
   TSendDirectMessageErrorRes,
   TSocketErrorRes,
   TSuccess,
   TUpdateUserInfoPayload,
 } from "../types/global"
-import { ESocketEvents, ESocketInitEvents } from "./events"
+import type { ESocketEvents, ESocketInitEvents } from "./events"
 import type {
   TChattingPayload,
   TMsgSeenEmitPayload,
@@ -31,9 +31,17 @@ import type {
   TPinGroupMessageEventData,
   TGroupTypingEmitPayload,
   TChattingPayloadForGroup,
+  TCallOfferAnswerEmitPayload,
+  TCallRequestEmitPayload,
+  TCallRequestEmitRes,
+  TCallAcceptEmitPayload,
+  TCallRejectEmitPayload,
+  TCallHangupEmitPayload,
+  TCallIceEmitPayload,
+  TCallCalleeSetSessionEmitPayload,
 } from "../types/socket"
-import { EChatType } from "../enums"
-import { EOnlineStatus } from "./enums"
+import type { EChatType, ESDPType, EVoiceCallStatus } from "../enums"
+import type { EOnlineStatus } from "./enums"
 
 export interface IListenSocketEvents {
   [ESocketEvents.server_hello]: (payload: string) => void
@@ -84,6 +92,11 @@ export interface IListenSocketEvents {
   [ESocketEvents.delete_direct_chat]: (directChatId: number, deleter: TUserWithProfile) => void
   [ESocketEvents.delete_group_chat]: (groupChatId: number) => void
   [ESocketEvents.member_leave_group_chat]: (groupChatId: number, memberId: number) => void
+  [ESocketEvents.call_status]: (status: EVoiceCallStatus) => void
+  [ESocketEvents.call_offer_answer]: (SDP: string, type: ESDPType) => void
+  [ESocketEvents.call_request]: (activeCallSession: TActiveVoiceCallSession) => void
+  [ESocketEvents.callee_set_session]: () => void
+  [ESocketEvents.call_ice]: (candidate: string, sdpMid?: string, sdpMLineIndex?: number) => void
 }
 
 export interface IEmitSocketEvents {
@@ -115,5 +128,14 @@ export interface IEmitSocketEvents {
     payload: TJoinGroupChatRoomEmitPayload,
     cb: (data: TSuccess | TSocketErrorRes) => void
   ) => void
-  [ESocketEvents.call_request]: (payload: TCallRequestEmitPayload) => void
+  [ESocketEvents.call_request]: (
+    payload: TCallRequestEmitPayload,
+    cb: (data: TCallRequestEmitRes) => void
+  ) => void
+  [ESocketEvents.call_offer_answer]: (payload: TCallOfferAnswerEmitPayload) => void
+  [ESocketEvents.call_accept]: (payload: TCallAcceptEmitPayload) => void
+  [ESocketEvents.call_reject]: (payload: TCallRejectEmitPayload) => void
+  [ESocketEvents.call_hangup]: (payload: TCallHangupEmitPayload) => void
+  [ESocketEvents.call_ice]: (payload: TCallIceEmitPayload) => void
+  [ESocketEvents.callee_set_session]: (payload: TCallCalleeSetSessionEmitPayload) => void
 }

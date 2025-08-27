@@ -161,5 +161,24 @@ export enum EVoiceCallStatus {
   ACCEPTED = "ACCEPTED",
   CONNECTED = "CONNECTED",
   ENDED = "ENDED",
+  REJECTED = "REJECTED",
+  CANCELLED = "CANCELLED",
   TIMEOUT = "TIMEOUT",
+  BUSY = "BUSY",
+  OFFLINE = "OFFLINE",
+}
+
+export enum ESDPType {
+  OFFER = "offer",
+  ANSWER = "answer",
+  PRANSWER = "pranswer",
+  ROLLBACK = "rollback",
+}
+
+export enum EHangupReason {
+  NORMAL = "NORMAL",
+  NETWORK_ERROR = "NETWORK_ERROR",
+  ICE_FAILED = "ICE_FAILED",
+  PEER_LEFT = "PEER_LEFT",
+  UNKNOWN = "UNKNOWN",
 }

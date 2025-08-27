@@ -827,8 +827,3 @@ export type TUnsubscribePushNotificationParams = {
 export type TGetPublicVapidKeyRes = {
   publicKey: string
 }
-
-export type TCallRequestEmitPayload = {
-  calleeUserId: number
-  directChatId: number
-}

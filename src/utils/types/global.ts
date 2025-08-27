@@ -7,7 +7,7 @@ import type {
   TPinnedChat,
   TPushNotificationSubscription,
 } from "@/utils/types/be-api"
-import type { EChatType, EMessageMediaTypes, EMessageTypes } from "../enums"
+import type { EChatType, EMessageMediaTypes, EMessageTypes, EVoiceCallStatus } from "../enums"
 import type { Socket } from "socket.io-client"
 
 export type TStateMessage = TMessageFullInfo & {
@@ -62,6 +62,8 @@ export type TUnknownObject = {
 }
 
 export type TUnknownFunction<P, R> = (...args: P[]) => R
+
+export type TNoParamsFunction<R> = () => R
 
 export type TSocketErrorRes = {
   isError: boolean
@@ -214,4 +216,12 @@ export type TSubscribePushNotificationRes = {
 
 export type TUnsubscribePushNotificationRes = {
   oldSubscription: PushSubscription | null
+}
+
+export type TActiveVoiceCallSession = {
+  id: string
+  status: EVoiceCallStatus
+  callerUserId: number
+  calleeUserId: number
+  directChatId: number
 }

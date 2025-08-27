@@ -109,7 +109,7 @@ export const ReportModal = ({
               fileSize: 0,
               fileName: "",
               thumbnailUrl: "",
-              createdAt: new Date(),
+              createdAt: new Date().toISOString(),
             }
           : null,
         Sticker:

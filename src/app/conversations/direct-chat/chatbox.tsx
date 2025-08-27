@@ -167,7 +167,7 @@ const Header = ({
           </div>
         </CustomTooltip>
 
-        <VoiceCall canSend={canSend} />
+        <VoiceCall canSend={canSend} directChatId={directChatId} />
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
           <div>

@@ -69,7 +69,7 @@ export function usePushNotification(): TUsePushNotification {
       // Tạo subscription mới
       const newSub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey.publicKey),
+        applicationServerKey: new Uint8Array(urlBase64ToUint8Array(vapidPublicKey.publicKey)),
       })
 
       // Gửi subscription mới lên server

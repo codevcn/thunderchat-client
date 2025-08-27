@@ -5,8 +5,9 @@ import type {
   EHangupReason,
   EMessageTypeAllTypes,
   ESDPType,
+  EVoiceCallStatus,
 } from "@/utils/enums"
-import type { TSuccess } from "./global"
+import type { TActiveVoiceCallSession, TSuccess } from "./global"
 import type { TMessage } from "./be-api"
 
 export type TWsErrorResponse = {
@@ -111,7 +112,8 @@ export type TCallRequestEmitPayload = {
 }
 
 export type TCallRequestEmitRes = {
-  sessionId: string
+  status: EVoiceCallStatus
+  session?: TActiveVoiceCallSession
 }
 
 export type TCallOfferAnswerEmitPayload = {

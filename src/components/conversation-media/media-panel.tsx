@@ -196,7 +196,7 @@ const MediaPanel = React.memo(() => {
           type: EMessageMediaTypes.AUDIO,
           fileSize: voiceMessage.fileSize,
           thumbnailUrl: voiceMessage.thumbnailUrl,
-          createdAt: new Date(voiceMessage.createdAt),
+          createdAt: voiceMessage.createdAt,
         },
         Sticker: null,
         isViolated: voiceMessage.isViolated,

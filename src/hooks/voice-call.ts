@@ -51,7 +51,6 @@ export function useVoiceCall() {
         }
         remoteStreamRef.current.addTrack(track)
       })
-      // gán vào thẻ audio bên ngoài qua getter getRemoteStream()
     }
 
     // Khi nhận được candidate từ peer khác, gửi lại cho peer

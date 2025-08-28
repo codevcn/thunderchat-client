@@ -141,7 +141,3 @@ export type TCallIceEmitPayload = {
   sdpMid?: string
   sdpMLineIndex?: number
 }
-
-export type TCallCalleeSetSessionEmitPayload = {
-  sessionId: string
-}

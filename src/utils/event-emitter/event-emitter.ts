@@ -3,6 +3,7 @@ import type { EInternalEvents } from "./events"
 import type { TMsgContent } from "./types"
 import type { TGetMessagesMessage, TGetFriendRequestsData, TGroupChat } from "../types/be-api"
 import type { EChatType } from "../enums"
+import type { TEmitLogMessage } from "../types/global"
 
 interface IEventEmitter {
   [EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION]: () => void
@@ -26,6 +27,9 @@ interface IEventEmitter {
   [EInternalEvents.SEND_MESSAGE]: () => void
   [EInternalEvents.ADD_GROUP_CHAT_MEMBERS]: (newMemberIds: number[], groupChat: TGroupChat) => void
   [EInternalEvents.JOIN_CHAT_ROOM_FOR_CONVERSATIONS]: () => void
+  [EInternalEvents.VOICE_CALL_REQUEST_RECEIVED]: () => void
+  [EInternalEvents.EMIT_LOG]: (messages: TEmitLogMessage[]) => void
+  [EInternalEvents.INIT_REMOTE_STREAM]: () => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

@@ -9,7 +9,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { SwitchChatbox } from "./switch-chatbox"
 import type { TGetMessagesMessage, TGroupChat } from "@/utils/types/be-api"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import { STATIC_CHAT_BACKGROUND_URL } from "@/utils/UI-constants"
 import {
   removeGroupChatMembers,
@@ -136,32 +136,38 @@ const ConversationPage = () => {
 
   useEffect(() => {
     document.body.addEventListener("click", handleClickOnLayout)
-    clientSocket.socket.on(ESocketEvents.update_group_chat_info, listenUpdateGroupChatInfo)
-    clientSocket.socket.on(ESocketEvents.remove_group_chat_members, listenRemoveGroupChatMembers)
-    clientSocket.socket.on(ESocketEvents.add_group_chat_members, listenAddGroupChatMembers)
-    clientSocket.socket.on(ESocketEvents.send_message_direct, listenSendDirectMessage)
-    clientSocket.socket.on(ESocketEvents.send_message_group, listenSendGroupMessage)
-    clientSocket.socket.on(ESocketEvents.update_user_info, listenUpdateUserInfo)
-    clientSocket.socket.on(ESocketEvents.member_leave_group_chat, listenMemberLeaveGroupChat)
+    clientSocket.socket.on(EMessagingEvents.update_group_chat_info, listenUpdateGroupChatInfo)
+    clientSocket.socket.on(EMessagingEvents.remove_group_chat_members, listenRemoveGroupChatMembers)
+    clientSocket.socket.on(EMessagingEvents.add_group_chat_members, listenAddGroupChatMembers)
+    clientSocket.socket.on(EMessagingEvents.send_message_direct, listenSendDirectMessage)
+    clientSocket.socket.on(EMessagingEvents.send_message_group, listenSendGroupMessage)
+    clientSocket.socket.on(EMessagingEvents.update_user_info, listenUpdateUserInfo)
+    clientSocket.socket.on(EMessagingEvents.member_leave_group_chat, listenMemberLeaveGroupChat)
     return () => {
       document.body.removeEventListener("click", handleClickOnLayout)
       clientSocket.socket.removeListener(
-        ESocketEvents.update_group_chat_info,
+        EMessagingEvents.update_group_chat_info,
         listenUpdateGroupChatInfo
       )
       clientSocket.socket.removeListener(
-        ESocketEvents.remove_group_chat_members,
+        EMessagingEvents.remove_group_chat_members,
         listenRemoveGroupChatMembers
       )
       clientSocket.socket.removeListener(
-        ESocketEvents.add_group_chat_members,
+        EMessagingEvents.add_group_chat_members,
         listenAddGroupChatMembers
       )
-      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, listenSendDirectMessage)
-      clientSocket.socket.removeListener(ESocketEvents.send_message_group, listenSendGroupMessage)
-      clientSocket.socket.removeListener(ESocketEvents.update_user_info, listenUpdateUserInfo)
       clientSocket.socket.removeListener(
-        ESocketEvents.member_leave_group_chat,
+        EMessagingEvents.send_message_direct,
+        listenSendDirectMessage
+      )
+      clientSocket.socket.removeListener(
+        EMessagingEvents.send_message_group,
+        listenSendGroupMessage
+      )
+      clientSocket.socket.removeListener(EMessagingEvents.update_user_info, listenUpdateUserInfo)
+      clientSocket.socket.removeListener(
+        EMessagingEvents.member_leave_group_chat,
         listenMemberLeaveGroupChat
       )
     }

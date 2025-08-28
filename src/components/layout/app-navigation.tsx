@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Settings, MessageCircle, Users } from "lucide-react"
+import { Home, Settings, MessageCircle, Users, Phone } from "lucide-react"
 import Link from "next/link"
 import { memo, JSX, useEffect, useState } from "react"
 import { CounterBadge, CustomAvatar, CustomTooltip } from "../materials"
@@ -8,7 +8,7 @@ import { useAccountModal } from "@/contexts/account-modal.context"
 import { useUser } from "@/hooks/user"
 import { useAppSelector } from "@/hooks/redux"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TGetFriendRequestsData, TUserWithProfile } from "@/utils/types/be-api"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
@@ -39,6 +39,11 @@ const navs = (unreadFriendRequestsCount: number): TNav[] => [
     href: "/friends",
     icon: <Users size={20} color="white" />,
     counter: unreadFriendRequestsCount,
+  },
+  {
+    label: "Voice Call",
+    href: "/dev/voice-call",
+    icon: <Phone size={20} color="white" />,
   },
 ]
 
@@ -78,9 +83,9 @@ export const AppNavigation = memo(() => {
   }, [pathname])
 
   useEffect(() => {
-    clientSocket.socket.on(ESocketEvents.send_friend_request, listenFriendRequest)
+    clientSocket.socket.on(EMessagingEvents.send_friend_request, listenFriendRequest)
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.send_friend_request, listenFriendRequest)
+      clientSocket.socket.removeListener(EMessagingEvents.send_friend_request, listenFriendRequest)
     }
   }, [])
 

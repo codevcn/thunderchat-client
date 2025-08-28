@@ -3,7 +3,7 @@ import { useAppSelector } from "./redux"
 import { messageService } from "@/services/message.service"
 import { EMessageMediaTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TMessage, TMessageFullInfo } from "@/utils/types/be-api"
 
 export const useMediaMessages = () => {
@@ -153,9 +153,9 @@ export const useMediaMessages = () => {
   useEffect(() => {
     if (!directChat?.id) return
 
-    clientSocket.socket.on(ESocketEvents.send_message_direct, handleMessageUpdate)
+    clientSocket.socket.on(EMessagingEvents.send_message_direct, handleMessageUpdate)
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, handleMessageUpdate)
+      clientSocket.socket.removeListener(EMessagingEvents.send_message_direct, handleMessageUpdate)
     }
   }, [directChat?.id, handleMessageUpdate])
 

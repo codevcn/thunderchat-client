@@ -10,7 +10,7 @@ import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TGroupChatData, TUserWithProfile } from "@/utils/types/be-api"
 import { VoiceMessagePlayer } from "../../../components/voice-message/voice-message-player-props"
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
@@ -137,9 +137,9 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
 
   useEffect(() => {
     resetTyping()
-    clientSocket.socket.on(ESocketEvents.typing_group, handleTypingMessage)
+    clientSocket.socket.on(EMessagingEvents.typing_group, handleTypingMessage)
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.typing_group, handleTypingMessage)
+      clientSocket.socket.removeListener(EMessagingEvents.typing_group, handleTypingMessage)
     }
   }, [groupChatId])
 
@@ -230,7 +230,7 @@ const Main = ({ groupChat }: TMainProps) => {
   }
 
   const joinGroupChatRoom = () => {
-    clientSocket.socket.emit(ESocketEvents.join_group_chat_room, { groupChatId }, () => {})
+    clientSocket.socket.emit(EMessagingEvents.join_group_chat_room, { groupChatId }, () => {})
   }
 
   const fetchGroupChatPermissions = async () => {
@@ -253,7 +253,7 @@ const Main = ({ groupChat }: TMainProps) => {
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
     // Remove toàn bộ listener cũ trước khi đăng ký mới
-    clientSocket.socket.off(ESocketEvents.pin_message_group)
+    clientSocket.socket.off(EMessagingEvents.pin_message_group)
 
     const handlePinMessage = (data: TPinGroupMessageEventData) => {
       const currentChatId = groupChatIdRef.current
@@ -277,10 +277,10 @@ const Main = ({ groupChat }: TMainProps) => {
       }
     }
 
-    clientSocket.socket.on(ESocketEvents.pin_message_group, handlePinMessage)
+    clientSocket.socket.on(EMessagingEvents.pin_message_group, handlePinMessage)
     return () => {
       resetAllChatDataHandler()
-      clientSocket.socket.off(ESocketEvents.pin_message_group, handlePinMessage)
+      clientSocket.socket.off(EMessagingEvents.pin_message_group, handlePinMessage)
       // Cleanup timeout
       if (fetchPinnedTimeoutRef.current) {
         clearTimeout(fetchPinnedTimeoutRef.current)

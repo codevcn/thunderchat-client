@@ -1,7 +1,7 @@
 import { ObjectQueue } from "@/utils/algorithms/queue"
 import { EMessageTypeAllTypes } from "@/utils/enums"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TChattingPayload, TChattingPayloadForGroup } from "@/utils/types/socket"
 import type { TSendMessageCallback } from "@/utils/types/global"
 
@@ -28,7 +28,7 @@ class ChattingService {
       if (this.getAcknowledgmentFlag()) {
         this.setAcknowledgmentFlag(false)
         clientSocket.socket.timeout(this.MAX_TIMEOUT_MESSAGING).emit(
-          ESocketEvents.send_message_direct,
+          EMessagingEvents.send_message_direct,
           {
             type,
             msgPayload: message,
@@ -65,7 +65,7 @@ class ChattingService {
       if (this.getAcknowledgmentFlag()) {
         this.setAcknowledgmentFlag(false)
         clientSocket.socket.timeout(this.MAX_TIMEOUT_MESSAGING).emit(
-          ESocketEvents.send_message_group,
+          EMessagingEvents.send_message_group,
           {
             type,
             msgPayload: message,

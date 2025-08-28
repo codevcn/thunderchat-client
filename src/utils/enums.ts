@@ -182,3 +182,8 @@ export enum EHangupReason {
   PEER_LEFT = "PEER_LEFT",
   UNKNOWN = "UNKNOWN",
 }
+
+export enum ESocketNamespaces {
+  messaging = "messaging",
+  voice_call = "voice_call",
+}

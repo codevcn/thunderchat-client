@@ -10,7 +10,7 @@ import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { TypeMessageBar } from "./type-message-bar"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TDirectChatData, TUserWithProfile } from "@/utils/types/be-api"
 import { VoiceMessagePlayer } from "../../../components/voice-message/voice-message-player-props"
 import { VoicePlayerProvider, useVoicePlayer } from "@/contexts/voice-player.context"
@@ -102,7 +102,7 @@ const Header = ({
 
   const checkFriendOnlineStatus = () => {
     clientSocket.socket.emit(
-      ESocketEvents.check_user_online_status,
+      EMessagingEvents.check_user_online_status,
       { userId: friendId },
       (data: TCheckUserOnlineStatusRes) => {
         setFriendOnlineStatus(data.onlineStatus)
@@ -113,10 +113,13 @@ const Header = ({
   useEffect(() => {
     resetTyping()
     checkFriendOnlineStatus()
-    clientSocket.socket.on(ESocketEvents.broadcast_user_online_status, listenBroadcastFriendOnline)
-    clientSocket.socket.on(ESocketEvents.typing_direct, handleTypingMessage)
+    clientSocket.socket.on(
+      EMessagingEvents.broadcast_user_online_status,
+      listenBroadcastFriendOnline
+    )
+    clientSocket.socket.on(EMessagingEvents.typing_direct, handleTypingMessage)
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.typing_direct, handleTypingMessage)
+      clientSocket.socket.removeListener(EMessagingEvents.typing_direct, handleTypingMessage)
     }
   }, [directChatId])
 
@@ -214,7 +217,7 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
 
   const joinDirectChatRoom = () => {
     if (directChatId === -1) return
-    clientSocket.socket.emit(ESocketEvents.join_direct_chat_room, { directChatId }, () => {})
+    clientSocket.socket.emit(EMessagingEvents.join_direct_chat_room, { directChatId }, () => {})
   }
 
   useEffect(() => {
@@ -225,7 +228,7 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
     // Remove toàn bộ listener cũ trước khi đăng ký mới
-    clientSocket.socket.off(ESocketEvents.pin_message)
+    clientSocket.socket.off(EMessagingEvents.pin_message)
     const handlePinMessage = (data: TPinMessageEventData) => {
       const currentChatId = directChatIdRef.current
 
@@ -249,10 +252,10 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
         }, 500) // Delay 500ms
       }
     }
-    clientSocket.socket.on(ESocketEvents.pin_message, handlePinMessage)
+    clientSocket.socket.on(EMessagingEvents.pin_message, handlePinMessage)
     return () => {
       resetAllChatDataHandler()
-      clientSocket.socket.off(ESocketEvents.pin_message, handlePinMessage)
+      clientSocket.socket.off(EMessagingEvents.pin_message, handlePinMessage)
       // Cleanup timeout
       if (fetchPinnedTimeoutRef.current) {
         clearTimeout(fetchPinnedTimeoutRef.current)

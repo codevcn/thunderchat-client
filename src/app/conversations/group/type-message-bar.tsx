@@ -18,7 +18,7 @@ import { memo, useEffect, useRef, useState } from "react"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type {
   TGroupChat,
   TGroupChatData,
@@ -579,10 +579,10 @@ export const TypeMessageBar = memo(
 
     useEffect(() => {
       eventEmitter.on(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, handleRemoveGroupChatMembers)
-      clientSocket.socket.on(ESocketEvents.delete_group_chat, listenDeleteGroupChat)
+      clientSocket.socket.on(EMessagingEvents.delete_group_chat, listenDeleteGroupChat)
       return () => {
         eventEmitter.off(EInternalEvents.REMOVE_GROUP_CHAT_MEMBERS, handleRemoveGroupChatMembers)
-        clientSocket.socket.off(ESocketEvents.delete_group_chat, listenDeleteGroupChat)
+        clientSocket.socket.off(EMessagingEvents.delete_group_chat, listenDeleteGroupChat)
       }
     }, [])
 

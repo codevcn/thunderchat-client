@@ -1,14 +1,15 @@
 export enum ESocketInitEvents {
   connect_error = "connect_error",
   connect = "connect",
+  error = "error",
 }
 
-export enum ESocketEvents {
+// dùng cho cả emit và listen
+export enum EMessagingEvents {
   server_hello = "server_hello",
   client_hello = "client_hello",
   send_message_direct = "send_message:direct",
   send_message_group = "send_message:group",
-  error = "error",
   send_friend_request = "friend_request:send",
   recovered_connection = "recovered_connection",
   message_seen_direct = "message_seen:direct",
@@ -31,10 +32,15 @@ export enum ESocketEvents {
   delete_direct_chat = "delete_direct_chat",
   delete_group_chat = "delete_group_chat",
   member_leave_group_chat = "member_leave_group_chat",
+}
+
+// dùng cho cả emit và listen
+export enum EVoiceCallEvents {
+  server_hello = "server_hello",
+  client_hello = "client_hello",
   call_request = "voice_call:request",
   call_status = "voice_call:status",
   call_offer_answer = "voice_call:offer_answer",
-  callee_set_session = "callee_set_session",
   call_accept = "voice_call:accept",
   call_reject = "voice_call:reject",
   call_hangup = "voice_call:hangup",

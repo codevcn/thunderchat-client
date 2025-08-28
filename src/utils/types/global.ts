@@ -225,3 +225,12 @@ export type TActiveVoiceCallSession = {
   calleeUserId: number
   directChatId: number
 }
+
+export type TEmitLogMessage = {
+  order: number
+  message: string
+}
+
+export type TEmitLogStaticConst = {
+  ORDER: number
+}

@@ -11,7 +11,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TGroupChat, TSticker } from "@/utils/types/be-api"
 import type { TEmoji } from "@/utils/types/global"
 import { EMessageTypeAllTypes } from "@/utils/enums"
@@ -213,7 +213,7 @@ export const MessageTextField = ({
   const debounce = useCustomDebounce(typingFlagRef)
 
   const indicateUserIsTyping = debounce((type: TTypingFlags) => {
-    clientSocket.socket.emit(ESocketEvents.typing_group, {
+    clientSocket.socket.emit(EMessagingEvents.typing_group, {
       groupChatId,
       isTyping: type === "typing",
     })

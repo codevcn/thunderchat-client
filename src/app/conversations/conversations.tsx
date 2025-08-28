@@ -30,7 +30,7 @@ import { useUser } from "@/hooks/user"
 import { useNavToConversation } from "@/hooks/navigation"
 import { updateDirectChat } from "@/redux/messages/messages.slice"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { localStorageManager } from "@/utils/local-storage"
@@ -357,12 +357,12 @@ const ConversationCards = () => {
 
   useEffect(() => {
     fetchPinChatsByUserId()
-    clientSocket.socket.on(ESocketEvents.new_conversation, listenNewConversation)
+    clientSocket.socket.on(EMessagingEvents.new_conversation, listenNewConversation)
     // @ts-ignore
     eventEmitter.on(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
     eventEmitter.on(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
     return () => {
-      clientSocket.socket.off(ESocketEvents.new_conversation, listenNewConversation)
+      clientSocket.socket.off(EMessagingEvents.new_conversation, listenNewConversation)
       eventEmitter.removeListener(EInternalEvents.UNREAD_MESSAGES_COUNT, listenUnreadMessagesCount)
       eventEmitter.removeListener(EInternalEvents.SEND_MESSAGE_DIRECT, listenSendMessage)
     }

@@ -25,7 +25,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { handleEventDelegation } from "@/utils/helpers"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TFriendRequestPayload } from "@/utils/types/socket"
 import { friendRequestService } from "@/services/friend-request.service"
 import { toaster } from "@/utils/toaster"
@@ -319,7 +319,7 @@ export const FriendRequests = () => {
         fetchFriendRequests()
       }
     }
-    clientSocket.socket.on(ESocketEvents.friend_request_action, listenFriendRequestAction)
+    clientSocket.socket.on(EMessagingEvents.friend_request_action, listenFriendRequestAction)
     eventEmitter.on(EInternalEvents.SEND_FRIEND_REQUEST, listenSendFriendRequest)
     eventEmitter.on(EInternalEvents.FRIEND_REMOVED, listenFriendRemoved)
     return () => {

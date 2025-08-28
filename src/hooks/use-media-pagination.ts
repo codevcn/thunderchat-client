@@ -4,7 +4,7 @@ import type { TMediaItem, TMediaFilters, TMessageFullInfo } from "@/utils/types/
 import type { TMediaPaginationState } from "@/utils/types/fe-api"
 import type { TGetMediaMessagesResponse } from "@/utils/types/be-api"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import { EMessageMediaTypes, EMessageTypes } from "@/utils/enums"
 import type { TMessage } from "@/utils/types/be-api"
 
@@ -425,10 +425,10 @@ export const useMediaPagination = ({
     if (!directChatId) return
 
     // Lắng nghe tin nhắn mới/cập nhật từ socket
-    clientSocket.socket.on(ESocketEvents.send_message_direct, handleMessageUpdate)
+    clientSocket.socket.on(EMessagingEvents.send_message_direct, handleMessageUpdate)
 
     return () => {
-      clientSocket.socket.removeListener(ESocketEvents.send_message_direct, handleMessageUpdate)
+      clientSocket.socket.removeListener(EMessagingEvents.send_message_direct, handleMessageUpdate)
     }
   }, [directChatId, handleMessageUpdate])
 

@@ -5,17 +5,17 @@ import { EAuthStatus } from "@/utils/enums"
 import { useAuth } from "@/hooks/auth"
 import { useUser } from "@/hooks/user"
 import { chattingService } from "@/services/chatting.service"
-import { ESocketEvents, ESocketInitEvents } from "@/utils/socket/events"
+import { EMessagingEvents, ESocketInitEvents, EVoiceCallEvents } from "@/utils/socket/events"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { toast } from "sonner"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
+import { toaster } from "@/utils/toaster"
 
 export const SocketProvider = ({ children }: { children: JSX.Element }) => {
   const { authStatus } = useAuth()
   const user = useUser()
 
-  const handleConnectSocket = (connected: boolean) => {
+  const handleConnectMessagingSocket = (connected: boolean) => {
     if (connected) {
       clientSocket.socket.connect()
     } else {
@@ -23,43 +23,91 @@ export const SocketProvider = ({ children }: { children: JSX.Element }) => {
     }
   }
 
-  useEffect(() => {
+  const initMessagingSocketConnection = () => {
     if (authStatus === EAuthStatus.AUTHENTICATED && user) {
-      clientSocket.socket.on(ESocketEvents.server_hello, (payload) => {
-        console.log(">>> Server hello:", payload)
+      clientSocket.socket.on(EMessagingEvents.server_hello, (payload) => {
+        console.log(">>> Server hello (at messaging):", payload)
         eventEmitter.emit(EInternalEvents.JOIN_CHAT_ROOM_FOR_CONVERSATIONS)
       })
-
       clientSocket.socket.on(ESocketInitEvents.connect, () => {
-        console.log(">>> Socket connected to server")
+        console.log(">>> Socket connected to server (at messaging)")
         chattingService.sendOfflineMessages()
-        console.log(">>> Check socket connected:", clientSocket.socket.connected)
-        handleConnectSocket(true)
-        clientSocket.socket.emit(ESocketEvents.client_hello, "VCN Hello", (data) => {
-          console.log(">>> Client hello response:", data)
-        })
+        clientSocket.socket.emit(
+          EMessagingEvents.client_hello,
+          "VCN Client Hello - " + (user?.Profile.fullName || ""),
+          (data) => {
+            console.log(">>> Client hello response (at messaging):", data)
+          }
+        )
       })
-
       clientSocket.socket.on(ESocketInitEvents.connect_error, (error) => {
-        console.log(">>> Socket fails to connect to server >>>", error)
-        toast.error("Something went wrong! Can't connect to Server")
+        console.log(">>> Socket fails to connect to server (at messaging) >>>", error)
+        toaster.error("Something went wrong! Can't connect to Server")
+      })
+      clientSocket.socket.on(ESocketInitEvents.error, (payload) => {
+        toaster.error(payload.message)
       })
 
-      clientSocket.socket.on(ESocketEvents.error, (payload) => {
-        toast.error(payload.message)
-      })
-
-      clientSocket.setAuth(user.id)
-      handleConnectSocket(true)
+      clientSocket.setSocketAuth(user.id)
+      handleConnectMessagingSocket(true)
     } else if (authStatus === EAuthStatus.UNAUTHENTICATED) {
-      handleConnectSocket(false)
+      handleConnectMessagingSocket(false)
     }
+  }
+
+  const handleConnectVoiceCallSocket = (connected: boolean) => {
+    if (connected) {
+      clientSocket.voiceCallSocket.connect()
+    } else {
+      clientSocket.voiceCallSocket.disconnect()
+    }
+  }
+
+  const initVoiceCallSocketConnection = () => {
+    if (authStatus === EAuthStatus.AUTHENTICATED && user) {
+      clientSocket.voiceCallSocket.on(ESocketInitEvents.connect, () => {
+        console.log(">>> Socket connected to server (at voice call)")
+        clientSocket.voiceCallSocket.emit(
+          EVoiceCallEvents.client_hello,
+          "VCN Client Hello - " + user.Profile.fullName,
+          (data) => {
+            console.log(">>> Client hello response (at voice call):", data)
+          }
+        )
+      })
+      clientSocket.voiceCallSocket.on(ESocketInitEvents.connect_error, (error) => {
+        console.log(">>> Socket fails to connect to server (at voice call) >>>", error)
+        toaster.error("Something went wrong! Can't connect to Server")
+      })
+      clientSocket.voiceCallSocket.on(ESocketInitEvents.error, (error) => {
+        console.log(">>> Socket fails to connect to server (at voice call) >>>", error)
+        toaster.error(error.message)
+      })
+      clientSocket.voiceCallSocket.on(EVoiceCallEvents.server_hello, (payload) => {
+        console.log(">>> Server hello (at voice call):", payload)
+      })
+
+      clientSocket.setVoiceCallSocketAuth(user.id)
+      handleConnectVoiceCallSocket(true)
+    } else {
+      handleConnectVoiceCallSocket(false)
+    }
+  }
+
+  useEffect(() => {
+    initMessagingSocketConnection()
+    initVoiceCallSocketConnection()
     return () => {
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect)
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect_error)
-      clientSocket.socket.removeAllListeners(ESocketEvents.error)
+      clientSocket.socket.removeAllListeners(ESocketInitEvents.error)
+      clientSocket.socket.removeAllListeners(EMessagingEvents.server_hello)
+      clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect)
+      clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect_error)
+      clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.error)
+      clientSocket.voiceCallSocket.removeAllListeners(EVoiceCallEvents.server_hello)
     }
-  }, [authStatus])
+  }, [authStatus, user])
 
   return children
 }

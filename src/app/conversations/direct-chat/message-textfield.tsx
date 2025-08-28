@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import type { TDirectChat } from "@/utils/types/be-api"
 import { EMessageTypeAllTypes } from "@/utils/enums"
 import { toast } from "sonner"
@@ -65,7 +65,7 @@ export const MessageTextField = ({
   const debounce = useCustomDebounce(typingFlagRef)
 
   const indicateUserIsTyping = debounce((type: TTypingFlags) => {
-    clientSocket.socket.emit(ESocketEvents.typing_direct, {
+    clientSocket.socket.emit(EMessagingEvents.typing_direct, {
       receiverId: recipientId === user.id ? creatorId : recipientId,
       isTyping: type === "typing",
       directChatId: directChat.id,

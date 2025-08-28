@@ -20,7 +20,7 @@ import { displayMessageStickyTime } from "@/utils/date-time"
 import axiosErrorHandler from "@/utils/axios-error-handler"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import type { TGroupChatData } from "@/utils/types/be-api"
 import type { TMsgSeenListenPayload } from "@/utils/types/socket"
@@ -428,7 +428,7 @@ export const Messages = memo(
           groupChatId,
           EChatType.GROUP
         )
-        clientSocket.socket.emit(ESocketEvents.message_seen_group, {
+        clientSocket.socket.emit(EMessagingEvents.message_seen_group, {
           messageId: msgId,
           groupChatId,
         })
@@ -670,8 +670,8 @@ export const Messages = memo(
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)
       eventEmitter.on(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
       eventEmitter.on(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
-      clientSocket.socket.on(ESocketEvents.recovered_connection, handleRecoverdConnection)
-      clientSocket.socket.on(ESocketEvents.message_seen_group, handleMessageSeen)
+      clientSocket.socket.on(EMessagingEvents.recovered_connection, handleRecoverdConnection)
+      clientSocket.socket.on(EMessagingEvents.message_seen_group, handleMessageSeen)
       return () => {
         resetAllChatDataHandler()
         messagesContainer.current?.removeEventListener("scroll", handleScrollMsgsContainer)
@@ -679,10 +679,10 @@ export const Messages = memo(
         eventEmitter.off(EInternalEvents.SCROLL_TO_BOTTOM_MSG_ACTION, handleScrollToBottomMsg)
         eventEmitter.off(EInternalEvents.SCROLL_TO_MESSAGE_MEDIA, handleScrollToMessageMedia)
         clientSocket.socket.removeListener(
-          ESocketEvents.recovered_connection,
+          EMessagingEvents.recovered_connection,
           handleRecoverdConnection
         )
-        clientSocket.socket.removeListener(ESocketEvents.message_seen_group, handleMessageSeen)
+        clientSocket.socket.removeListener(EMessagingEvents.message_seen_group, handleMessageSeen)
       }
     }, [])
 

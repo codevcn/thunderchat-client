@@ -1,5 +1,5 @@
 import dayjs from "dayjs"
-import type { TEmoji, TFormData, THighlightOffsets } from "./types/global"
+import type { TEmitLogMessage, TEmoji, TFormData, THighlightOffsets } from "./types/global"
 import DOMPurify from "dompurify"
 import type { TDeepPartial, THierarchyKeyObject } from "./types/utility-types"
 import {
@@ -12,9 +12,12 @@ import {
 import type { TGroupChat, TGroupChatMember, TGroupChatPermissionState, TUser } from "./types/be-api"
 import type { TMemberPermissionRenderingResult } from "./types/global"
 import { clientSocket } from "./socket/client-socket"
-import { ESocketEvents } from "./socket/events"
+import { EMessagingEvents } from "./socket/events"
 import { EChatType } from "./enums"
 import { toaster } from "./toaster"
+import { eventEmitter } from "./event-emitter/event-emitter"
+import { EInternalEvents } from "./event-emitter/events"
+import { STATIC_EMIT_LOG_ORDER } from "./UI-constants"
 
 const NEXT_PUBLIC_SERVER_HOST =
   process.env.NODE_ENV === "production"
@@ -329,7 +332,7 @@ export const processPinNoticeContent = (text: string): string => {
 export const joinChatRoom = (chatId: number, chatType: EChatType) => {
   if (chatType === EChatType.DIRECT) {
     clientSocket.socket.emit(
-      ESocketEvents.join_direct_chat_room,
+      EMessagingEvents.join_direct_chat_room,
       { directChatId: chatId },
       (data) => {
         if (data && "isError" in data) {
@@ -339,7 +342,7 @@ export const joinChatRoom = (chatId: number, chatType: EChatType) => {
     )
   } else {
     clientSocket.socket.emit(
-      ESocketEvents.join_group_chat_room,
+      EMessagingEvents.join_group_chat_room,
       { groupChatId: chatId },
       (data) => {
         if (data && "isError" in data) {
@@ -348,4 +351,19 @@ export const joinChatRoom = (chatId: number, chatType: EChatType) => {
       }
     )
   }
+}
+
+export const emitLog = (...messages: string[]) => {
+  eventEmitter.emit(
+    EInternalEvents.EMIT_LOG,
+    messages.map((message) => ({
+      order: STATIC_EMIT_LOG_ORDER.ORDER++,
+      message,
+    }))
+  )
+}
+
+export const sortEmitLogs = (logs: TEmitLogMessage[]): TEmitLogMessage[] => {
+  // sort by order ascending
+  return logs.sort((a, b) => a.order - b.order)
 }

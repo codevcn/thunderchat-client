@@ -33,7 +33,7 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { MessageTextField } from "./message-textfield"
 import { ExpressionPicker } from "./expression-picker"
 import { clientSocket } from "@/utils/socket/client-socket"
-import { ESocketEvents } from "@/utils/socket/events"
+import { EMessagingEvents } from "@/utils/socket/events"
 
 const fileOptions = [
   { icon: <ImageIcon size={20} />, label: "Photo or video", value: "photo" },
@@ -540,9 +540,9 @@ export const TypeMessageBar = memo(
     }
 
     useEffect(() => {
-      clientSocket.socket.on(ESocketEvents.delete_direct_chat, listenDeleteDirectChat)
+      clientSocket.socket.on(EMessagingEvents.delete_direct_chat, listenDeleteDirectChat)
       return () => {
-        clientSocket.socket.off(ESocketEvents.delete_direct_chat, listenDeleteDirectChat)
+        clientSocket.socket.off(EMessagingEvents.delete_direct_chat, listenDeleteDirectChat)
       }
     }, [])
 

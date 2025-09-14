@@ -29,7 +29,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EOnlineStatus } from "@/utils/socket/enums"
 import { userService } from "@/services/user.service"
 import { setOpenConvsList } from "@/redux/layout/layout.slice"
-import { VoiceCall } from "./voice-call"
+// import { VoiceCall } from "./voice-call"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -170,7 +170,7 @@ const Header = ({
           </div>
         </CustomTooltip>
 
-        <VoiceCall canSend={canSend} directChatId={directChatId} />
+        {/* <VoiceCall canSend={canSend} directChatId={directChatId} /> */}
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
           <div>

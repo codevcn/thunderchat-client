@@ -62,9 +62,14 @@ export function useVoiceCall() {
 
     // Khi nhận được audio track từ peer khác, thêm vào remoteStreamRef, cho phép nghe được audio từ peer khác
     p2pConnectionRef.current.ontrack = (e) => {
-      e.streams[0].getAudioTracks().forEach((track) => {
-        remoteStreamRef.current?.addTrack(track)
-      })
+      const stream = e.streams[0]
+      if (stream) {
+        stream.getAudioTracks().forEach((track) => {
+          remoteStreamRef.current?.addTrack(track)
+        })
+      } else {
+        remoteStreamRef.current?.addTrack(e.track)
+      }
     }
 
     // Khi nhận được candidate từ STUN server, gửi lại cho peer

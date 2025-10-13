@@ -33,6 +33,7 @@ const SW_PATH = "/service-workers/service.worker.js"
 
 export function usePushNotification(): TUsePushNotification {
   // Xin quyền
+
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
     return await Notification.requestPermission()
   }, [])
@@ -51,7 +52,7 @@ export function usePushNotification(): TUsePushNotification {
         type: "module",
         scope: "/service-workers/",
       })
-
+      console.log("SW registered:", registration)
       // Xin quyền push
       const perm = await requestPermission()
       if (perm !== "granted") {

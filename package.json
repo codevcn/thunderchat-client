@@ -31,6 +31,7 @@
     "dayjs": "^1.11.13",
     "dompurify": "^3.2.6",
     "eventemitter3": "^5.0.1",
+    "firebase": "^12.4.0",
     "linkify-html": "^4.3.2",
     "linkify-react": "^4.3.2",
     "linkifyjs": "^4.3.2",

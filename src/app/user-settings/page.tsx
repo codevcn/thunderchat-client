@@ -71,6 +71,7 @@ const Notification = () => {
 
   const togglePushNotification = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.currentTarget.checked
+    console.log("checkkk", checked)
     if (checked) {
       const isSupported = await checkIfSupported()
       if (isSupported) {
@@ -82,8 +83,16 @@ const Notification = () => {
         toaster.error("Push notification is not supported on this browser.")
       }
     } else {
+      userSettingService
+        .updateUserSettings({ pushNotificationEnabled: false })
+        .then(() => {
+          dispatch(setPushNotificationEnabled(false))
+        })
+        .catch((error) => {
+          toaster.error(axiosErrorHandler.handleHttpError(error).message)
+          dispatch(setPushNotificationEnabled(true)) // rollback nếu lỗi
+        })
       await unsubscribe()
-      dispatch(setPushNotificationEnabled(false))
     }
   }
 

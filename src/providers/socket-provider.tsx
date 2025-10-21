@@ -11,7 +11,7 @@ import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { toaster } from "@/utils/toaster"
 import { useAppDispatch } from "@/hooks/redux"
-import { initGlobalVoiceCallListener } from "@/hooks/useGlobalVoiceCallListener"
+import { initGlobalVoiceCallListener } from "@/hooks/use-global-voice-call"
 
 export const SocketProvider = ({ children }: { children: JSX.Element }) => {
   const { authStatus } = useAuth()

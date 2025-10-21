@@ -31,7 +31,7 @@ import { userService } from "@/services/user.service"
 import { setOpenConvsList } from "@/redux/layout/layout.slice"
 import { VoiceCall } from "./voice-call"
 import { useRouter } from "next/navigation"
-import { useGlobalVoiceCallListener } from "@/hooks/useGlobalVoiceCallListener"
+import { useGlobalVoiceCallListener } from "@/hooks/use-global-voice-call"
 
 const TYPING_TIMEOUT: number = 5000
 

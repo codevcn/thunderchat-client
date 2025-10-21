@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { PASSWORD_REGEX } from "@/utils/regex"
 import type { TRegisterUserParams } from "@/utils/types/be-api"
 import { Calendar, CustomDialog, Spinner } from "@/components/materials"
@@ -12,6 +12,7 @@ import { extractFormData } from "@/utils/helpers"
 import { toast } from "sonner"
 import dayjs from "dayjs"
 import { checkkIfUnder18 } from "@/utils/date-time"
+import { ClientCookieManager } from "@/utils/cookie"
 
 type TFormFields = TRegisterUserParams & {
   confirmPassword: string
@@ -96,7 +97,8 @@ export const RegisterForm = ({ typedEmail, onGoBack }: TRegisterUserFormProps) =
     setLoading(true)
     userService
       .registerUser({ ...data, birthday })
-      .then(() => {
+      .then((result) => {
+        ClientCookieManager.setAuthCookie(result.jwt_token)
         setTimeout(() => {
           authRedirect()
         }, 500)

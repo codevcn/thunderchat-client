@@ -6,28 +6,48 @@ import type {
 } from "./interfaces"
 import { ESocketNamespaces } from "../enums"
 import { io, Socket } from "socket.io-client"
-
-const SERVER_HOST =
-  process.env.NODE_ENV === "production"
-    ? process.env.NEXT_PUBLIC_SERVER_HOST
-    : process.env.NEXT_PUBLIC_SERVER_HOST_DEV
+import { ClientCookieManager } from "../cookie"
 
 class ClientSocket {
   readonly socket: Socket<IMessagingListenSocketEvents, IMessagingEmitSocketEvents>
   readonly voiceCallSocket: Socket<IVoiceCallListenSocketEvents, IVoiceCallEmitSocketEvents>
 
   constructor() {
-    this.socket = io(SERVER_HOST + `/${ESocketNamespaces.messaging}`, {
+    const WEBSOCKET_MESSAGING_HOST =
+      process.env.NODE_ENV === "production"
+        ? process.env.NEXT_PUBLIC_WEBSOCKET_MESSAGING_ENDPOINT
+        : process.env.NEXT_PUBLIC_WEBSOCKET_MESSAGING_ENDPOINT_DEV
+
+    const WEBSOCKET_CALLING_HOST =
+      process.env.NODE_ENV === "production"
+        ? process.env.NEXT_PUBLIC_WEBSOCKET_CALLING_ENDPOINT
+        : process.env.NEXT_PUBLIC_WEBSOCKET_CALLING_ENDPOINT_DEV
+
+    this.socket = io(WEBSOCKET_MESSAGING_HOST + `/${ESocketNamespaces.messaging}`, {
       autoConnect: false,
       withCredentials: true,
       auth: {},
     })
 
-    this.voiceCallSocket = io(SERVER_HOST + `/${ESocketNamespaces.voice_call}`, {
+    this.voiceCallSocket = io(WEBSOCKET_CALLING_HOST + `/${ESocketNamespaces.voice_call}`, {
       autoConnect: false,
       withCredentials: true,
       auth: {},
     })
+  }
+
+  setAuthCookie() {
+    this.socket.auth = {
+      ...(this.socket.auth || {}),
+      authToken: ClientCookieManager.getAuthCookie(),
+    }
+  }
+
+  setVoiceCallAuthCookie() {
+    this.voiceCallSocket.auth = {
+      ...(this.voiceCallSocket.auth || {}),
+      authToken: ClientCookieManager.getAuthCookie(),
+    }
   }
 
   setSocketAuth(clientId: number): void {

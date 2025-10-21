@@ -827,3 +827,11 @@ export type TUnsubscribePushNotificationParams = {
 export type TGetPublicVapidKeyRes = {
   publicKey: string
 }
+
+export type TLoginRes = {
+  jwt_token: string
+}
+
+export type TRegisterRes = {
+  jwt_token: string
+}

@@ -1,5 +1,6 @@
 import type {
   TBlockedUserFullInfo,
+  TRegisterRes,
   TRegisterUserParams,
   TSearchUsersData,
   TUserWithProfile,
@@ -36,9 +37,9 @@ class UserService {
     return data
   }
 
-  async registerUser(data: TRegisterUserParams): Promise<TSuccess> {
-    await postRegisterUser(data)
-    return { success: true }
+  async registerUser(payload: TRegisterUserParams): Promise<TRegisterRes> {
+    const { data } = await postRegisterUser(payload)
+    return { jwt_token: data.jwt_token }
   }
 
   async changePassword(oldPassword: string, newPassword: string) {

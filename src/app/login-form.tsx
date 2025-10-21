@@ -11,6 +11,7 @@ import axiosErrorHandler from "@/utils/axios-error-handler"
 import { useAuthRedirect } from "@/hooks/navigation"
 import type { TCheckboxValue } from "@/utils/types/global"
 import { toast } from "sonner"
+import { ClientCookieManager } from "@/utils/cookie"
 
 type TLoginFormData = {
   email: string
@@ -36,7 +37,8 @@ export const LoginForm = ({ typedEmail, onGoBack }: TLoginFormProps) => {
       setBanError("") // Clear previous ban error
       authService
         .loginUser(email, password, keepSigned === "on")
-        .then(() => {
+        .then((result) => {
+          ClientCookieManager.setAuthCookie(result.jwt_token)
           setTimeout(() => {
             authRedirect()
           }, 500)

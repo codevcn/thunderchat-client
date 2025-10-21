@@ -9,6 +9,18 @@ export const NEXT_PUBLIC_SERVER_ENDPOINT =
 
 export const clientAxios = axios.create({ baseURL: NEXT_PUBLIC_SERVER_ENDPOINT })
 
+clientAxios.interceptors.request.use((config) => {
+  const token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("jwt_token_auth="))
+    ?.split("=")[1]
+  if (token) {
+    console.log(">>> token intercepted:", token)
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 clientAxios.interceptors.response.use(
   (response) => response,
   (error) => {

@@ -10,10 +10,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    // Bỏ qua lỗi TS khi build (chỉ nên dùng tạm thời)
-    ignoreBuildErrors: true,
-  },
+  typescript: {},
 }
 
 module.exports = nextConfig

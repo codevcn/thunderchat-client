@@ -49,6 +49,7 @@ export const SocketProvider = ({ children }: { children: JSX.Element }) => {
       })
 
       clientSocket.setSocketAuth(user.id)
+      clientSocket.setAuthCookie()
       handleConnectMessagingSocket(true)
     } else if (authStatus === EAuthStatus.UNAUTHENTICATED) {
       handleConnectMessagingSocket(false)
@@ -88,6 +89,7 @@ export const SocketProvider = ({ children }: { children: JSX.Element }) => {
       })
 
       clientSocket.setVoiceCallSocketAuth(user.id)
+      clientSocket.setVoiceCallAuthCookie()
       handleConnectVoiceCallSocket(true)
     } else {
       handleConnectVoiceCallSocket(false)
@@ -96,16 +98,16 @@ export const SocketProvider = ({ children }: { children: JSX.Element }) => {
 
   useEffect(() => {
     initMessagingSocketConnection()
-    initVoiceCallSocketConnection()
+    // initVoiceCallSocketConnection()
     return () => {
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect)
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect_error)
       clientSocket.socket.removeAllListeners(ESocketInitEvents.error)
       clientSocket.socket.removeAllListeners(EMessagingEvents.server_hello)
-      clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect)
-      clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect_error)
-      clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.error)
-      clientSocket.voiceCallSocket.removeAllListeners(EVoiceCallEvents.server_hello)
+      // clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect)
+      // clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect_error)
+      // clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.error)
+      // clientSocket.voiceCallSocket.removeAllListeners(EVoiceCallEvents.server_hello)
     }
   }, [authStatus, user])
 

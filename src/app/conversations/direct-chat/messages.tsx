@@ -35,7 +35,7 @@ import { PinMessageModal } from "./pin-message"
 import { pinService } from "@/services/pin.service"
 import { directChatService } from "@/services/direct-chat.service"
 import { messageService } from "@/services/message.service"
-
+import { PhoneIncoming } from "lucide-react"
 const SCROLL_ON_MESSAGES_THRESHOLD: number = 100
 const SHOW_SCROLL_BTN_THRESHOLD: number = 250
 
@@ -419,7 +419,6 @@ export const Messages = memo(
       }
     }
 
-    // Xử lý tin nhắn chưa đọc nằm trong vùng nhìn thấy (tức là user nhìn thấy 80% tin nhắn chưa đọc)
     const handleUnreadMsgInVisibleView = (
       messagesContainer: HTMLElement,
       unreadMessage: HTMLElement,

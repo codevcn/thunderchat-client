@@ -10,11 +10,13 @@ import { clientSocket } from "@/utils/socket/client-socket"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { toaster } from "@/utils/toaster"
+import { useAppDispatch } from "@/hooks/redux"
+import { initGlobalVoiceCallListener } from "@/hooks/useGlobalVoiceCallListener"
 
 export const SocketProvider = ({ children }: { children: JSX.Element }) => {
   const { authStatus } = useAuth()
   const user = useUser()
-
+  const dispatch = useAppDispatch()
   const handleConnectMessagingSocket = (connected: boolean) => {
     if (connected) {
       clientSocket.socket.connect()
@@ -97,6 +99,14 @@ export const SocketProvider = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     initMessagingSocketConnection()
     initVoiceCallSocketConnection()
+
+    // let voiceCallCleanup: (() => void) | undefined // Biến để store cleanup từ listener
+
+    // // Đặt ở đây: Sau initVoiceCallSocketConnection, khi socket ready và authenticated
+    // if (authStatus === EAuthStatus.AUTHENTICATED && user) {
+    //   voiceCallCleanup = initGlobalVoiceCallListener(dispatch) // Init listener toàn cục
+    //   console.log(">>> [SocketProvider] Global voice call listener initialized")
+    // }
     return () => {
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect)
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect_error)

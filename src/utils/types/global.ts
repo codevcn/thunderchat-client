@@ -234,3 +234,5 @@ export type TEmitLogMessage = {
 export type TEmitLogStaticConst = {
   ORDER: number
 }
+
+export type TActionSendIcon = "start" | "end"

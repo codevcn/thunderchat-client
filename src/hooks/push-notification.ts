@@ -41,7 +41,6 @@ export function usePushNotification(): TUsePushNotification {
   // Đăng ký push
   const subscribe = useCallback(async (): Promise<TSubscribePushNotificationRes | null> => {
     try {
-      // Unregister tất cả SW cũ
       const regs = await navigator.serviceWorker.getRegistrations()
       for (const r of regs) {
         await r.unregister()
@@ -52,6 +51,7 @@ export function usePushNotification(): TUsePushNotification {
         type: "module",
         scope: "/service-workers/",
       })
+
       console.log("SW registered:", registration)
       // Xin quyền push
       const perm = await requestPermission()

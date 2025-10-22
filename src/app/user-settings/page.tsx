@@ -71,7 +71,6 @@ const Notification = () => {
 
   const togglePushNotification = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.currentTarget.checked
-    console.log("checkkk", checked)
     if (checked) {
       const isSupported = await checkIfSupported()
       if (isSupported) {

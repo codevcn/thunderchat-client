@@ -17,7 +17,7 @@ import { useUser } from "@/hooks/user"
 import { memo, useEffect, useRef, useState } from "react"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import type { TDirectChat } from "@/utils/types/be-api"
+import type { TDirectChat, TUploadFileRes } from "@/utils/types/be-api"
 import type { TStateMessage } from "@/utils/types/global"
 import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
 import { toast } from "sonner"
@@ -65,6 +65,140 @@ function FileTypeMenu({ onSelect, onClose }: TFileTypeMenuProps) {
       ))}
     </div>
   )
+}
+
+const validateFiles = (files: File[], fileMode: string): File[] => {
+  return files.filter((file) => {
+    if (fileMode === "media") {
+      // Hỗ trợ tất cả image và video types
+      return file.type.startsWith("image/") || file.type.startsWith("video/")
+    } else if (fileMode === "document") {
+      // Chỉ hỗ trợ: PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP, RAR, 7Z, HTML, JSON, Markdown
+      const allowedTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+        "text/csv",
+        "application/zip",
+        "application/x-rar-compressed",
+        "application/x-7z-compressed",
+        "text/html",
+        "application/json",
+        "text/markdown",
+      ]
+      const allowedExtensions = [
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+        ".txt",
+        ".csv",
+        ".zip",
+        ".rar",
+        ".7z",
+        ".html",
+        ".json",
+        ".md",
+      ]
+      return (
+        allowedTypes.includes(file.type) ||
+        allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
+      )
+    } else if (fileMode === "audio") {
+      // Chỉ hỗ trợ mp3
+      return file.type === "audio/mpeg" || file.name.toLowerCase().endsWith(".mp3")
+    }
+    // fallback: cho phép image, video và mp3
+    return (
+      file.type.startsWith("image/") ||
+      file.type.startsWith("video/") ||
+      file.type === "audio/mpeg" ||
+      file.name.toLowerCase().endsWith(".mp3")
+    )
+  })
+}
+
+function keepOnlyImgAndSvgTags(html: string) {
+  // Loại bỏ mọi thẻ không phải <img>, <svg> và các thẻ SVG con
+  return html.replace(
+    /<(?!img\b|svg\b|path\b|rect\b|circle\b|g\b|line\b|ellipse\b|polygon\b|polyline\b|defs\b|linearGradient\b|stop\b|title\b|desc\b)[^>]*>/gi,
+    ""
+  )
+}
+
+function renderReplyPreview(msg: TStateMessage) {
+  // Nếu tin nhắn đã bị thu hồi hoặc vi phạm, hiển thị thông báo tương ứng
+  if (msg.isDeleted) {
+    const messageText = msg.isViolated
+      ? "This message has been recalled due to violation"
+      : "This message has been deleted"
+    return <span className="text-sm text-gray-400">{messageText}</span>
+  }
+
+  const type = msg.type.toUpperCase()
+  const { Media, Sticker } = msg
+  if (type === EMessageTypes.TEXT) {
+    return (
+      <span
+        className="w-full truncate text-sm"
+        dangerouslySetInnerHTML={{
+          __html: santizeMsgContent(msg.content) || "[Không có nội dung]",
+        }}
+      />
+    )
+  } else if (type === EMessageTypes.STICKER) {
+    return (
+      <span className="inline-block mt-1">
+        <img src={Sticker?.imageUrl} alt="sticker" className="h-8" />
+      </span>
+    )
+  } else if (type === EMessageTypes.MEDIA) {
+    if (Media?.type === EMessageMediaTypes.IMAGE) {
+      if (Media?.url) {
+        return (
+          <span className="inline-block mt-1">
+            <img src={Media.url} alt="sticker" className="h-10" />
+          </span>
+        )
+      }
+      return "Unknown content"
+    } else if (Media?.type === EMessageMediaTypes.VIDEO) {
+      return (
+        <span className="flex items-center gap-2 mt-1 text-sm">
+          <FileVideo size={16} />
+          <span>{Media?.fileName || "File unnamed"}</span>
+        </span>
+      )
+    } else if (Media?.type === EMessageMediaTypes.AUDIO) {
+      return <span className="text-sm">Voice message</span>
+    } else if (Media?.type === EMessageMediaTypes.DOCUMENT) {
+      return (
+        <span className="flex items-center gap-2 mt-1 text-sm">
+          <Paperclip size={16} />
+          <span>{Media?.fileName || "File unnamed"}</span>
+        </span>
+      )
+    }
+  } else {
+    const msgContent = msg.content
+    if (
+      msgContent &&
+      typeof msgContent === "string" &&
+      (msgContent.includes("<img") || msgContent.includes("<svg"))
+    ) {
+      const cleanContent = keepOnlyImgAndSvgTags(msgContent)
+      return <span className="" dangerouslySetInnerHTML={{ __html: cleanContent }} />
+    }
+    return "[Không có nội dung]"
+  }
 }
 
 type TTypeMessageBarProps = {
@@ -138,7 +272,7 @@ export const TypeMessageBar = memo(
         }, 0)
       } else if (type === "document") {
         setFileAccept(
-          ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.odt,.ods,.odp,.zip,.rar,.7z,.gz,.tar,.html,.json,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/rtf,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/zip,application/x-rar-compressed,application/x-7z-compressed,application/gzip,application/x-tar,text/html,application/json,text/markdown"
+          ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.gz,.tar,.html,.json,.md"
         )
         setFileMode("document")
         setFileInputKey((prev) => prev + 1)
@@ -146,183 +280,65 @@ export const TypeMessageBar = memo(
           fileInputRef.current?.click()
         }, 0)
       }
-      // ... các case khác
     }
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!user) return
       const { recipientId, creatorId } = directChat
       const files = Array.from(e.target.files || [])
       if (files.length === 0) return
-
       // Kiểm tra loại file hợp lệ theo mode
-      const validFiles = files.filter((file) => {
-        if (fileMode === "media") {
-          // Hỗ trợ tất cả image và video types
-          return file.type.startsWith("image/") || file.type.startsWith("video/")
-        }
-        if (fileMode === "document") {
-          // Hỗ trợ tất cả document types bao gồm cả archive
-          return (
-            file.type === "application/pdf" ||
-            file.type === "application/msword" ||
-            file.type ===
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-            file.type === "application/vnd.ms-excel" ||
-            file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-            file.type === "application/vnd.ms-powerpoint" ||
-            file.type ===
-              "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-            file.type === "text/plain" ||
-            file.type === "text/csv" ||
-            file.type === "application/rtf" ||
-            file.type === "application/vnd.oasis.opendocument.text" ||
-            file.type === "application/vnd.oasis.opendocument.spreadsheet" ||
-            file.type === "application/vnd.oasis.opendocument.presentation" ||
-            file.type === "application/zip" ||
-            file.type === "application/x-rar-compressed" ||
-            file.type === "application/x-7z-compressed" ||
-            file.type === "application/gzip" ||
-            file.type === "application/x-tar" ||
-            file.type === "text/html" ||
-            file.type === "application/json" ||
-            file.type === "text/markdown" ||
-            // Kiểm tra extension cho các file không có MIME type rõ ràng
-            [
-              ".pdf",
-              ".doc",
-              ".docx",
-              ".xls",
-              ".xlsx",
-              ".ppt",
-              ".pptx",
-              ".txt",
-              ".csv",
-              ".rtf",
-              ".odt",
-              ".ods",
-              ".odp",
-              ".zip",
-              ".rar",
-              ".7z",
-              ".gz",
-              ".tar",
-              ".html",
-              ".json",
-              ".md",
-            ].some((ext) => file.name.endsWith(ext))
-          )
-        }
-        // fallback: cho phép tất cả các loại file được hỗ trợ
-        return (
-          file.type.startsWith("image/") ||
-          file.type.startsWith("video/") ||
-          file.type === "application/pdf" ||
-          file.type === "application/msword" ||
-          file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-          file.type === "application/vnd.ms-excel" ||
-          file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-          file.type === "application/vnd.ms-powerpoint" ||
-          file.type ===
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-          file.type === "text/plain" ||
-          file.type === "text/csv" ||
-          file.type === "application/rtf" ||
-          file.type === "application/vnd.oasis.opendocument.text" ||
-          file.type === "application/vnd.oasis.opendocument.spreadsheet" ||
-          file.type === "application/vnd.oasis.opendocument.presentation" ||
-          file.type === "application/zip" ||
-          file.type === "application/x-rar-compressed" ||
-          file.type === "application/x-7z-compressed" ||
-          file.type === "application/gzip" ||
-          file.type === "application/x-tar" ||
-          file.type === "text/html" ||
-          file.type === "application/json" ||
-          file.type === "text/markdown" ||
-          [
-            ".pdf",
-            ".doc",
-            ".docx",
-            ".xls",
-            ".xlsx",
-            ".ppt",
-            ".pptx",
-            ".txt",
-            ".csv",
-            ".rtf",
-            ".odt",
-            ".ods",
-            ".odp",
-            ".zip",
-            ".rar",
-            ".7z",
-            ".gz",
-            ".tar",
-            ".html",
-            ".json",
-            ".md",
-          ].some((ext) => file.name.endsWith(ext))
-        )
-      })
-
+      const validFiles = validateFiles(files, fileMode)
       if (validFiles.length === 0) {
         toast.error(
-          "Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT, CSV, RTF, OpenDocument, ZIP, RAR, 7Z, HTML, JSON, Markdown)"
+          "Chỉ hỗ trợ file ảnh, video hoặc tài liệu (PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP, RAR, 7Z, HTML, JSON, Markdown)"
         )
         return
       }
-
       if (validFiles.length !== files.length) {
-        toast.error(`${files.length - validFiles.length} file không được hỗ trợ`)
+        toast.warning(`${files.length - validFiles.length} file không được hỗ trợ`)
       }
-
       setIsUploading(true)
+      let uploadedFiles: TUploadFileRes[] = []
       try {
-        for (const file of validFiles) {
-          if (file.size > 50 * 1024 * 1024) {
-            toast.error(`File ${file.name} vượt quá 50MB!`)
-            continue
-          }
-          // Upload file lên server
-          const { id } = await FileService.uploadFile(file, (loaded, total) => {
-            const progress = total ? Math.round((loaded / total) * 100) : 0
-            setUploadProgress(progress)
-          })
-          let messageType = EMessageTypes.MEDIA
-          let mediaType: EMessageMediaTypes
-          if (file.type.startsWith("image/")) {
-            messageType = EMessageTypes.MEDIA
-            mediaType = EMessageMediaTypes.IMAGE
-          } else if (file.type.startsWith("video/")) {
-            messageType = EMessageTypes.MEDIA
-            mediaType = EMessageMediaTypes.VIDEO
-          } else {
-            messageType = EMessageTypes.MEDIA
-            mediaType = EMessageMediaTypes.DOCUMENT
-          }
-
-          const msgPayload: TChattingPayload["msgPayload"] = {
-            content: `${id}`, // hoặc caption nếu có
-            receiverId: user.id === recipientId ? creatorId : recipientId,
-            token: chattingService.getMessageToken(),
-            timestamp: new Date(),
-          }
-          chattingService.sendMessage(
-            converToMessageTypeAllTypes(messageType, mediaType),
-            msgPayload,
-            (data) => {
-              if ("success" in data && data.success) {
-                chattingService.recursiveSendingQueueMessages()
-              } else if ("isError" in data && data.isError) {
-                toast.error(data.message)
-              }
-            }
-          )
-        }
+        uploadedFiles = await FileService.uploadMultipleFiles(validFiles, (loaded, total) => {
+          const progress = total ? Math.round((loaded / total) * 100) : 0
+          setUploadProgress(progress)
+        })
       } catch (error) {
         toast.error(axiosErrorHandler.handleHttpError(error).message)
       } finally {
         setIsUploading(false)
+      }
+      for (const { id, fileType } of uploadedFiles) {
+        let messageType = EMessageTypes.MEDIA
+        let mediaType: EMessageMediaTypes
+        if (fileType.startsWith("image/")) {
+          messageType = EMessageTypes.MEDIA
+          mediaType = EMessageMediaTypes.IMAGE
+        } else if (fileType.startsWith("video/")) {
+          messageType = EMessageTypes.MEDIA
+          mediaType = EMessageMediaTypes.VIDEO
+        } else {
+          messageType = EMessageTypes.MEDIA
+          mediaType = EMessageMediaTypes.DOCUMENT
+        }
+        const msgPayload: TChattingPayload["msgPayload"] = {
+          content: `${id}`, // hoặc caption nếu có
+          receiverId: user.id === recipientId ? creatorId : recipientId,
+          token: chattingService.getMessageToken(),
+          timestamp: new Date(),
+        }
+        chattingService.sendMessage(
+          converToMessageTypeAllTypes(messageType, mediaType),
+          msgPayload,
+          (data) => {
+            if ("success" in data && data.success) {
+              chattingService.recursiveSendingQueueMessages()
+            } else if ("isError" in data && data.isError) {
+              toast.error(data.message)
+            }
+          }
+        )
       }
       e.target.value = ""
     }
@@ -340,81 +356,6 @@ export const TypeMessageBar = memo(
         document.removeEventListener("mousedown", handleClickOutside)
       }
     }, [showFileMenu])
-
-    function keepOnlyImgAndSvgTags(html: string) {
-      // Loại bỏ mọi thẻ không phải <img>, <svg> và các thẻ SVG con
-      return html.replace(
-        /<(?!img\b|svg\b|path\b|rect\b|circle\b|g\b|line\b|ellipse\b|polygon\b|polyline\b|defs\b|linearGradient\b|stop\b|title\b|desc\b)[^>]*>/gi,
-        ""
-      )
-    }
-
-    function renderReplyPreview(msg: TStateMessage) {
-      // Nếu tin nhắn đã bị thu hồi hoặc vi phạm, hiển thị thông báo tương ứng
-      if (msg.isDeleted) {
-        const messageText = msg.isViolated
-          ? "This message has been recalled due to violation"
-          : "This message has been deleted"
-        return <span className="text-sm text-gray-400">{messageText}</span>
-      }
-
-      const type = msg.type.toUpperCase()
-      const { Media, Sticker } = msg
-      if (type === EMessageTypes.TEXT) {
-        return (
-          <span
-            className="w-full truncate text-sm"
-            dangerouslySetInnerHTML={{
-              __html: santizeMsgContent(msg.content) || "[Không có nội dung]",
-            }}
-          />
-        )
-      } else if (type === EMessageTypes.STICKER) {
-        return (
-          <span className="inline-block mt-1">
-            <img src={Sticker?.imageUrl} alt="sticker" className="h-8" />
-          </span>
-        )
-      } else if (type === EMessageTypes.MEDIA) {
-        if (Media?.type === EMessageMediaTypes.IMAGE) {
-          if (Media?.url) {
-            return (
-              <span className="inline-block mt-1">
-                <img src={Media.url} alt="sticker" className="h-10" />
-              </span>
-            )
-          }
-          return "Unknown content"
-        } else if (Media?.type === EMessageMediaTypes.VIDEO) {
-          return (
-            <span className="flex items-center gap-2 mt-1 text-sm">
-              <FileVideo size={16} />
-              <span>{Media?.fileName || "File unnamed"}</span>
-            </span>
-          )
-        } else if (Media?.type === EMessageMediaTypes.AUDIO) {
-          return <span className="text-sm">Voice message</span>
-        } else if (Media?.type === EMessageMediaTypes.DOCUMENT) {
-          return (
-            <span className="flex items-center gap-2 mt-1 text-sm">
-              <Paperclip size={16} />
-              <span>{Media?.fileName || "File unnamed"}</span>
-            </span>
-          )
-        }
-      } else {
-        const msgContent = msg.content
-        if (
-          msgContent &&
-          typeof msgContent === "string" &&
-          (msgContent.includes("<img") || msgContent.includes("<svg"))
-        ) {
-          const cleanContent = keepOnlyImgAndSvgTags(msgContent)
-          return <span className="" dangerouslySetInnerHTML={{ __html: cleanContent }} />
-        }
-        return "[Không có nội dung]"
-      }
-    }
 
     const startRecording = async () => {
       setIsRecording(true)

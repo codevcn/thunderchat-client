@@ -291,7 +291,6 @@ const ConversationCards = () => {
     newMessage: TMessage | null,
     sender: TUserWithProfile
   ) => {
-    console.log(">>> listen New Conversation:", { directChat, groupChat, type, newMessage, sender })
     if (type === EChatType.DIRECT && directChat) {
       const lastDirectChatData = localStorageManager.getLastDirectChatData()
       if (lastDirectChatData) {

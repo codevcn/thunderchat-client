@@ -13,3 +13,18 @@ export const uploadFile = async (
     },
   })
 }
+
+export const uploadMultipleFiles = async (
+  files: File[],
+  onUploadProgress?: (loaded: number, total?: number) => void
+) => {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append("files", file)
+  }
+  return clientAxios.post<TUploadFileRes[]>("/upload/multiple-files", formData, {
+    onUploadProgress: (progressEvent) => {
+      onUploadProgress?.(progressEvent.loaded, progressEvent.total)
+    },
+  })
+}

@@ -10,6 +10,7 @@ import {
   postRegisterUser,
   getCheckBlockedUser,
   getBlockedUsersList,
+  getUserById,
 } from "@/apis/user"
 import { EPaginations } from "@/utils/enums"
 import type { TSuccess } from "@/utils/types/global"
@@ -33,6 +34,11 @@ class UserService {
 
   async getUserByEmail(email: string): Promise<TUserWithProfile> {
     const { data } = await getUserByEmail(email)
+    return data
+  }
+
+  async getUserById(id: number): Promise<TUserWithProfile> {
+    const { data } = await getUserById(id)
     return data
   }
 

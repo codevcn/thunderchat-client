@@ -18,9 +18,7 @@ self.addEventListener("push", (event) => {
       data = { body: event.data.text() }
     }
   }
-
-  console.log(">>> [Service Worker] data analyzed :", data)
-
+  console.log(">>> [Service Worker] data analyzed:", data)
   event.waitUntil(
     (async () => {
       const allClients = await self.clients.matchAll({ includeUncontrolled: true })
@@ -33,11 +31,12 @@ self.addEventListener("push", (event) => {
           })
         }
       } else {
-        const title = data.conversation.title
+        // Không có tab → fallback Notification API
+        const title = "New notification"
         const options = {
-          body: data.conversation.message.content,
-          icon: "../icons/icon-128.png",
-          badge: "../icons/icon-128.png",
+          body: "You have a new notification.",
+          icon: "/icons/icon-192x192.png",
+          badge: "/icons/badge-72x72.png",
           vibrate: [100, 50, 100],
           data,
         }
@@ -46,7 +45,7 @@ self.addEventListener("push", (event) => {
     })()
   )
 })
-
+// When user clicks on the notification
 self.addEventListener("notificationclick", (event) => {
   console.log(">>> [Service Worker] Notification click Received.")
   event.notification.close()

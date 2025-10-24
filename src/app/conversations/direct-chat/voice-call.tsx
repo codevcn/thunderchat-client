@@ -13,8 +13,8 @@ import {
 } from "lucide-react"
 import { useVoiceCall } from "@/hooks/voice-call"
 import { useUser } from "@/hooks/user"
-import { useEffect, useRef, useState } from "react"
-import type { TDirectChat } from "@/utils/types/be-api"
+import { useEffect, useMemo, useRef, useState } from "react"
+import type { TDirectChat, TUserWithProfile } from "@/utils/types/be-api"
 import { EVoiceCallStatus } from "@/utils/enums"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
@@ -34,6 +34,7 @@ import {
 import { useVideoCall } from "@/hooks/video-call"
 import HolderUI from "@/components/voice-call/holder"
 import { TCallRequestEmitRes } from "@/utils/types/socket"
+import { userService } from "@/services/user.service"
 
 type TCallBoxProps = {
   open: boolean
@@ -61,7 +62,9 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
   } = useVoiceCall() // Hook 3
   const [callState, setCallState] = useState<EVoiceCallStatus>()
   const [logs, setLogs] = useState<TEmitLogMessage[]>([])
-  const [calleeName, setCalleeName] = useState<string>("User")
+  const [calleeName, setCalleeName] = useState<string>("callee")
+  const [callerName, setCallerName] = useState<string>("caller")
+  const [calleeAvatar, setCalleeAvatar] = useState<string>("/images/user/default-avatar-white.webp")
   const [showIncomingModal, setShowIncomingModal] = useState(false)
   const remoteAudioEleRef = useRef<HTMLAudioElement>(null!)
   const incomingCallSession = useAppSelector((state) => state["voice-call"]?.incomingCallSession)
@@ -79,7 +82,6 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
       },
     }
   )
-
   useEffect(() => {
     return () => {
       cleanupVideo()
@@ -97,11 +99,7 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
     setShowIncomingModal(false)
     setCallState(EVoiceCallStatus.CONNECTED)
     //  dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.CONNECTED }));
-    console.log(
-      ">>> [handleAcceptModal] Starting reject - current:",
-      callState,
-      incomingCallSession
-    )
+    console.log(">>> [handleAcceptModal] Starting reject - current:", callState, callSession)
   }
 
   const handleRejectFromModal = () => {
@@ -176,10 +174,46 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
   }
 
   useEffect(() => {
-    if (incomingCallSession && isIncoming) {
-      setCalleeName("Caller From Redux")
+    const fetchCallee = async () => {
+      if (incomingCallSession && isIncoming) {
+        try {
+          // Tính toán calleeUserId
+          const currentUserId = user?.id
+          if (!currentUserId) {
+            console.error(">>> [CallBox] Error: Current user ID not found")
+            setCalleeName("Call")
+            return
+          }
+
+          const calleeUserId =
+            directChat.creatorId === currentUserId ? directChat.recipientId : directChat.creatorId
+
+          // Gọi API để lấy thông tin callee
+          const callee = await userService.getUserById(calleeUserId)
+          console.log(">>>>callee", callee)
+          setCalleeName(callee.Profile?.fullName || "Call") // Sử dụng thông tin từ callee
+          setCalleeAvatar(callee.Profile.avatar || "/images/user/default-avatar-white.webp")
+        } catch (error) {
+          console.error(">>> [CallBox] Failed to fetch callee user:", error)
+          setCalleeName("Call") // Fallback nếu lỗi
+          toaster.error("Failed to load callee information")
+        }
+      } else {
+        try {
+          const caller = await userService.getUserById(calleeUserId)
+
+          setCallerName(caller.Profile?.fullName || "Call") // Sử dụng thông tin từ callee
+          //   setCalleeAvatar(callee.Profile.avatar || "/images/user/default-avatar-white.webp")
+        } catch (error) {
+          console.error(">>> [CallBox] Failed to fetch callee user:", error)
+          setCalleeName("Call") // Fallback nếu lỗi
+          toaster.error("Failed to load callee information")
+        }
+      }
     }
-  }, [incomingCallSession, isIncoming])
+
+    fetchCallee()
+  }, [incomingCallSession, isIncoming, directChat, user]) // Thêm directChat và user vào dependency array
 
   useEffect(() => {
     if (isIncoming && open) {
@@ -221,7 +255,7 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
       {(callState === EVoiceCallStatus.CONNECTED || callState === EVoiceCallStatus.RINGING) && (
         <HolderUI
           onClose={handleEndCall}
-          calleeName={calleeName}
+          calleeName={callerName}
           callState={callState}
           remoteAudioEleRef={remoteAudioEleRef}
           localVideoRef={localVideoRef}
@@ -234,7 +268,7 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
       <IncomingCallModal
         open={showIncomingModal}
         callerName={calleeName}
-        callerAvatar="/images/user/default-avatar-white.webp"
+        callerAvatar={calleeAvatar}
         onAccept={handleAcceptFromModal}
         onReject={handleRejectFromModal}
       />
@@ -254,6 +288,7 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
   const dispatch = useAppDispatch()
   const { startCall, cleanup } = useVoiceCall()
   const user = useUser()!
+
   useEffect(() => {
     if (callSession?.status === EVoiceCallStatus.REJECTED) {
       setCallBoxOpen(false)

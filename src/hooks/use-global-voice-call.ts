@@ -20,10 +20,10 @@ export function useGlobalVoiceCallListener() {
       eventEmitter.emit(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED)
     }
 
-    clientSocket.voiceCallSocket.on(EVoiceCallEvents.call_request, handleCallRequest)
+    clientSocket.callSocket.on(EVoiceCallEvents.call_request, handleCallRequest)
 
     return () => {
-      clientSocket.voiceCallSocket.off(EVoiceCallEvents.call_request, handleCallRequest)
+      clientSocket.callSocket.off(EVoiceCallEvents.call_request, handleCallRequest)
       dispatch(resetIncomingCallSession())
     }
   }, [dispatch])
@@ -36,11 +36,11 @@ export function initGlobalVoiceCallListener(dispatch: AppDispatch) {
     eventEmitter.emit(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED)
   }
 
-  clientSocket.voiceCallSocket.on(EVoiceCallEvents.call_request, handleCallRequest)
+  clientSocket.callSocket.on(EVoiceCallEvents.call_request, handleCallRequest)
 
   // Return cleanup function
   return () => {
-    clientSocket.voiceCallSocket.off(EVoiceCallEvents.call_request, handleCallRequest)
+    clientSocket.callSocket.off(EVoiceCallEvents.call_request, handleCallRequest)
     dispatch(resetIncomingCallSession())
   }
 }

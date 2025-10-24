@@ -56,10 +56,28 @@ const IncomingCallModal = ({
   const portalRoot = document.body
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      {/* <audio ref={ringtoneRef} src="/sounds/ringtone.mp3" loop style={{ display: 'none' }} /> */}
-      <div className="modal-container bg-white dark:bg-[#242526] rounded-lg shadow-2xl w-[70vw] mx-auto min-h-[600px] max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="bg-[#0084ff] px-5 py-4 flex items-center gap-3 box-content shrink-0">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <audio ref={ringtoneRef} src="/sounds/ringtone.mp3" loop style={{ display: "none" }} />
+
+      <div
+        className="rounded-2xl shadow-[0_0_25px_rgba(0,0,0,0.4)] w-[70vw] max-w-[460px] mx-auto overflow-hidden flex flex-col animate-fade-in"
+        style={{
+          backgroundColor: "var(--tdc-regular-modal-board-bgcl)",
+          color: "var(--tdc-regular-white-cl)",
+        }}
+      >
+        {/* Header */}
+        <div
+          className="px-5 py-4 flex items-center gap-3 shrink-0"
+          style={{
+            background: "var(--tdc-user-avt-bgimg)",
+            borderBottom: "1px solid var(--tdc-regular-border-cl)",
+          }}
+        >
           <div className="relative animate-pulse-scale">
             {callerAvatar ? (
               <img
@@ -68,63 +86,91 @@ const IncomingCallModal = ({
                 className="w-12 h-12 rounded-full border-2 border-white object-cover"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-white flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full border-2 border-white flex items-center justify-center bg-[var(--tdc-regular-hover-bgcl)]">
+                <User className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
               </div>
             )}
             <div className="absolute inset-0 rounded-full border-2 border-white/40 animate-ping"></div>
           </div>
+
           <div className="flex-1">
-            <h3 className="text-white font-semibold text-base">{callerName}</h3>
-            <p className="text-white/90 text-sm">Calling...</p>
+            <h3 className="font-semibold text-base text-[var(--tdc-regular-white-cl)]">
+              {callerName}
+            </h3>
+            <p className="text-sm text-[var(--tdc-regular-text-secondary-cl)]">Incoming call...</p>
           </div>
         </div>
 
-        <div className="flex-1 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-[#18191a] dark:to-[#242526] py-32 flex justify-center items-center box-content min-h-0 overflow-hidden">
+        {/* Avatar main */}
+        <div
+          className="flex-1 flex justify-center items-center py-20"
+          style={{
+            background:
+              "linear-gradient(to bottom, var(--tdc-regular-dark-gray-cl), var(--tdc-regular-modal-board-bgcl))",
+          }}
+        >
           <div className="relative animate-pulse-scale">
             {callerAvatar ? (
               <img
                 src={callerAvatar}
                 alt={callerName}
-                className="w-48 h-48 rounded-full border-4 border-[#0084ff]/30 shadow-xl object-cover"
+                className="w-44 h-44 rounded-full border-4 shadow-xl object-cover"
+                style={{
+                  borderColor: "var(--tdc-gradient-blue-from-cl)",
+                }}
               />
             ) : (
-              <div className="w-48 h-48 rounded-full bg-gray-200 dark:bg-gray-700 border-4 border-[#0084ff]/30 flex items-center justify-center shadow-xl">
-                <User className="w-24 h-24 text-gray-400" />
+              <div
+                className="w-44 h-44 rounded-full flex items-center justify-center shadow-xl"
+                style={{
+                  backgroundColor: "var(--tdc-regular-hover-card-cl)",
+                  border: "4px solid var(--tdc-gradient-blue-from-cl)",
+                }}
+              >
+                <User className="w-20 h-20 text-[var(--tdc-regular-icon-cl)]" />
               </div>
             )}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#242526] px-8 py-8 flex justify-center items-center gap-6 box-content shrink-0">
+        {/* Actions */}
+        <div
+          className="px-8 py-6 flex justify-center items-center gap-10 shrink-0"
+          style={{
+            backgroundColor: "var(--tdc-regular-modal-board-bgcl)",
+            borderTop: "1px solid var(--tdc-regular-border-cl)",
+          }}
+        >
+          {/* Decline */}
           <button
             onClick={handleReject}
-            className="group flex flex-col items-center gap-2 cursor-pointer"
+            className="group flex flex-col items-center gap-2 focus:outline-none"
           >
-            <div className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-105">
-              <PhoneOff className="w-6 h-6 text-white" />
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-105"
+              style={{ backgroundColor: "var(--tdc-regular-red-cl)" }}
+            >
+              <PhoneOff className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
             </div>
-            <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Decline</span>
+            <span className="text-sm font-medium text-[var(--tdc-regular-text-secondary-cl)]">
+              Decline
+            </span>
           </button>
 
+          {/* Answer */}
           <button
             onClick={handleAccept}
-            className="group flex flex-col items-center gap-2 cursor-pointer"
+            className="group flex flex-col items-center gap-2 focus:outline-none"
           >
-            <div className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-105 animate-pulse">
-              <Phone className="w-6 h-6 text-white" />
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-105 animate-pulse"
+              style={{ backgroundColor: "var(--tdc-regular-green-cl)" }}
+            >
+              <Phone className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
             </div>
-            <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Answer</span>
-          </button>
-
-          <button
-            onClick={handleAccept}
-            className="group flex flex-col items-center gap-2 cursor-pointer"
-          >
-            <div className="w-14 h-14 rounded-full bg-[#0084ff] hover:bg-[#0073e6] flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-105">
-              <Video className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Video</span>
+            <span className="text-sm font-medium text-[var(--tdc-regular-text-secondary-cl)]">
+              Answer
+            </span>
           </button>
         </div>
       </div>

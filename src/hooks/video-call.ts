@@ -83,58 +83,89 @@ export function useVideoCall({
   const toggleVideo = useCallback(
     async (enable?: boolean) => {
       const shouldEnable = enable ?? !isVideoEnabled
-      setIsVideoEnabled(shouldEnable)
+      const pc = p2pConnectionRef.current
+      const localStream = localStreamRef.current
 
-      if (!p2pConnectionRef.current || !localStreamRef.current) {
+      if (!pc || !localStream) {
         toaster.error("Call not established yet")
         return
       }
 
-      const existingVideoTrack = localStreamRef.current.getVideoTracks()[0]
+      console.log(">>> [toggleVideo] shouldEnable:", shouldEnable)
 
-      if (shouldEnable && !existingVideoTrack) {
-        // Thêm track mới
-        const videoStream = await getVideoStream()
-        if (!videoStream) return
+      if (shouldEnable) {
+        // 🔹 BẬT VIDEO
+        try {
+          let videoTrack = localStream.getVideoTracks()[0]
 
-        const newVideoTrack = videoStream.getVideoTracks()[0]
-        localStreamRef.current.addTrack(newVideoTrack)
+          // Nếu chưa có hoặc track đã stop
+          if (!videoTrack || videoTrack.readyState === "ended") {
+            console.log(">>> Getting new video stream...")
+            const videoStream = await getVideoStream()
+            if (!videoStream) return
 
-        // Thay thế hoặc add sender trong PC
-        const sender = p2pConnectionRef.current.getSenders().find((s) => s.track?.kind === "video")
-        if (sender) {
-          await sender.replaceTrack(newVideoTrack)
-          emitLog("Replaced video track in RTC sender")
-        } else {
-          p2pConnectionRef.current.addTrack(newVideoTrack, localStreamRef.current)
-          emitLog("Added new video track to RTC")
+            videoTrack = videoStream.getVideoTracks()[0]
+
+            // Xóa track cũ nếu có
+            localStream.getVideoTracks().forEach((track) => {
+              localStream.removeTrack(track)
+            })
+
+            localStream.addTrack(videoTrack)
+
+            // **FIX: Thêm hoặc replace sender**
+            const videoSender = pc.getSenders().find((s) => s.track?.kind === "video")
+            if (videoSender) {
+              await videoSender.replaceTrack(videoTrack)
+              console.log("✅ Replaced video track")
+            } else {
+              pc.addTrack(videoTrack, localStream)
+              console.log("✅ Added video track (will trigger negotiation)")
+            }
+          } else {
+            // Track còn tồn tại, chỉ enable
+            videoTrack.enabled = true
+            console.log("✅ Re-enabled video track")
+          }
+
+          // Update UI
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = localStream
+          }
+
+          setIsVideoEnabled(true)
+          emitLog("🎥 Video enabled")
+        } catch (err: any) {
+          console.error("❌ Enable video failed:", err)
+          toaster.error("Cannot enable camera: " + err.message)
+        }
+      } else {
+        // 🔸 TẮT VIDEO
+        console.log(">>> Disabling video...")
+        const videoTracks = localStream.getVideoTracks()
+
+        videoTracks.forEach((track) => {
+          track.enabled = false
+          track.stop() // **QUAN TRỌNG: Stop để release camera**
+          localStream.removeTrack(track)
+        })
+
+        // **FIX: Remove sender để trigger renegotiation**
+        const videoSender = pc.getSenders().find((s) => s.track?.kind === "video")
+        if (videoSender) {
+          pc.removeTrack(videoSender)
+          console.log("✅ Removed video sender (will trigger negotiation)")
         }
 
-        // Gắn local video UI - FIX: Check null
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = localStreamRef.current
-        }
-      } else if (!shouldEnable && existingVideoTrack) {
-        // Disable hoặc remove track
-        existingVideoTrack.enabled = false
-        existingVideoTrack.stop() // Stop để tiết kiệm tài nguyên
-        localStreamRef.current.removeTrack(existingVideoTrack)
-
-        // Remove từ PC
-        const sender = p2pConnectionRef.current.getSenders().find((s) => s.track?.kind === "video")
-        if (sender) {
-          await sender.replaceTrack(null)
-          emitLog("Removed video track from RTC sender")
-        }
-
-        // Clear local video UI - FIX: Check null
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = null
         }
+
+        setIsVideoEnabled(false)
+        emitLog("📷 Video disabled")
       }
 
       eventEmitter.emit(EInternalEvents.VIDEO_TOGGLED, shouldEnable)
-      emitLog(`Video toggled: ${shouldEnable ? "enabled" : "disabled"}`)
     },
     [isVideoEnabled]
   )
@@ -143,11 +174,7 @@ export function useVideoCall({
   const cleanupVideo = useCallback(() => {
     localStreamRef.current?.getVideoTracks().forEach((track) => {
       track.stop()
-      localStreamRef.current?.removeTrack(track)
     })
-    // FIX: Check null trước khi access
-    if (localVideoRef.current) localVideoRef.current.srcObject = null
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
     setIsVideoEnabled(false)
   }, [])
 

@@ -1,25 +1,15 @@
 import { CustomTooltip } from "@/components/materials/tooltip"
 import { IconButton } from "@/components/materials/icon-button"
-import {
-  Phone,
-  X,
-  Maximize2,
-  MicOff,
-  Video,
-  ScreenShare,
-  PhoneOff,
-  User,
-  BellRing,
-} from "lucide-react"
+import { Phone, Video } from "lucide-react"
 import { useVoiceCall } from "@/hooks/voice-call"
 import { useUser } from "@/hooks/user"
-import { useEffect, useMemo, useRef, useState } from "react"
-import type { TDirectChat, TUserWithProfile } from "@/utils/types/be-api"
+import { useEffect, useRef, useState } from "react"
+import type { TDirectChat } from "@/utils/types/be-api"
 import { EVoiceCallStatus } from "@/utils/enums"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { toaster } from "@/utils/toaster"
-import { emitLog, sortEmitLogs } from "@/utils/helpers"
+import { emitLog } from "@/utils/helpers"
 import type { TEmitLogMessage } from "@/utils/types/global"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import IncomingCallModal from "@/components/voice-call/in-coming-call-modal"
@@ -27,10 +17,8 @@ import {
   resetCallSession,
   resetIncomingCallSession,
   setCallSession,
-  setIncomingCallSession,
-  updateCallSession,
   updateIncomingCallSession,
-} from "@/redux/voice-call/layout.slice"
+} from "@/redux/call/layout.slice"
 import { useVideoCall } from "@/hooks/video-call"
 import HolderUI from "@/components/voice-call/holder"
 import { TCallRequestEmitRes } from "@/utils/types/socket"
@@ -51,7 +39,6 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
 
   const dispatch = useAppDispatch()
   const {
-    startCall,
     hangupCall,
     acceptCall,
     rejectCall,
@@ -59,16 +46,21 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
     getP2pConnection,
     getLocalStream,
     toggleMic,
-  } = useVoiceCall() // Hook 3
-  const [callState, setCallState] = useState<EVoiceCallStatus>()
+    toggleVideo: voiceCallToggleVideo, // Lấy từ useVoiceCall
+    isVideoEnabled: voiceCallIsVideoEnabled, // Lấy từ useVoiceCall
+  } = useVoiceCall()
+
+  // ✅ States
+  const [callState, setCallState] = useState<EVoiceCallStatus | undefined>(undefined)
   const [logs, setLogs] = useState<TEmitLogMessage[]>([])
   const [calleeName, setCalleeName] = useState<string>("callee")
   const [callerName, setCallerName] = useState<string>("caller")
   const [calleeAvatar, setCalleeAvatar] = useState<string>("/images/user/default-avatar-white.webp")
   const [showIncomingModal, setShowIncomingModal] = useState(false)
+  const [peerRejected, setPeerRejected] = useState(false)
+
   const remoteAudioEleRef = useRef<HTMLAudioElement>(null!)
   const incomingCallSession = useAppSelector((state) => state["voice-call"]?.incomingCallSession)
-  const [peerRejected, setPeerRejected] = useState(false)
 
   const { localVideoRef, remoteVideoRef, toggleVideo, isVideoEnabled, cleanupVideo } = useVideoCall(
     {
@@ -83,62 +75,153 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
     }
   )
   useEffect(() => {
+    const localVideo = localVideoRef.current
+    const localStream = getLocalStream()
+
+    console.log(">>> [CallBox] Updating local video", {
+      hasVideoElement: !!localVideo,
+      hasStream: !!localStream,
+      isVideoEnabled: voiceCallIsVideoEnabled,
+    })
+
+    if (localVideo && localStream) {
+      localVideo.srcObject = localStream
+      console.log(
+        ">>> [CallBox] Local video srcObject set:",
+        localStream.getVideoTracks().length,
+        "video tracks"
+      )
+    }
+  }, [localVideoRef, getLocalStream, voiceCallIsVideoEnabled])
+
+  // **FIX: Gán remoteStream vào remoteVideoRef**
+  useEffect(() => {
+    const remoteVideo = remoteVideoRef.current
+    const remoteStream = getRemoteStream()
+
+    console.log(">>> [CallBox] Updating remote video", {
+      hasVideoElement: !!remoteVideo,
+      hasStream: !!remoteStream,
+    })
+
+    if (remoteVideo && remoteStream) {
+      remoteVideo.srcObject = remoteStream
+      console.log(
+        ">>> [CallBox] Remote video srcObject set:",
+        remoteStream.getVideoTracks().length,
+        "video tracks"
+      )
+    }
+  }, [remoteVideoRef, getRemoteStream])
+
+  // **FIX: Listen to remote video updates từ event emitter**
+  useEffect(() => {
+    const handleRemoteVideoUpdate = (stream: MediaStream) => {
+      console.log(">>> [CallBox] Remote video updated event:", stream)
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream
+        console.log(">>> [CallBox] Remote video srcObject updated from event")
+      }
+    }
+
+    eventEmitter.on(EInternalEvents.REMOTE_VIDEO_UPDATED, handleRemoteVideoUpdate)
+
     return () => {
+      eventEmitter.off(EInternalEvents.REMOTE_VIDEO_UPDATED, handleRemoteVideoUpdate)
+    }
+  }, [remoteVideoRef])
+  // **VIDEO: Wrapper để sync giữa useVoiceCall và useVideoCall**
+  const handleToggleVideo = async () => {
+    const result = await voiceCallToggleVideo()
+    // Có thể sync thêm state nếu cần
+    return result
+  }
+
+  useEffect(() => {
+    return () => {
+      console.log(">>> CallBox unmounting - resetting ALL state")
+      setCallState(undefined)
+      setShowIncomingModal(false)
+      setPeerRejected(false)
+      setCalleeName("callee")
+      setCallerName("caller")
       cleanupVideo()
     }
   }, [cleanupVideo])
 
-  const voiceCallHandler = () => {
-    if (!callSession) {
-      setCallState(EVoiceCallStatus.RINGING)
+  useEffect(() => {
+    if (!open) {
+      console.log(">>> CallBox closed - resetting state")
+      setCallState(undefined)
+      setShowIncomingModal(false)
+      setPeerRejected(false)
     }
-  }
+  }, [open])
 
   const handleAcceptFromModal = () => {
+    console.log(">>> [handleAcceptFromModal] Accepting call - current state:", callState)
     acceptCall()
     setShowIncomingModal(false)
     setCallState(EVoiceCallStatus.CONNECTED)
-    //  dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.CONNECTED }));
-    console.log(">>> [handleAcceptModal] Starting reject - current:", callState, callSession)
   }
 
   const handleRejectFromModal = () => {
+    console.log(">>> [handleRejectFromModal] Rejecting call")
     rejectCall()
+
     setShowIncomingModal(false)
     setCallState(EVoiceCallStatus.REJECTED)
+
     eventEmitter.emit(EInternalEvents.CALL_REJECTED, directChatId)
+
+    dispatch(resetIncomingCallSession())
+    dispatch(resetCallSession())
+
+    cleanupVideo()
     onClose()
-    console.log(">>> [handleRejectFromModal] end reject")
   }
 
   const handleEndCall = () => {
-    console.log("check handle end call")
+    console.log(">>> [handleEndCall] Ending call - current state:", callState)
     hangupCall()
+
     setShowIncomingModal(false)
     setCallState(EVoiceCallStatus.ENDED)
+
+    dispatch(resetCallSession())
+    dispatch(resetIncomingCallSession())
+
+    cleanupVideo()
     onClose()
   }
 
   const handlePeerCancelled = (data: { directChatId?: number }) => {
     if (!data.directChatId || data.directChatId === directChatId) {
-      rejectCall()
+      console.log(">>> [handlePeerCancelled] Peer cancelled call")
+
       setCallState(EVoiceCallStatus.CANCELLED)
-      onClose()
-      dispatch(updateCallSession({ status: EVoiceCallStatus.CANCELLED }))
-      dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.CANCELLED }))
+      setShowIncomingModal(false)
+
       dispatch(resetCallSession())
       dispatch(resetIncomingCallSession())
+
       cleanupVideo()
-      setTimeout(() => onClose(), 300)
+      onClose()
     }
   }
+
   const handlePeerRejected = (data: { directChatId?: number }) => {
     if (!data.directChatId || data.directChatId === directChatId) {
+      console.log(">>> [handlePeerRejected] Peer rejected call")
       emitLog(`Peer rejected call for chat ${directChatId}. Closing UI.`)
-      dispatch(resetCallSession())
-      dispatch(resetIncomingCallSession())
+
       setPeerRejected(true)
       setCallState(EVoiceCallStatus.REJECTED)
+      setShowIncomingModal(false)
+
+      dispatch(resetCallSession())
+      dispatch(resetIncomingCallSession())
+
       cleanupVideo()
       onClose()
     }
@@ -146,21 +229,25 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
 
   const listenCallRejected = (chatId: number) => {
     if (chatId === directChatId) {
+      console.log(">>> [listenCallRejected] Call rejected/cancelled for chat:", chatId)
       emitLog(`Call Rejected/Cancelled for chat ${chatId}. Closing modal.`)
 
       setCallState(EVoiceCallStatus.REJECTED)
+      setShowIncomingModal(false)
 
       cleanupVideo()
       onClose()
     }
   }
-  const handleCloseModal = () => {
-    handleRejectFromModal()
-  }
 
   const listenCallRequestReceived = () => {
-    dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.RINGING }))
-    setCallState(EVoiceCallStatus.RINGING)
+    console.log(">>> [listenCallRequestReceived] Call request received - isIncoming:", isIncoming)
+
+    if (isIncoming) {
+      dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.RINGING }))
+      setCallState(EVoiceCallStatus.RINGING)
+      setShowIncomingModal(true)
+    }
   }
 
   const listenInitRemoteStream = () => {
@@ -174,60 +261,56 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
   }
 
   useEffect(() => {
-    const fetchCallee = async () => {
-      if (incomingCallSession && isIncoming) {
-        try {
-          // Tính toán calleeUserId
-          const currentUserId = user?.id
-          if (!currentUserId) {
-            console.error(">>> [CallBox] Error: Current user ID not found")
-            setCalleeName("Call")
-            return
-          }
-
-          const calleeUserId =
-            directChat.creatorId === currentUserId ? directChat.recipientId : directChat.creatorId
-
-          // Gọi API để lấy thông tin callee
-          const callee = await userService.getUserById(calleeUserId)
-          console.log(">>>>callee", callee)
-          setCalleeName(callee.Profile?.fullName || "Call") // Sử dụng thông tin từ callee
-          setCalleeAvatar(callee.Profile.avatar || "/images/user/default-avatar-white.webp")
-        } catch (error) {
-          console.error(">>> [CallBox] Failed to fetch callee user:", error)
-          setCalleeName("Call") // Fallback nếu lỗi
-          toaster.error("Failed to load callee information")
+    const fetchUserInfo = async () => {
+      try {
+        const currentUserId = user?.id
+        if (!currentUserId) {
+          console.error(">>> [CallBox] Error: Current user ID not found")
+          return
         }
-      } else {
-        try {
-          const caller = await userService.getUserById(calleeUserId)
 
-          setCallerName(caller.Profile?.fullName || "Call") // Sử dụng thông tin từ callee
-          //   setCalleeAvatar(callee.Profile.avatar || "/images/user/default-avatar-white.webp")
-        } catch (error) {
-          console.error(">>> [CallBox] Failed to fetch callee user:", error)
-          setCalleeName("Call") // Fallback nếu lỗi
-          toaster.error("Failed to load callee information")
+        const targetUserId =
+          directChat.creatorId === currentUserId ? directChat.recipientId : directChat.creatorId
+
+        const targetUser = await userService.getUserById(targetUserId)
+
+        if (isIncoming && incomingCallSession) {
+          setCalleeName(targetUser.Profile?.fullName || "Unknown")
+          setCalleeAvatar(targetUser.Profile?.avatar || "/images/user/default-avatar-white.webp")
+        } else {
+          setCallerName(targetUser.Profile?.fullName || "Unknown")
         }
+      } catch (error) {
+        console.error(">>> [CallBox] Failed to fetch user info:", error)
+        toaster.error("Failed to load user information")
       }
     }
 
-    fetchCallee()
-  }, [incomingCallSession, isIncoming, directChat, user]) // Thêm directChat và user vào dependency array
-
-  useEffect(() => {
-    if (isIncoming && open) {
-      console.log(">>> [CallBox] Set RINGING cho incoming")
-      // setCallState(EVoiceCallStatus.RINGING);
-      dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.RINGING }))
-      setShowIncomingModal(true)
-    } else if (open) {
-      voiceCallHandler()
+    if (open) {
+      fetchUserInfo()
     }
-  }, [open, isIncoming])
+  }, [open, isIncoming, incomingCallSession, directChat, user])
 
   useEffect(() => {
-    emitLog("Registering for call request received")
+    if (!open) return
+
+    console.log(">>> [CallBox] Initializing - isIncoming:", isIncoming, "open:", open)
+
+    if (isIncoming) {
+      console.log(">>> [CallBox] Setting RINGING for incoming call")
+      setCallState(EVoiceCallStatus.RINGING)
+      setShowIncomingModal(true)
+      dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.RINGING }))
+    } else {
+      console.log(">>> [CallBox] Setting RINGING for outgoing call")
+      setCallState(EVoiceCallStatus.RINGING)
+      setShowIncomingModal(false)
+    }
+  }, [open, isIncoming, dispatch])
+
+  useEffect(() => {
+    console.log(">>> [CallBox] Registering event listeners")
+
     eventEmitter.on(EInternalEvents.INIT_REMOTE_STREAM, listenInitRemoteStream)
     eventEmitter.on(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED, listenCallRequestReceived)
     eventEmitter.on(EInternalEvents.CALL_REJECTED, listenCallRejected)
@@ -236,8 +319,9 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
     eventEmitter.on(EInternalEvents.EMIT_LOG, (messages) => {
       setLogs((prev) => [...messages, ...prev])
     })
+
     return () => {
-      emitLog("Un-registering for call request received")
+      console.log(">>> [CallBox] Unregistering event listeners")
       eventEmitter.off(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED, listenCallRequestReceived)
       eventEmitter.off(EInternalEvents.INIT_REMOTE_STREAM, listenInitRemoteStream)
       eventEmitter.off(EInternalEvents.CALL_REJECTED, listenCallRejected)
@@ -245,60 +329,86 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
       eventEmitter.off(EInternalEvents.CALL_REJECTED_BY_PEER, handlePeerRejected)
       eventEmitter.off(EInternalEvents.EMIT_LOG)
     }
-  }, [directChatId, onClose, cleanupVideo]) // Hook 12
+  }, [directChatId, onClose, cleanupVideo])
+
+  const shouldShowIncomingModal =
+    isIncoming && callState === EVoiceCallStatus.RINGING && showIncomingModal
+
+  const shouldShowHolder =
+    !shouldShowIncomingModal &&
+    (callState === EVoiceCallStatus.CONNECTED ||
+      (callState === EVoiceCallStatus.RINGING && !isIncoming))
+
+  console.log(">>> [CallBox] Render decision:", {
+    callState,
+    isIncoming,
+    showIncomingModal,
+    shouldShowIncomingModal,
+    shouldShowHolder,
+  })
 
   return (
     <div className="mt-6">
-      {/* <button className="p-2 bg-pink-600 w-fit" onClick={() => hangupCall()}>
-        end call
-      </button> */}
-      {(callState === EVoiceCallStatus.CONNECTED || callState === EVoiceCallStatus.RINGING) && (
+      {shouldShowHolder && (
         <HolderUI
           onClose={handleEndCall}
           calleeName={callerName}
-          callState={callState}
+          callState={callState!}
           remoteAudioEleRef={remoteAudioEleRef}
           localVideoRef={localVideoRef}
           remoteVideoRef={remoteVideoRef}
-          toggleVideo={toggleVideo}
-          isVideoEnabled={isVideoEnabled}
+          toggleVideo={handleToggleVideo} // **VIDEO: Dùng wrapper function**
+          isVideoEnabled={voiceCallIsVideoEnabled} // **VIDEO: Dùng state từ useVoiceCall**
           toggleMic={toggleMic}
         />
       )}
-      <IncomingCallModal
-        open={showIncomingModal}
-        callerName={calleeName}
-        callerAvatar={calleeAvatar}
-        onAccept={handleAcceptFromModal}
-        onReject={handleRejectFromModal}
-      />
+
+      {shouldShowIncomingModal && (
+        <IncomingCallModal
+          open={true}
+          callerName={calleeName}
+          callerAvatar={calleeAvatar}
+          onAccept={handleAcceptFromModal}
+          onReject={handleRejectFromModal}
+        />
+      )}
 
       <audio ref={remoteAudioEleRef} autoPlay playsInline />
     </div>
   )
 }
+
+// ===== VoiceCall Component =====
 type TVoiceCallProps = {
   canSend: boolean
   directChat: TDirectChat
 }
+
 export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
   const [callBoxOpen, setCallBoxOpen] = useState<boolean>(false)
   const incomingCallSession = useAppSelector((state) => state["voice-call"]?.incomingCallSession)
   const callSession = useAppSelector((state) => state["voice-call"].callSession)
   const dispatch = useAppDispatch()
-  const { startCall, cleanup } = useVoiceCall()
+  const { startCall } = useVoiceCall()
   const user = useUser()!
 
   useEffect(() => {
-    if (callSession?.status === EVoiceCallStatus.REJECTED) {
+    if (
+      callSession?.status === EVoiceCallStatus.REJECTED ||
+      callSession?.status === EVoiceCallStatus.ENDED ||
+      callSession?.status === EVoiceCallStatus.CANCELLED
+    ) {
+      console.log(">>> [VoiceCall] Call ended/rejected/cancelled - closing CallBox")
       setCallBoxOpen(false)
     }
   }, [callSession?.status])
+
   useEffect(() => {
     const handleIncoming = () => {
-      console.log(">>> [VoiceCall] Nhận event incoming")
+      console.log(">>> [VoiceCall] Received incoming call event")
       setCallBoxOpen(true)
     }
+
     eventEmitter.on(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED, handleIncoming)
 
     return () => {
@@ -308,82 +418,154 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
 
   useEffect(() => {
     if (incomingCallSession) {
+      console.log(">>> [VoiceCall] IncomingCallSession detected - opening CallBox")
       setCallBoxOpen(true)
     }
   }, [incomingCallSession])
 
-  useEffect(() => {
-    if (
-      callSession?.status === EVoiceCallStatus.REJECTED ||
-      callSession?.status === EVoiceCallStatus.ENDED ||
-      callSession?.status === EVoiceCallStatus.CANCELLED ||
-      incomingCallSession?.status === EVoiceCallStatus.CANCELLED ||
-      incomingCallSession?.status === EVoiceCallStatus.ENDED
-    ) {
-      setCallBoxOpen(false)
+  // **VIDEO: Hàm gọi thoại (audio only)**
+  const handleVoiceCall = () => {
+    if (incomingCallSession) {
+      console.log(">>> [VoiceCall] Cannot start call - already has incoming session")
+      return
     }
-  }, [callSession?.status, incomingCallSession?.status])
-  const handleClick = () => {
-    if (!incomingCallSession) {
-      setCallBoxOpen(true)
-      const currentUserId = user?.id // Lấy ID user hiện tại
-      if (!currentUserId) {
-        console.error(">>> [VoiceCall] Error: Current user ID not found")
-        toaster.error("Cannot start call: User not authenticated")
-        setCallBoxOpen(false)
-        return
-      }
 
-      // Xác định calleeUserId
-      const calleeUserId =
-        directChat.creatorId === currentUserId ? directChat.recipientId : directChat.creatorId
+    const currentUserId = user?.id
+    if (!currentUserId) {
+      console.error(">>> [VoiceCall] Error: Current user ID not found")
+      toaster.error("Cannot start call: User not authenticated")
+      return
+    }
 
-      // Debug chi tiết
-      console.log(">>> [VoiceCall] Starting call", {
-        currentUserId,
-        calleeUserId,
-        directChatId: directChat.id,
-        directChat: { creatorId: directChat.creatorId, recipientId: directChat.recipientId },
-      })
+    const calleeUserId =
+      directChat.creatorId === currentUserId ? directChat.recipientId : directChat.creatorId
 
-      // Kiểm tra không tự gọi chính mình
-      if (calleeUserId === currentUserId) {
-        console.error(">>> [VoiceCall] Error: Cannot call yourself", {
-          currentUserId,
-          calleeUserId,
-        })
-        toaster.error("Cannot call yourself")
-        setCallBoxOpen(false)
-        return
-      }
+    console.log(">>> [VoiceCall] Starting voice call", {
+      currentUserId,
+      calleeUserId,
+      directChatId: directChat.id,
+    })
 
-      startCall(calleeUserId, directChat.id, (res: TCallRequestEmitRes) => {
-        console.log(">>> [VoiceCall] Call request response:", res)
+    if (calleeUserId === currentUserId) {
+      console.error(">>> [VoiceCall] Error: Cannot call yourself")
+      toaster.error("Cannot call yourself")
+      return
+    }
+
+    setCallBoxOpen(true)
+
+    startCall(
+      calleeUserId,
+      directChat.id,
+      (res: TCallRequestEmitRes) => {
+        console.log(">>> [VoiceCall] Voice call request response:", res)
         if (res.session) {
           dispatch(setCallSession(res.session))
         }
-      }).catch((error) => {
-        console.error(">>> [VoiceCall] Failed to start call:", error)
-        toaster.error(`Failed to start call: ${error.message}`)
-        setCallBoxOpen(false)
-      })
-    }
+      },
+      false
+    ).catch((error) => {
+      // **VIDEO: isVideoCall = false**
+      console.error(">>> [VoiceCall] Failed to start voice call:", error)
+      toaster.error(`Failed to start call: ${error.message}`)
+      setCallBoxOpen(false)
+    })
   }
-  const handleCallBoxClose = () => setCallBoxOpen(false)
+
+  // **VIDEO: Hàm gọi video - MỚI**
+  const handleVideoCall = () => {
+    if (incomingCallSession) {
+      console.log(">>> [VideoCall] Cannot start call - already has incoming session")
+      return
+    }
+
+    const currentUserId = user?.id
+    if (!currentUserId) {
+      console.error(">>> [VideoCall] Error: Current user ID not found")
+      toaster.error("Cannot start call: User not authenticated")
+      return
+    }
+
+    const calleeUserId =
+      directChat.creatorId === currentUserId ? directChat.recipientId : directChat.creatorId
+
+    console.log(">>> [VideoCall] Starting video call", {
+      currentUserId,
+      calleeUserId,
+      directChatId: directChat.id,
+    })
+
+    if (calleeUserId === currentUserId) {
+      console.error(">>> [VideoCall] Error: Cannot call yourself")
+      toaster.error("Cannot call yourself")
+      return
+    }
+
+    setCallBoxOpen(true)
+
+    startCall(
+      calleeUserId,
+      directChat.id,
+      (res: TCallRequestEmitRes) => {
+        console.log(">>> [VideoCall] Video call request response:", res)
+        if (res.session) {
+          dispatch(setCallSession(res.session))
+        }
+      },
+      true
+    ).catch((error) => {
+      // **VIDEO: isVideoCall = true**
+      console.error(">>> [VideoCall] Failed to start video call:", error)
+      toaster.error(`Failed to start video call: ${error.message}`)
+      setCallBoxOpen(false)
+    })
+  }
+
+  const handleCallBoxClose = () => {
+    console.log(">>> [VoiceCall] CallBox closed by user")
+    setCallBoxOpen(false)
+  }
+
+  console.log(">>> [VoiceCall] ========== RENDER ==========")
+  console.log(">>> [VoiceCall] callBoxOpen:", callBoxOpen)
+  console.log(">>> [VoiceCall] incomingCallSession:", incomingCallSession)
+  console.log(">>> [VoiceCall] callSession:", callSession)
+  console.log(">>> [VoiceCall] Will render CallBox:", callBoxOpen)
+  console.log(">>> [VoiceCall] CallBox isIncoming:", !!incomingCallSession)
+  console.log(">>> [VoiceCall] ======================================")
+
   return (
-    <div className="relative">
-      <CustomTooltip title="Call" placement="bottom" align="end">
+    <div className="relative flex gap-2">
+      {/* **VIDEO: Nút Voice Call** */}
+      <CustomTooltip title="Voice call" placement="bottom" align="end">
         <div
-          className={`${canSend === false ? "pointer-events-none cursor-not-allowed" : ""} w-fit ${!!incomingCallSession ? "opacity-50 cursor-not-allowed" : ""}`} // Thêm class disabled thay vì prop
+          className={`${
+            canSend === false ? "pointer-events-none cursor-not-allowed" : ""
+          } w-fit ${!!incomingCallSession ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <IconButton
-            onClick={handleClick}
+            onClick={handleVoiceCall}
             className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
           >
             <Phone />
           </IconButton>
         </div>
       </CustomTooltip>
+
+      {/* <CustomTooltip title="Video call" placement="bottom" align="end">
+        <div
+          className={`${canSend === false ? "pointer-events-none cursor-not-allowed" : ""
+            } w-fit ${!!incomingCallSession ? "opacity-50 cursor-not-allowed" : ""}`}
+        >
+          <IconButton
+            onClick={handleVideoCall}
+            className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
+          >
+            <Video />
+          </IconButton>
+        </div>
+      </CustomTooltip> */}
+
       {callBoxOpen && (
         <CallBox
           open={callBoxOpen}
@@ -392,7 +574,7 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
           onClose={handleCallBoxClose}
           callSession={callSession}
         />
-      )}{" "}
+      )}
     </div>
   )
 }

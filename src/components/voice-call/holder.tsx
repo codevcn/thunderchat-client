@@ -1,15 +1,14 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
-import { PhoneOff, MicOff, Video, ScreenShare, X, Mic } from "lucide-react"
+import { PhoneOff, MicOff, Video, VideoOff, X, Mic } from "lucide-react"
 import type { RefObject } from "react"
 import { EVoiceCallStatus } from "@/utils/enums"
 import { createPortal } from "react-dom"
 import { useAppDispatch } from "@/hooks/redux"
-import { updateCallSession, updateIncomingCallSession } from "@/redux/voice-call/layout.slice"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
+
 const emitLog = (message: string) => console.log(message)
-// HẾT GIẢ ĐỊNH
 
 type HolderUIProps = {
   onClose: () => void
@@ -28,7 +27,6 @@ const HolderUI = ({
   calleeName,
   callState,
   remoteAudioEleRef,
-
   localVideoRef,
   remoteVideoRef,
   toggleVideo,
@@ -39,7 +37,46 @@ const HolderUI = ({
   const dispatch = useAppDispatch()
   const [isMicEnabled, setIsMicEnabled] = useState(true)
   const [isRemoteVideoActive, setIsRemoteVideoActive] = useState(false)
+  const [isLocalVideoReady, setIsLocalVideoReady] = useState(false) // **NEW: Track local video**
+
   console.log("calleeName>>", calleeName)
+
+  // **FIX: Kiểm tra local video stream**
+  useEffect(() => {
+    const localVideo = localVideoRef.current
+    if (!localVideo) return
+
+    const checkLocalVideo = () => {
+      const stream = localVideo.srcObject as MediaStream
+      if (stream) {
+        const videoTracks = stream.getVideoTracks()
+        const hasVideo = videoTracks.some((track) => track.readyState === "live" && track.enabled)
+        console.log(">>> Local video check:", hasVideo, videoTracks.length)
+        setIsLocalVideoReady(hasVideo)
+      } else {
+        console.log(">>> Local video: No stream")
+        setIsLocalVideoReady(false)
+      }
+    }
+
+    checkLocalVideo()
+
+    // Listen for loadedmetadata event
+    const handleLoadedMetadata = () => {
+      console.log(">>> Local video metadata loaded")
+      checkLocalVideo()
+    }
+
+    localVideo.addEventListener("loadedmetadata", handleLoadedMetadata)
+
+    const interval = setInterval(checkLocalVideo, 500)
+
+    return () => {
+      clearInterval(interval)
+      localVideo.removeEventListener("loadedmetadata", handleLoadedMetadata)
+    }
+  }, [localVideoRef, isVideoEnabled])
+
   useEffect(() => {
     const remoteVideo = remoteVideoRef.current
     if (!remoteVideo) return
@@ -48,7 +85,6 @@ const HolderUI = ({
       const stream = remoteVideo.srcObject as MediaStream
       if (stream) {
         const videoTracks = stream.getVideoTracks()
-        // Kiểm tra track có active và enabled
         const hasActiveVideo = videoTracks.some(
           (track) => track.readyState === "live" && track.enabled
         )
@@ -59,7 +95,7 @@ const HolderUI = ({
     }
 
     checkRemoteVideo()
-    const interval = setInterval(checkRemoteVideo, 1000) // Tăng interval
+    const interval = setInterval(checkRemoteVideo, 1000)
 
     return () => clearInterval(interval)
   }, [remoteVideoRef])
@@ -67,14 +103,14 @@ const HolderUI = ({
   useEffect(() => {
     const handleRemoteVideoUpdate = (stream: MediaStream) => {
       console.log(">>> Remote video updated:", stream?.getVideoTracks().length)
-      if (remoteVideoRef.current && stream) {
-        remoteVideoRef.current.srcObject = stream
 
-        // Check tracks
-        const videoTracks = stream.getVideoTracks()
-        const hasActiveVideo = videoTracks.some((t) => t.enabled && t.readyState === "live")
-        setIsRemoteVideoActive(hasActiveVideo)
-      }
+      if (!stream) return
+
+      const videoTracks = stream.getVideoTracks()
+      const hasActiveVideo = videoTracks.some((t) => t.enabled && t.readyState === "live")
+
+      console.log(">>> Setting isRemoteVideoActive:", hasActiveVideo)
+      setIsRemoteVideoActive(hasActiveVideo)
     }
 
     eventEmitter.on(EInternalEvents.REMOTE_VIDEO_UPDATED, handleRemoteVideoUpdate)
@@ -82,7 +118,7 @@ const HolderUI = ({
     return () => {
       eventEmitter.off(EInternalEvents.REMOTE_VIDEO_UPDATED, handleRemoteVideoUpdate)
     }
-  }, [remoteVideoRef])
+  }, [])
 
   useEffect(() => {
     const audio = ringtoneRef.current
@@ -103,16 +139,20 @@ const HolderUI = ({
   }, [callState])
 
   const handleToggleMic = () => {
-    const newMicState = toggleMic() // Gọi hàm từ useVoiceCall
-    setIsMicEnabled(newMicState) // Cập nhật state
+    const newMicState = toggleMic()
+    setIsMicEnabled(newMicState)
     emitLog(`Toggle mic: Mic is now ${newMicState ? "enabled" : "disabled"}`)
   }
+
   const handleEndCall = () => {
-    emitLog("User1 ended call")
+    emitLog("User ended call")
     onClose()
   }
 
-  if (!open) return null
+  const handleToggleVideo = () => {
+    console.log(">>> Toggle video clicked, current state:", isVideoEnabled)
+    toggleVideo()
+  }
 
   if (typeof document === "undefined") return null
   const portalRoot = document.body
@@ -133,10 +173,10 @@ const HolderUI = ({
           borderColor: "var(--tdc-regular-border-cl)",
         }}
       >
-        {/* âm thanh cuộc gọi */}
+        {/* Audio element */}
         <audio ref={remoteAudioEleRef} autoPlay playsInline style={{ display: "none" }} />
 
-        {/* Vùng video chính */}
+        {/* Main video area */}
         <div
           className="flex-1 relative flex items-center justify-center overflow-hidden"
           style={{
@@ -152,7 +192,7 @@ const HolderUI = ({
             }`}
           />
 
-          {/* Placeholder khi video đối phương tắt */}
+          {/* Placeholder when remote video is off */}
           {!isRemoteVideoActive && (
             <div
               className="absolute inset-0 flex flex-col items-center justify-center text-white p-4"
@@ -175,7 +215,7 @@ const HolderUI = ({
             <div className="text-white text-lg font-semibold">
               {calleeName}
               <p className="text-sm font-normal text-white/80">
-                {callState === EVoiceCallStatus.CONNECTED ? "In Call" : "Connecting..."}
+                {callState === EVoiceCallStatus.CONNECTED ? "Connected" : "Connecting..."}
               </p>
             </div>
             <button
@@ -190,18 +230,31 @@ const HolderUI = ({
             </button>
           </div>
 
-          {/* Local video */}
+          {/* **FIX: Local video với background để debug** */}
           {isVideoEnabled && (
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="absolute bottom-4 right-4 w-40 h-28 rounded-lg border-2 shadow-xl object-cover z-10"
+            <div
+              className="absolute bottom-4 right-4 w-40 h-28 rounded-lg border-2 shadow-xl overflow-hidden z-10"
               style={{
                 borderColor: "var(--tdc-regular-white-cl)",
+                backgroundColor: isLocalVideoReady ? "transparent" : "#1a1a1a", // Debug background
               }}
-            />
+            >
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${
+                  isLocalVideoReady ? "opacity-100" : "opacity-0"
+                }`}
+              />
+              {/* Debug overlay */}
+              {!isLocalVideoReady && (
+                <div className="absolute inset-0 flex items-center justify-center text-white text-xs">
+                  <span>Loading...</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -214,13 +267,9 @@ const HolderUI = ({
           }}
         >
           {/* Toggle Video */}
-          {/* Toggle Video */}
           <div className="flex flex-col items-center gap-2">
             <button
-              onClick={() => {
-                console.log(">>> Video button clicked, current state:", isVideoEnabled)
-                toggleVideo()
-              }}
+              onClick={handleToggleVideo}
               className={`w-14 h-14 rounded-full inline-flex items-center justify-center transition shadow-md ${
                 isVideoEnabled ? "text-white" : "text-gray-300"
               }`}
@@ -231,7 +280,7 @@ const HolderUI = ({
               }}
               aria-label={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
             >
-              <Video className="w-6 h-6" />
+              {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
             </button>
             <span
               className="text-sm font-medium"
@@ -268,7 +317,7 @@ const HolderUI = ({
           <div className="flex flex-col items-center gap-2 ml-4">
             <button
               onClick={handleEndCall}
-              className="w-16 h-16 rounded-full inline-flex items-center justify-center shadow-lg transition duration-200 hover:scale-105"
+              className="w-14 h-14 rounded-full inline-flex items-center justify-center shadow-lg transition duration-200 hover:scale-105"
               style={{
                 backgroundColor: "var(--tdc-regular-red-cl)",
                 color: "#fff",

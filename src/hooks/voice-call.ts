@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { EVoiceCallEvents } from "@/utils/socket/events"
@@ -15,7 +15,8 @@ import {
   updateCallSession,
   resetIncomingCallSession,
   updateIncomingCallSession,
-} from "@/redux/voice-call/layout.slice"
+  setIncomingCallSession,
+} from "@/redux/call/layout.slice"
 import { toaster } from "@/utils/toaster"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
@@ -50,7 +51,10 @@ export function useVoiceCall() {
   const dispatch = useAppDispatch()
   const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([])
 
-  // **FIX KEY: Thêm flag để track vai trò**
+  // **VIDEO: Thêm state để track video**
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false)
+  const isVideoCallRef = useRef(false) // Track xem đây có phải video call không
+
   const isCallerRef = useRef<boolean>(false)
   const makingOfferRef = useRef<boolean>(false)
   const isSettingRemoteDescriptionRef = useRef<boolean>(false)
@@ -98,25 +102,38 @@ export function useVoiceCall() {
       const stream = e.streams[0]
       if (stream) {
         if (e.track.kind === "audio") {
+          remoteStreamRef.current?.getAudioTracks().forEach((track) => {
+            remoteStreamRef.current?.removeTrack(track)
+          })
           stream.getAudioTracks().forEach((track) => {
             remoteStreamRef.current?.addTrack(track)
           })
         } else if (e.track.kind === "video") {
+          remoteStreamRef.current?.getVideoTracks().forEach((track) => {
+            remoteStreamRef.current?.removeTrack(track)
+          })
+
           stream.getVideoTracks().forEach((track) => {
             remoteStreamRef.current?.addTrack(track)
           })
-          // **Emit event để UI update**
+
           if (remoteStreamRef.current) {
-            // <-- Thêm guard clause
+            console.log(">>> Refreshing remote video element")
             eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current)
+
+            setTimeout(() => {
+              eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current!)
+            }, 100)
           }
         }
       } else {
         remoteStreamRef.current?.addTrack(e.track)
         if (e.track.kind === "video") {
           if (remoteStreamRef.current) {
-            // <-- Thêm guard clause
             eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current)
+            setTimeout(() => {
+              eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current!)
+            }, 100)
           }
         }
       }
@@ -134,7 +151,6 @@ export function useVoiceCall() {
       })
     }
 
-    // **FIX: Perfect Negotiation Pattern**
     p2pConnectionRef.current.onnegotiationneeded = async () => {
       try {
         makingOfferRef.current = true
@@ -145,7 +161,6 @@ export function useVoiceCall() {
 
         const offer = await p2pConnectionRef.current!.createOffer()
 
-        // Kiểm tra xem có phải đang setting remote description không
         if (p2pConnectionRef.current!.signalingState !== "stable") {
           console.log(">>> Skip negotiation: Not in stable state")
           return
@@ -166,11 +181,20 @@ export function useVoiceCall() {
     }
   }
 
-  async function getMicStream(): Promise<MediaStream> {
+  // **VIDEO: Sửa lại hàm lấy media stream để hỗ trợ video**
+  async function getMediaStream(withVideo: boolean = false): Promise<MediaStream> {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       throw new Error("Media devices not supported in this environment")
     }
-    return navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    return navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: withVideo
+        ? {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          }
+        : false,
+    })
   }
 
   function toggleMic(): boolean {
@@ -192,7 +216,6 @@ export function useVoiceCall() {
       track.enabled = !isEnabled
     })
 
-    // **FIX: Cập nhật sender trong peer connection**
     const p2pConnection = p2pConnectionRef.current
     if (p2pConnection) {
       p2pConnection.getSenders().forEach((sender) => {
@@ -206,28 +229,95 @@ export function useVoiceCall() {
     emitLog(`Mic ${isEnabled ? "muted" : "unmuted"}`)
     return !isEnabled
   }
+
+  // **VIDEO: Thêm hàm toggle video**
+  async function toggleVideo(): Promise<boolean> {
+    const p2pConnection = p2pConnectionRef.current
+
+    if (!localStreamRef.current) {
+      console.log(">>> [toggleVideo] No local stream")
+      return false
+    }
+
+    const videoTracks = localStreamRef.current.getVideoTracks()
+
+    if (isVideoEnabled && videoTracks.length > 0) {
+      // Tắt video
+      videoTracks.forEach((track) => {
+        track.stop()
+        localStreamRef.current?.removeTrack(track)
+      })
+
+      // Remove video sender
+      if (p2pConnection) {
+        const senders = p2pConnection.getSenders()
+        senders.forEach((sender) => {
+          if (sender.track?.kind === "video") {
+            p2pConnection.removeTrack(sender)
+          }
+        })
+      }
+
+      setIsVideoEnabled(false)
+      console.log(">>> Video disabled")
+      return false
+    } else {
+      // Bật video
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        })
+
+        const videoTrack = videoStream.getVideoTracks()[0]
+        localStreamRef.current.addTrack(videoTrack)
+
+        // Add video track to peer connection
+        if (p2pConnection) {
+          p2pConnection.addTrack(videoTrack, localStreamRef.current)
+        }
+
+        setIsVideoEnabled(true)
+        console.log(">>> Video enabled")
+        return true
+      } catch (error) {
+        console.error(">>> Failed to enable video:", error)
+        toaster.error("Không thể bật camera")
+        return false
+      }
+    }
+  }
+
   function initRemoteStream() {
     remoteStreamRef.current = new MediaStream()
     eventEmitter.emit(EInternalEvents.INIT_REMOTE_STREAM)
   }
 
-  async function attachMic() {
+  // **VIDEO: Sửa attachMic thành attachMedia để hỗ trợ video**
+  async function attachMedia(withVideo: boolean = false) {
     if (localStreamRef.current) {
-      console.log("🎙️ [attachMic] Stream already exists, reusing")
+      console.log("🎙️ [attachMedia] Stream already exists, reusing")
       return
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await getMediaStream(withVideo)
       localStreamRef.current = stream
-      console.log("🎙️ [attachMic] Got local stream:", stream)
+      console.log("🎙️ [attachMedia] Got local stream:", stream)
+
+      // Track video state
+      if (withVideo) {
+        setIsVideoEnabled(true)
+      }
 
       stream.getTracks().forEach((track) => {
-        console.log("🎙️ [attachMic] Adding track:", track)
+        console.log("🎙️ [attachMedia] Adding track:", track.kind)
         p2pConnectionRef.current?.addTrack(track, stream)
       })
     } catch (err) {
-      console.error("❌ [attachMic] Failed to get mic:", err)
+      console.error("❌ [attachMedia] Failed to get media:", err)
       throw err
     }
   }
@@ -240,15 +330,18 @@ export function useVoiceCall() {
     return remoteStreamRef.current
   }
 
-  // **FIX: Đánh dấu caller khi bắt đầu cuộc gọi**
   async function startCall(
     calleeUserId: number,
     directChatId: number,
-    callback: TUnknownFunction<TCallRequestEmitRes, void>
+    callback: TUnknownFunction<TCallRequestEmitRes, void>,
+    isVideoCall: boolean = false
   ) {
-    isCallerRef.current = true // **Đánh dấu là caller**
+    isCallerRef.current = true
+    isVideoCallRef.current = isVideoCall
+
     await ensurePeer()
-    await attachMic()
+    await attachMedia(isVideoCall) // Truyền flag video vào
+
     emitLog("sent a call request")
 
     clientSocket.callSocket.emit(
@@ -267,7 +360,12 @@ export function useVoiceCall() {
       if (!p2pConnection) {
         throw new Error("Cannot establish peer connection")
       }
-
+      if (p2pConnection.signalingState !== "stable") {
+        console.warn(
+          `[sendOffer] Skip creating offer, signaling state = ${p2pConnection.signalingState}`
+        )
+        return
+      }
       emitLog("creating an offer")
       const offer = await p2pConnection.createOffer()
       emitLog("setting local description")
@@ -296,10 +394,9 @@ export function useVoiceCall() {
     }
   }
 
-  // **FIX: Callee không tạo offer tự động**
   async function acceptCall() {
     try {
-      isCallerRef.current = false // **Đánh dấu là callee**
+      isCallerRef.current = false
 
       const activeCallSession = incomingCallSession || tempActiveCallSessionRef.current
       console.log("activeCallSession in accept:", activeCallSession)
@@ -313,7 +410,8 @@ export function useVoiceCall() {
       dispatch(resetIncomingCallSession())
 
       await ensurePeer()
-      await attachMic()
+      // **VIDEO: Khi accept call, không tự động bật video**
+      await attachMedia(false)
 
       console.log("Peer connection:", p2pConnectionRef.current)
       emitLog(`[acceptCall] ensurePeer done: ${p2pConnectionRef.current}`)
@@ -340,6 +438,7 @@ export function useVoiceCall() {
     }
 
     dispatch(updateCallSession({ status: EVoiceCallStatus.REJECTED }))
+    dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.REJECTED }))
     clientSocket.callSocket.emit(EVoiceCallEvents.call_reject, { sessionId: sessionToUse.id })
     cleanup()
   }
@@ -414,12 +513,15 @@ export function useVoiceCall() {
     dispatch(resetCallSession())
     dispatch(resetIncomingCallSession())
 
-    // Reset flags
     isCallerRef.current = false
     makingOfferRef.current = false
     isSettingRemoteDescriptionRef.current = false
     receivedOfferRef.current = false
     pendingIceCandidatesRef.current = []
+
+    // **VIDEO: Reset video state**
+    setIsVideoEnabled(false)
+    isVideoCallRef.current = false
   }
 
   function autoCleanup() {
@@ -431,8 +533,18 @@ export function useVoiceCall() {
   }
 
   function registerSocketListeners() {
+    console.log("🎯 [registerSocketListeners] Starting registration")
+    console.log("🔌 [Socket] Connected:", clientSocket.callSocket.connected)
+    console.log("🔌 [Socket] ID:", clientSocket.callSocket.id)
+
     clientSocket.callSocket.on(EVoiceCallEvents.call_request, (activeCallSession) => {
       emitLog("Call request received")
+      dispatch(
+        setIncomingCallSession({
+          ...activeCallSession,
+          status: EVoiceCallStatus.RINGING,
+        })
+      )
       tempActiveCallSessionRef.current = activeCallSession
       eventEmitter.emit(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED)
     })
@@ -453,9 +565,8 @@ export function useVoiceCall() {
             dispatch(setCallSession(callSession))
           }
           await ensurePeer()
-          await attachMic()
+          await attachMedia(isVideoCallRef.current) // Sử dụng flag video
           sendOffer()
-
           break
 
         case EVoiceCallStatus.REJECTED:
@@ -466,7 +577,6 @@ export function useVoiceCall() {
           } else {
             eventEmitter.emit(EInternalEvents.CALL_REJECTED_BY_PEER, {})
           }
-          cleanup()
           toaster.info("Call rejected")
           break
 
@@ -483,7 +593,7 @@ export function useVoiceCall() {
           break
 
         case EVoiceCallStatus.ENDED:
-          toaster.info("Call ended by peer.")
+          toaster.info("case ended.")
           if (callSession) {
             eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {
               directChatId: callSession.directChatId,
@@ -494,7 +604,6 @@ export function useVoiceCall() {
       }
     })
 
-    // **FIX CHÍNH: Perfect Negotiation Pattern**
     clientSocket.callSocket.on(EVoiceCallEvents.call_offer_answer, async (SDP, type) => {
       emitLog("received an offer or answer")
       const p2pConnection = p2pConnectionRef.current
@@ -519,7 +628,6 @@ export function useVoiceCall() {
           emitLog("received an offer")
           receivedOfferRef.current = true
 
-          // **Perfect Negotiation: Polite peer (callee) rollback nếu đang tạo offer**
           const offerCollision =
             type === ESDPType.OFFER &&
             (makingOfferRef.current || p2pConnection.signalingState !== "stable")
@@ -531,7 +639,6 @@ export function useVoiceCall() {
             return
           }
 
-          // Rollback nếu cần
           if (offerCollision) {
             console.log(">>> Rollback local description")
             await Promise.all([p2pConnection.setLocalDescription({ type: "rollback" })])
@@ -540,7 +647,7 @@ export function useVoiceCall() {
           isSettingRemoteDescriptionRef.current = true
 
           await ensurePeer()
-          await attachMic()
+          await attachMedia(false) // Callee không tự động bật video
           await p2pConnection.setRemoteDescription({ sdp: SDP, type: "offer" })
 
           flushIceCandidates()
@@ -572,7 +679,6 @@ export function useVoiceCall() {
         }
       } catch (error) {
         console.error(`Failed to process SDP: ${error}`)
-        toaster.error("Failed to establish voice call, please try again later!")
         isSettingRemoteDescriptionRef.current = false
       }
     })
@@ -595,7 +701,7 @@ export function useVoiceCall() {
         try {
           await p2pConnection.addIceCandidate({ candidate, sdpMid, sdpMLineIndex })
         } catch (err) {
-          console.error("❌ addIceCandidate error:", err)
+          console.error(" addIceCandidate error:", err)
         }
       }
     )
@@ -604,8 +710,8 @@ export function useVoiceCall() {
   function sendPhoneIconMessage(directChatId: number, receiverId: number, action: TActionSendIcon) {
     const content =
       action === "start"
-        ? '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Call started'
-        : '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Call ended'
+        ? '<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span style="vertical-align: middle;">Call started</span>'
+        : '<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span style="vertical-align: middle;">Call ended</span>'
 
     const msgPayload = {
       content,
@@ -628,6 +734,7 @@ export function useVoiceCall() {
   }
 
   useEffect(() => {
+    console.log("🔧 [useVoiceCall] REGISTERING socket listeners")
     registerSocketListeners()
     return () => {
       clientSocket.callSocket.off(EVoiceCallEvents.call_request)
@@ -650,5 +757,7 @@ export function useVoiceCall() {
     getP2pConnection: () => p2pConnectionRef.current,
     incomingCallSession,
     toggleMic,
+    toggleVideo, // **VIDEO: Export toggleVideo**
+    isVideoEnabled, // **VIDEO: Export isVideoEnabled state**
   }
 }

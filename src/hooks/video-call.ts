@@ -93,12 +93,11 @@ export function useVideoCall({
 
       console.log(">>> [toggleVideo] shouldEnable:", shouldEnable)
 
+      // Trong toggleVideo, phần BẬT VIDEO:
       if (shouldEnable) {
-        // 🔹 BẬT VIDEO
         try {
           let videoTrack = localStream.getVideoTracks()[0]
 
-          // Nếu chưa có hoặc track đã stop
           if (!videoTrack || videoTrack.readyState === "ended") {
             console.log(">>> Getting new video stream...")
             const videoStream = await getVideoStream()
@@ -106,29 +105,39 @@ export function useVideoCall({
 
             videoTrack = videoStream.getVideoTracks()[0]
 
-            // Xóa track cũ nếu có
+            // **Đảm bảo track enabled TRƯỚC khi add**
+            videoTrack.enabled = true
+
+            // Xóa track cũ
             localStream.getVideoTracks().forEach((track) => {
+              track.stop()
               localStream.removeTrack(track)
             })
 
             localStream.addTrack(videoTrack)
 
-            // **FIX: Thêm hoặc replace sender**
             const videoSender = pc.getSenders().find((s) => s.track?.kind === "video")
             if (videoSender) {
               await videoSender.replaceTrack(videoTrack)
               console.log("✅ Replaced video track")
             } else {
               pc.addTrack(videoTrack, localStream)
-              console.log("✅ Added video track (will trigger negotiation)")
+              console.log("✅ Added video track")
             }
+
+            // **Log để debug**
+            console.log(">>> Local video track after enable:", {
+              id: videoTrack.id,
+              enabled: videoTrack.enabled,
+              readyState: videoTrack.readyState,
+              muted: videoTrack.muted,
+            })
           } else {
-            // Track còn tồn tại, chỉ enable
             videoTrack.enabled = true
-            console.log("✅ Re-enabled video track")
+            console.log("✅ Re-enabled existing track")
           }
 
-          // Update UI
+          // Update local UI
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = localStream
           }

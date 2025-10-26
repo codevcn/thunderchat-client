@@ -30,6 +30,22 @@ interface IEventEmitter {
   [EInternalEvents.VOICE_CALL_REQUEST_RECEIVED]: () => void
   [EInternalEvents.EMIT_LOG]: (messages: TEmitLogMessage[]) => void
   [EInternalEvents.INIT_REMOTE_STREAM]: () => void
+  [EInternalEvents.VOICE_CALL_CONNECTED]: () => void
+  [EInternalEvents.CALL_REJECTED]: (directChatId: number) => void
+  [EInternalEvents.REMOTE_VIDEO_UPDATED]: (stream: MediaStream) => void // Thêm cho update remote video stream
+  [EInternalEvents.MIC_TOGGLED]: (enabled: boolean) => void // Thêm cho toggle mic (nếu cần sync riêng)
+  [EInternalEvents.REMOTE_STREAM_UPDATED]: (stream: MediaStream) => void // Thêm cho update remote stream tổng quát (audio/video)
+  [EInternalEvents.VIDEO_TOGGLED]: (enabled: boolean) => void
+  [EInternalEvents.CALL_REJECTED_BY_PEER]: (data: { directChatId?: number }) => void
+  [EInternalEvents.CALL_CANCEL]: (directChatId: number) => void
+  [EInternalEvents.CALL_CANCELLED_BY_PEER]: (data: { directChatId?: number }) => void
+  [EInternalEvents.CALL_STARTED]: (payload: {
+    directChatId?: number // Optional for direct chat
+    groupChatId?: number // Optional for group chat
+    initiatorId: number
+    type: string
+    timestamp: Date
+  }) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

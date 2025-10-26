@@ -51,63 +51,63 @@ self.addEventListener("push", (event) => {
 
   const name = data.conversation.message.Author.Profile.avatar || "../images/user/avatar.png"
   const message = data.conversation.message
-  const type = message.type?.toUpperCase()
+  let type = message.type?.toUpperCase()
   const { Media, Sticker } = message
 
   let notificationBody = ""
   if (message.content && message.content.includes("<svg")) {
-    type = "CALL" // Ghi đè type nếu phát hiện SVG
+    type = "CALL" // Override type if SVG detected
   }
   switch (type) {
     case EMessageTypes.TEXT:
-      notificationBody = message.content || "[Không có nội dung]"
+      notificationBody = message.content || "[No content]"
       break
 
     case EMessageTypes.STICKER:
-      notificationBody = "Đã gửi một sticker"
+      notificationBody = "Sent a sticker"
 
       notificationImage = Sticker?.imageUrl
       break
     case EMessageTypes.MEDIA:
       if (!Media) {
-        notificationBody = "[Nội dung media không hợp lệ]"
+        notificationBody = "[Invalid media content]"
         break
       }
       const mediaType = Media.type?.toUpperCase()
 
       switch (mediaType) {
         case EMessageMediaTypes.IMAGE:
-          notificationBody = "📷 Đã gửi một hình ảnh"
+          notificationBody = "📷 Sent an image"
           notificationImage = Media.url
           break
         case EMessageMediaTypes.VIDEO:
-          notificationBody = `🎥 Đã gửi một video: ${Media.fileName || "Không có tên"}`
+          notificationBody = `🎥 Sent a video: ${Media.fileName || "No name"}`
 
           notificationImage = Media.thumbnailUrl
           break
 
         case EMessageMediaTypes.AUDIO:
-          notificationBody = "🎤 Tin nhắn thoại"
+          notificationBody = "🎤 Voice message"
 
           break
 
         case EMessageMediaTypes.DOCUMENT:
-          notificationBody = `📎 Đã gửi tệp: ${Media.fileName || "Không có tên"}`
+          notificationBody = `📎 Sent a file: ${Media.fileName || "No name"}`
 
           break
         default:
-          notificationBody = "Đã gửi một tệp đính kèm"
+          notificationBody = "Sent an attachment"
           break
       }
       break
     case EMessageTypes.CALL:
-      notificationBody = "📞 Cuộc gọi đến từ " + (data.conversation.title || name)
-      // Có thể thêm icon hoặc hình ảnh đặc trưng cho cuộc gọi
-      // notificationImage = '../icons/call-icon.png'; // Nếu có icon cuộc gọi
+      notificationBody = "📞 Incoming call from " + (data.conversation.title || name)
+      // You can add a call icon or image here
+      // notificationImage = '../icons/call-icon.png'; // If you have a call icon
       break
     default:
-      // Fallback cho các loại không xác định hoặc nội dung HTML phức tạp
-      notificationBody = message.content || "Bạn có tin nhắn mới"
+      // Fallback for unknown types or complex HTML content
+      notificationBody = message.content || "You have a new message"
       break
   }
   event.waitUntil(

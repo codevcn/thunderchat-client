@@ -10,11 +10,13 @@ import { clientSocket } from "@/utils/socket/client-socket"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
 import { toaster } from "@/utils/toaster"
+import { useAppDispatch } from "@/hooks/redux"
+import { initGlobalVoiceCallListener } from "@/hooks/use-global-voice-call"
 
 export const SocketProvider = ({ children }: { children: JSX.Element }) => {
   const { authStatus } = useAuth()
   const user = useUser()
-
+  const dispatch = useAppDispatch()
   const handleConnectMessagingSocket = (connected: boolean) => {
     if (connected) {
       clientSocket.socket.connect()
@@ -56,19 +58,19 @@ export const SocketProvider = ({ children }: { children: JSX.Element }) => {
     }
   }
 
-  const handleConnectVoiceCallSocket = (connected: boolean) => {
+  const handleConnectcallSocket = (connected: boolean) => {
     if (connected) {
-      clientSocket.voiceCallSocket.connect()
+      clientSocket.callSocket.connect()
     } else {
-      clientSocket.voiceCallSocket.disconnect()
+      clientSocket.callSocket.disconnect()
     }
   }
 
-  const initVoiceCallSocketConnection = () => {
+  const initcallSocketConnection = () => {
     if (authStatus === EAuthStatus.AUTHENTICATED && user) {
-      clientSocket.voiceCallSocket.on(ESocketInitEvents.connect, () => {
+      clientSocket.callSocket.on(ESocketInitEvents.connect, () => {
         console.log(">>> Socket connected to server (at voice call)")
-        clientSocket.voiceCallSocket.emit(
+        clientSocket.callSocket.emit(
           EVoiceCallEvents.client_hello,
           "VCN Client Hello - " + user.Profile.fullName,
           (data) => {
@@ -76,38 +78,46 @@ export const SocketProvider = ({ children }: { children: JSX.Element }) => {
           }
         )
       })
-      clientSocket.voiceCallSocket.on(ESocketInitEvents.connect_error, (error) => {
+      clientSocket.callSocket.on(ESocketInitEvents.connect_error, (error) => {
         console.log(">>> Socket fails to connect to server (at voice call) >>>", error)
         toaster.error("Something went wrong! Can't connect to Server")
       })
-      clientSocket.voiceCallSocket.on(ESocketInitEvents.error, (error) => {
+      clientSocket.callSocket.on(ESocketInitEvents.error, (error) => {
         console.log(">>> Socket fails to connect to server (at voice call) >>>", error)
         toaster.error(error.message)
       })
-      clientSocket.voiceCallSocket.on(EVoiceCallEvents.server_hello, (payload) => {
+      clientSocket.callSocket.on(EVoiceCallEvents.server_hello, (payload) => {
         console.log(">>> Server hello (at voice call):", payload)
       })
 
-      clientSocket.setVoiceCallSocketAuth(user.id)
+      clientSocket.setcallSocketAuth(user.id)
       clientSocket.setVoiceCallAuthCookie()
-      handleConnectVoiceCallSocket(true)
+      handleConnectcallSocket(true)
     } else {
-      handleConnectVoiceCallSocket(false)
+      handleConnectcallSocket(false)
     }
   }
 
   useEffect(() => {
     initMessagingSocketConnection()
-    // initVoiceCallSocketConnection()
+    initcallSocketConnection()
+
+    // let voiceCallCleanup: (() => void) | undefined // Biến để store cleanup từ listener
+
+    // // Đặt ở đây: Sau initcallSocketConnection, khi socket ready và authenticated
+    // if (authStatus === EAuthStatus.AUTHENTICATED && user) {
+    //   voiceCallCleanup = initGlobalVoiceCallListener(dispatch) // Init listener toàn cục
+    //   console.log(">>> [SocketProvider] Global voice call listener initialized")
+    // }
     return () => {
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect)
       clientSocket.socket.removeAllListeners(ESocketInitEvents.connect_error)
       clientSocket.socket.removeAllListeners(ESocketInitEvents.error)
       clientSocket.socket.removeAllListeners(EMessagingEvents.server_hello)
-      // clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect)
-      // clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.connect_error)
-      // clientSocket.voiceCallSocket.removeAllListeners(ESocketInitEvents.error)
-      // clientSocket.voiceCallSocket.removeAllListeners(EVoiceCallEvents.server_hello)
+      clientSocket.callSocket.removeAllListeners(ESocketInitEvents.connect)
+      clientSocket.callSocket.removeAllListeners(ESocketInitEvents.connect_error)
+      clientSocket.callSocket.removeAllListeners(ESocketInitEvents.error)
+      clientSocket.callSocket.removeAllListeners(EVoiceCallEvents.server_hello)
     }
   }, [authStatus, user])
 

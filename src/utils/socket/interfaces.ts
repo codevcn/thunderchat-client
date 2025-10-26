@@ -39,7 +39,7 @@ import type {
   TCallHangupEmitPayload,
   TCallIceEmitPayload,
 } from "../types/socket"
-import type { EChatType, ESDPType, EVoiceCallStatus } from "../enums"
+import type { EChatType, EHangupReason, ESDPType, EVoiceCallStatus } from "../enums"
 import type { EOnlineStatus } from "./enums"
 
 export interface IMessagingListenSocketEvents {
@@ -134,6 +134,7 @@ export interface IVoiceCallListenSocketEvents {
   [EVoiceCallEvents.call_offer_answer]: (SDP: string, type: ESDPType) => void
   [EVoiceCallEvents.call_request]: (activeCallSession: TActiveVoiceCallSession) => void
   [EVoiceCallEvents.call_ice]: (candidate: string, sdpMid?: string, sdpMLineIndex?: number) => void
+  [EVoiceCallEvents.call_hangup]: (reason: EHangupReason) => void
 }
 
 export interface IVoiceCallEmitSocketEvents {

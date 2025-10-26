@@ -11,6 +11,7 @@ import {
   X,
   Image as ImageIcon,
   FileText,
+  PhoneIncoming,
 } from "lucide-react"
 import { chattingService } from "@/services/chatting.service"
 import { useUser } from "@/hooks/user"
@@ -356,7 +357,6 @@ export const TypeMessageBar = memo(
       e.target.value = ""
     }
 
-    // Thêm useEffect để đóng menu khi click outside
     useEffect(() => {
       if (!showFileMenu) return
       const handleClickOutside = (event: MouseEvent) => {
@@ -387,6 +387,15 @@ export const TypeMessageBar = memo(
       const type = msg.type.toUpperCase()
       const { Media, Sticker } = msg
       if (type === EMessageTypes.TEXT) {
+        if (msg.content.includes("phone-incoming-icon") || msg.content.includes("M22 16.92v3")) {
+          const isCallStarted = msg.content.includes("Call started")
+          return (
+            <span className="flex items-center gap-2 text-sm">
+              <PhoneIncoming size={16} />
+              <span>{isCallStarted ? "Call started" : "Call ended"}</span>
+            </span>
+          )
+        }
         return (
           <span
             className="w-full truncate text-sm"

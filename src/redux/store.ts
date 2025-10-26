@@ -9,7 +9,7 @@ import { settingsSlice } from "./settings/settings.slice"
 import { searchSlice } from "./search/search.slice"
 import profileSlice from "./user/profile.slice"
 import { layoutSlice } from "./layout/layout.slice"
-import { voiceCallSlice } from "./voice-call/layout.slice"
+import { voiceCallSlice } from "./call/layout.slice"
 
 const store = configureStore({
   reducer: {

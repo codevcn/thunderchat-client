@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { VoiceCall } from "@/app/conversations/direct-chat/voice-call"
+import { VoiceCall } from "@/app/conversations/direct-chat/call"
 import { TDirectChatData } from "@/utils/types/be-api"
 import { directChatService } from "@/services/direct-chat.service"
 

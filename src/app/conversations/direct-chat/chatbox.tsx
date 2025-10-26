@@ -5,7 +5,7 @@ import { IconButton } from "@/components/materials/icon-button"
 import { Messages } from "./messages"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { useEffect, useMemo, useState, useRef } from "react"
-import { Search, MoreVertical, Pin, Menu } from "lucide-react"
+import { Search, MoreVertical, Pin, Menu, Phone, Video } from "lucide-react"
 import { InfoBar } from "./info-bar"
 import { openInfoBar } from "@/redux/conversations/conversations.slice"
 import { TypeMessageBar } from "./type-message-bar"
@@ -29,7 +29,9 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EOnlineStatus } from "@/utils/socket/enums"
 import { userService } from "@/services/user.service"
 import { setOpenConvsList } from "@/redux/layout/layout.slice"
-// import { VoiceCall } from "./voice-call"
+import { VoiceCall } from "./call"
+import { useRouter } from "next/navigation"
+import { useGlobalVoiceCallListener } from "@/hooks/use-global-voice-call"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -109,7 +111,7 @@ const Header = ({
       }
     )
   }
-
+  const router = useRouter()
   useEffect(() => {
     resetTyping()
     checkFriendOnlineStatus()
@@ -160,20 +162,22 @@ const Header = ({
       </div>
 
       <div
-        className={`${infoBarIsOpened ? "screen-large-chatting:translate-x-slide-header-icons" : "translate-x-0"} flex items-center gap-2 transition duration-300 ease-slide-info-bar-timing`}
+        className={`${
+          infoBarIsOpened ? "screen-large-chatting:translate-x-slide-header-icons" : "translate-x-0"
+        } flex items-center gap-2 transition duration-300 ease-slide-info-bar-timing relative z-[100]`}
       >
         <CustomTooltip title="Search this chat" placement="bottom" align="end">
-          <div>
+          <div className="relative z-[101]">
             <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
               <Search />
             </IconButton>
           </div>
         </CustomTooltip>
 
-        {/* <VoiceCall canSend={canSend} directChatId={directChatId} /> */}
+        <VoiceCall canSend={canSend} directChat={directChat} />
 
         <CustomTooltip title="More actions" placement="bottom" align="end">
-          <div>
+          <div className="relative z-[101]">
             <IconButton
               onClick={() => onOpenInfoBar(true)}
               className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]"
@@ -411,6 +415,8 @@ export const DirectChatbox = () => {
   const dispatch = useAppDispatch()
   const [canSend, setCanSend] = useState<boolean>(true)
   const user = useUser()
+
+  useGlobalVoiceCallListener()
 
   const handleFetchDirectChat = (directChatId: number) => {
     fetchDirectChatAbortController.abort()

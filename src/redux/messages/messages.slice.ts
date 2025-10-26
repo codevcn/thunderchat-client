@@ -181,6 +181,14 @@ export const messagesSlice = createSlice({
     setUserInGroupChat: (state, action: PayloadAction<TGroupChatMember | null>) => {
       state.userInGroupChat = action.payload
     },
+
+    addSystemMessage(state, action: PayloadAction<TStateMessage>) {
+      if (!state.directMessages) {
+        state.directMessages = [action.payload]
+      } else {
+        state.directMessages.push(action.payload)
+      }
+    },
   },
 })
 

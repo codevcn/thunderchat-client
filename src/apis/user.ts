@@ -11,6 +11,8 @@ import type {
 
 export const getUserByEmail = (email: string) =>
   clientAxios.get<TUserWithProfile>("/user/get-user?email=" + email)
+export const getUserById = (id: number) =>
+  clientAxios.get<TUserWithProfile>("/user/get-user-by-id?id=" + id)
 
 export const postRegisterUser = (data: TRegisterUserParams) =>
   clientAxios.post<TRegisterRes>("/user/register", data, requestConfig)

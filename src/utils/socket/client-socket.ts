@@ -10,7 +10,7 @@ import { ClientCookieManager } from "../cookie"
 
 class ClientSocket {
   readonly socket: Socket<IMessagingListenSocketEvents, IMessagingEmitSocketEvents>
-  readonly voiceCallSocket: Socket<IVoiceCallListenSocketEvents, IVoiceCallEmitSocketEvents>
+  readonly callSocket: Socket<IVoiceCallListenSocketEvents, IVoiceCallEmitSocketEvents>
 
   constructor() {
     const WEBSOCKET_MESSAGING_HOST =
@@ -29,7 +29,7 @@ class ClientSocket {
       auth: {},
     })
 
-    this.voiceCallSocket = io(WEBSOCKET_CALLING_HOST + `/${ESocketNamespaces.voice_call}`, {
+    this.callSocket = io(WEBSOCKET_CALLING_HOST + `/${ESocketNamespaces.voice_call}`, {
       autoConnect: false,
       withCredentials: true,
       auth: {},
@@ -44,8 +44,8 @@ class ClientSocket {
   }
 
   setVoiceCallAuthCookie() {
-    this.voiceCallSocket.auth = {
-      ...(this.voiceCallSocket.auth || {}),
+    this.callSocket.auth = {
+      ...(this.callSocket.auth || {}),
       authToken: ClientCookieManager.getAuthCookie(),
     }
   }
@@ -57,9 +57,9 @@ class ClientSocket {
     }
   }
 
-  setVoiceCallSocketAuth(userId: number): void {
-    this.voiceCallSocket.auth = {
-      ...(this.voiceCallSocket.auth || {}),
+  setcallSocketAuth(userId: number): void {
+    this.callSocket.auth = {
+      ...(this.callSocket.auth || {}),
       userId,
     }
   }

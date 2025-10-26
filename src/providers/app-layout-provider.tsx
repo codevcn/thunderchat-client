@@ -25,6 +25,7 @@ export const AppLayoutProvider = ({ children }: { children: React.ReactNode }) =
   return (
     <div ref={appRootRef} id="App-Root" className="bg-regular-dark-gray-cl">
       <PushNotificationProvider />
+
       <RootLayoutContext.Provider value={{ appRootRef }}>{children}</RootLayoutContext.Provider>
     </div>
   )

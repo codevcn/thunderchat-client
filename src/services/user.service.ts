@@ -11,6 +11,7 @@ import {
   postRegisterUser,
   getCheckBlockedUser,
   getBlockedUsersList,
+  getUserById,
 } from "@/apis/user"
 import { EPaginations } from "@/utils/enums"
 import type { TSuccess } from "@/utils/types/global"
@@ -40,6 +41,11 @@ class UserService {
   async registerUser(payload: TRegisterUserParams): Promise<TRegisterRes> {
     const { data } = await postRegisterUser(payload)
     return { jwt_token: data.jwt_token }
+  }
+
+  async getUserById(id: number): Promise<TUserWithProfile> {
+    const { data } = await getUserById(id)
+    return data
   }
 
   async changePassword(oldPassword: string, newPassword: string) {

@@ -46,11 +46,10 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
     getP2pConnection,
     getLocalStream,
     toggleMic,
-    toggleVideo: voiceCallToggleVideo, // Lấy từ useVoiceCall
-    isVideoEnabled: voiceCallIsVideoEnabled, // Lấy từ useVoiceCall
+    toggleVideo: voiceCallToggleVideo,
+    isVideoEnabled: voiceCallIsVideoEnabled,
   } = useVoiceCall()
 
-  // ✅ States
   const [callState, setCallState] = useState<EVoiceCallStatus | undefined>(undefined)
   const [logs, setLogs] = useState<TEmitLogMessage[]>([])
   const [calleeName, setCalleeName] = useState<string>("callee")
@@ -151,7 +150,6 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
 
   useEffect(() => {
     if (!open) {
-      console.log(">>> CallBox closed - resetting state")
       setCallState(undefined)
       setShowIncomingModal(false)
       setPeerRejected(false)
@@ -159,7 +157,6 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
   }, [open])
 
   const handleAcceptFromModal = () => {
-    console.log(">>> [handleAcceptFromModal] Accepting call - current state:", callState)
     acceptCall()
     setShowIncomingModal(false)
     setCallState(EVoiceCallStatus.CONNECTED)
@@ -259,6 +256,25 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
       }
     }
   }
+  // ✅ Force update local video element
+  useEffect(() => {
+    const localStream = getLocalStream()
+    const localVideo = localVideoRef.current
+
+    if (!localStream || !localVideo) return
+
+    const videoTracks = localStream.getVideoTracks()
+    console.log(">>> Force local video:", {
+      tracks: videoTracks.length,
+      enabled: videoTracks[0]?.enabled,
+      readyState: videoTracks[0]?.readyState,
+    })
+
+    if (videoTracks.length > 0) {
+      localVideo.srcObject = localStream
+      localVideo.play().catch((e) => console.warn("Autoplay blocked:", e))
+    }
+  }, [getLocalStream, localVideoRef, voiceCallIsVideoEnabled])
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -378,7 +394,6 @@ const CallBox = ({ open, directChat, isIncoming = false, onClose, callSession }:
   )
 }
 
-// ===== VoiceCall Component =====
 type TVoiceCallProps = {
   canSend: boolean
   directChat: TDirectChat
@@ -398,14 +413,12 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
       callSession?.status === EVoiceCallStatus.ENDED ||
       callSession?.status === EVoiceCallStatus.CANCELLED
     ) {
-      console.log(">>> [VoiceCall] Call ended/rejected/cancelled - closing CallBox")
       setCallBoxOpen(false)
     }
   }, [callSession?.status])
 
   useEffect(() => {
     const handleIncoming = () => {
-      console.log(">>> [VoiceCall] Received incoming call event")
       setCallBoxOpen(true)
     }
 
@@ -418,15 +431,12 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
 
   useEffect(() => {
     if (incomingCallSession) {
-      console.log(">>> [VoiceCall] IncomingCallSession detected - opening CallBox")
       setCallBoxOpen(true)
     }
   }, [incomingCallSession])
 
-  // **VIDEO: Hàm gọi thoại (audio only)**
   const handleVoiceCall = () => {
     if (incomingCallSession) {
-      console.log(">>> [VoiceCall] Cannot start call - already has incoming session")
       return
     }
 
@@ -496,7 +506,6 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
     })
 
     if (calleeUserId === currentUserId) {
-      console.error(">>> [VideoCall] Error: Cannot call yourself")
       toaster.error("Cannot call yourself")
       return
     }
@@ -506,37 +515,25 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
     startCall(
       calleeUserId,
       directChat.id,
+
       (res: TCallRequestEmitRes) => {
-        console.log(">>> [VideoCall] Video call request response:", res)
         if (res.session) {
-          dispatch(setCallSession(res.session))
+          dispatch(setCallSession(res.session), true)
         }
       },
       true
     ).catch((error) => {
-      // **VIDEO: isVideoCall = true**
-      console.error(">>> [VideoCall] Failed to start video call:", error)
       toaster.error(`Failed to start video call: ${error.message}`)
       setCallBoxOpen(false)
     })
   }
 
   const handleCallBoxClose = () => {
-    console.log(">>> [VoiceCall] CallBox closed by user")
     setCallBoxOpen(false)
   }
 
-  console.log(">>> [VoiceCall] ========== RENDER ==========")
-  console.log(">>> [VoiceCall] callBoxOpen:", callBoxOpen)
-  console.log(">>> [VoiceCall] incomingCallSession:", incomingCallSession)
-  console.log(">>> [VoiceCall] callSession:", callSession)
-  console.log(">>> [VoiceCall] Will render CallBox:", callBoxOpen)
-  console.log(">>> [VoiceCall] CallBox isIncoming:", !!incomingCallSession)
-  console.log(">>> [VoiceCall] ======================================")
-
   return (
     <div className="relative flex gap-2">
-      {/* **VIDEO: Nút Voice Call** */}
       <CustomTooltip title="Voice call" placement="bottom" align="end">
         <div
           className={`${
@@ -552,10 +549,11 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
         </div>
       </CustomTooltip>
 
-      {/* <CustomTooltip title="Video call" placement="bottom" align="end">
+      <CustomTooltip title="Video call" placement="bottom" align="end">
         <div
-          className={`${canSend === false ? "pointer-events-none cursor-not-allowed" : ""
-            } w-fit ${!!incomingCallSession ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`${
+            canSend === false ? "pointer-events-none cursor-not-allowed" : ""
+          } w-fit ${!!incomingCallSession ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <IconButton
             onClick={handleVideoCall}
@@ -564,7 +562,7 @@ export const VoiceCall = ({ canSend, directChat }: TVoiceCallProps) => {
             <Video />
           </IconButton>
         </div>
-      </CustomTooltip> */}
+      </CustomTooltip>
 
       {callBoxOpen && (
         <CallBox

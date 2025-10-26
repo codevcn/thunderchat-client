@@ -109,6 +109,7 @@ export type TJoinGroupChatRoomEmitPayload = {
 export type TCallRequestEmitPayload = {
   calleeUserId: number
   directChatId: number
+  isVideoCall: boolean
 }
 
 export type TCallRequestEmitRes = {

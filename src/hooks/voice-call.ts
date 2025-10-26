@@ -297,6 +297,9 @@ export function useVoiceCall() {
 
   // **VIDEO: Sửa attachMic thành attachMedia để hỗ trợ video**
   async function attachMedia(withVideo: boolean = false) {
+    // ← THÊM LOG NÀY
+    console.log("🎥 [attachMedia] Called with withVideo:", withVideo)
+    console.log("🎥 [attachMedia] localStreamRef.current:", localStreamRef.current)
     if (localStreamRef.current) {
       console.log("🎙️ [attachMedia] Stream already exists, reusing")
       return
@@ -346,7 +349,7 @@ export function useVoiceCall() {
 
     clientSocket.callSocket.emit(
       EVoiceCallEvents.call_request,
-      { calleeUserId, directChatId },
+      { calleeUserId, directChatId, isVideoCall },
       (res) => {
         callback(res)
         sendPhoneIconMessage(directChatId, calleeUserId, "start")
@@ -400,18 +403,20 @@ export function useVoiceCall() {
 
       const activeCallSession = incomingCallSession || tempActiveCallSessionRef.current
       console.log("activeCallSession in accept:", activeCallSession)
-
+      console.log(">>> [acceptCall] Full activeCallSession:", activeCallSession)
+      console.log(">>> [acceptCall] activeCallSession.isVideoCall:", activeCallSession?.isVideoCall)
+      console.log(">>> [acceptCall] isVideoCallRef.current:", isVideoCallRef.current)
       if (!activeCallSession) {
         console.log("No session for accept - return early")
         return
       }
-
+      const shouldUseVideo = activeCallSession?.isVideoCall ?? false
       dispatch(setCallSession(activeCallSession))
       dispatch(resetIncomingCallSession())
 
       await ensurePeer()
-      // **VIDEO: Khi accept call, không tự động bật video**
-      await attachMedia(false)
+      console.log(">>> [acceptCall] Calling attachMedia with video:", isVideoCallRef.current)
+      await attachMedia(shouldUseVideo)
 
       console.log("Peer connection:", p2pConnectionRef.current)
       emitLog(`[acceptCall] ensurePeer done: ${p2pConnectionRef.current}`)
@@ -539,6 +544,14 @@ export function useVoiceCall() {
 
     clientSocket.callSocket.on(EVoiceCallEvents.call_request, (activeCallSession) => {
       emitLog("Call request received")
+      // ← THÊM LOGS ĐẦY ĐỦ
+      console.log(">>> [call_request] ========== START ==========")
+      console.log(">>> [call_request] Raw session:", activeCallSession)
+      console.log(">>> [call_request] Session keys:", Object.keys(activeCallSession))
+      console.log(">>> [call_request] isVideoCall value:", activeCallSession.isVideoCall)
+      console.log(">>> [call_request] isVideoCall type:", typeof activeCallSession.isVideoCall)
+
+      isVideoCallRef.current = activeCallSession.isVideoCall || false
       dispatch(
         setIncomingCallSession({
           ...activeCallSession,
@@ -559,13 +572,15 @@ export function useVoiceCall() {
     clientSocket.callSocket.on(EVoiceCallEvents.call_status, async (status, callSession) => {
       switch (status) {
         case EVoiceCallStatus.ACCEPTED:
+          const shouldUseVideo = callSession?.isVideoCall ?? false
           emitLog("call accepted, sending an offer")
           if (callSession) {
             console.log("callSession >>", callSession)
             dispatch(setCallSession(callSession))
+            isVideoCallRef.current = callSession.isVideoCall || false
           }
           await ensurePeer()
-          await attachMedia(isVideoCallRef.current) // Sử dụng flag video
+          await attachMedia(shouldUseVideo) // Sử dụng flag video
           sendOffer()
           break
 
@@ -593,7 +608,7 @@ export function useVoiceCall() {
           break
 
         case EVoiceCallStatus.ENDED:
-          toaster.info("case ended.")
+          toaster.info("End call!")
           if (callSession) {
             eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {
               directChatId: callSession.directChatId,
@@ -645,9 +660,9 @@ export function useVoiceCall() {
           }
 
           isSettingRemoteDescriptionRef.current = true
-
+          const shouldUseVideo = callSession?.isVideoCall ?? false
           await ensurePeer()
-          await attachMedia(false) // Callee không tự động bật video
+          await attachMedia(shouldUseVideo)
           await p2pConnection.setRemoteDescription({ sdp: SDP, type: "offer" })
 
           flushIceCandidates()

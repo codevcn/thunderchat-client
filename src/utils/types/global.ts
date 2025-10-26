@@ -224,6 +224,7 @@ export type TActiveVoiceCallSession = {
   callerUserId: number
   calleeUserId: number
   directChatId: number
+  isVideoCall: boolean
 }
 
 export type TEmitLogMessage = {

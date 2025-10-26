@@ -29,7 +29,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EOnlineStatus } from "@/utils/socket/enums"
 import { userService } from "@/services/user.service"
 import { setOpenConvsList } from "@/redux/layout/layout.slice"
-import { VoiceCall } from "./voice-call"
+import { VoiceCall } from "./call"
 import { useRouter } from "next/navigation"
 import { useGlobalVoiceCallListener } from "@/hooks/use-global-voice-call"
 

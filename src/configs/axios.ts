@@ -15,7 +15,6 @@ clientAxios.interceptors.request.use((config) => {
     .find((row) => row.startsWith("jwt_token_auth="))
     ?.split("=")[1]
   if (token) {
-    console.log(">>> token intercepted:", token)
     config.headers.Authorization = `Bearer ${token}`
   }
   return config

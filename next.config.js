@@ -4,7 +4,7 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    domains: ["thunder-chat.s3.ap-southeast-1.amazonaws.com"],
+    unoptimized: true,
   },
   reactStrictMode: false,
   eslint: {

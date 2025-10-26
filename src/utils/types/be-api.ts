@@ -835,3 +835,21 @@ export type TLoginRes = {
 export type TRegisterRes = {
   jwt_token: string
 }
+
+export type TUploadMultipleFilesResult = {
+  success: boolean
+  message: string
+  uploadedFiles: (
+    | {
+        id: number
+        fileType: string
+        filename: string
+        location: string | undefined
+        key: string | undefined
+        iv: string
+      }
+    | {
+        error: string
+      }
+  )[]
+}

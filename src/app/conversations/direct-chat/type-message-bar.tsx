@@ -17,7 +17,7 @@ import { useUser } from "@/hooks/user"
 import { memo, useEffect, useRef, useState } from "react"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import type { TDirectChat, TUploadFileRes } from "@/utils/types/be-api"
+import type { TDirectChat, TUploadMultipleFilesResult } from "@/utils/types/be-api"
 import type { TStateMessage } from "@/utils/types/global"
 import { EMessageTypes, EMessageTypeAllTypes, EMessageMediaTypes } from "@/utils/enums"
 import { toast } from "sonner"
@@ -74,7 +74,7 @@ const validateFiles = (files: File[], fileMode: string): File[] => {
       return file.type.startsWith("image/") || file.type.startsWith("video/")
     } else if (fileMode === "document") {
       // Chỉ hỗ trợ: PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP, RAR, 7Z, HTML, JSON, Markdown
-      const allowedTypes = [
+      const allowedTypes: string[] = [
         "application/pdf",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -85,13 +85,12 @@ const validateFiles = (files: File[], fileMode: string): File[] => {
         "text/plain",
         "text/csv",
         "application/zip",
-        "application/x-rar-compressed",
-        "application/x-7z-compressed",
+        "application/gzip",
         "text/html",
         "application/json",
         "text/markdown",
       ]
-      const allowedExtensions = [
+      const allowedExtensions: string[] = [
         ".pdf",
         ".doc",
         ".docx",
@@ -298,7 +297,11 @@ export const TypeMessageBar = memo(
         toast.warning(`${files.length - validFiles.length} file không được hỗ trợ`)
       }
       setIsUploading(true)
-      let uploadedFiles: TUploadFileRes[] = []
+      let uploadedFiles: TUploadMultipleFilesResult = {
+        success: false,
+        message: "",
+        uploadedFiles: [],
+      }
       try {
         uploadedFiles = await FileService.uploadMultipleFiles(validFiles, (loaded, total) => {
           const progress = total ? Math.round((loaded / total) * 100) : 0
@@ -309,7 +312,9 @@ export const TypeMessageBar = memo(
       } finally {
         setIsUploading(false)
       }
-      for (const { id, fileType } of uploadedFiles) {
+      for (const uploadedFile of uploadedFiles.uploadedFiles) {
+        if ("error" in uploadedFile) return
+        const { id, fileType } = uploadedFile
         let messageType = EMessageTypes.MEDIA
         let mediaType: EMessageMediaTypes
         if (fileType.startsWith("image/")) {

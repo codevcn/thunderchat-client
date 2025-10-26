@@ -1,5 +1,5 @@
 import { uploadFile, uploadMultipleFiles } from "@/apis/upload"
-import type { TUploadFileRes } from "@/utils/types/be-api"
+import type { TUploadFileRes, TUploadMultipleFilesResult } from "@/utils/types/be-api"
 import axios from "axios"
 
 export class FileService {
@@ -26,8 +26,9 @@ export class FileService {
   static async uploadMultipleFiles(
     files: File[],
     onUploadProgress?: (loaded: number, total?: number) => void
-  ): Promise<TUploadFileRes[]> {
+  ): Promise<TUploadMultipleFilesResult> {
     const { data } = await uploadMultipleFiles(files, onUploadProgress)
+    console.log(">>> data:", data)
     return data
   }
 }

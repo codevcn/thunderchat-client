@@ -1,5 +1,5 @@
 import { clientAxios } from "@/configs/axios"
-import type { TUploadFileRes } from "@/utils/types/be-api"
+import type { TUploadFileRes, TUploadMultipleFilesResult } from "@/utils/types/be-api"
 
 export const uploadFile = async (
   file: File,
@@ -22,7 +22,7 @@ export const uploadMultipleFiles = async (
   for (const file of files) {
     formData.append("files", file)
   }
-  return clientAxios.post<TUploadFileRes[]>("/upload/multiple-files", formData, {
+  return clientAxios.post<TUploadMultipleFilesResult>("/upload/multiple-files", formData, {
     onUploadProgress: (progressEvent) => {
       onUploadProgress?.(progressEvent.loaded, progressEvent.total)
     },

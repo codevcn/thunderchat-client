@@ -234,3 +234,7 @@ export type TEmitLogMessage = {
 export type TEmitLogStaticConst = {
   ORDER: number
 }
+
+export type TDetectCollisionWithViewportEdgesResult = {
+  edge: "left" | "right" | "top" | "bottom" | null
+}

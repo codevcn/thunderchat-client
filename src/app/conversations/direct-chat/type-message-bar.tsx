@@ -34,6 +34,7 @@ import { MessageTextField } from "./message-textfield"
 import { ExpressionPicker } from "./expression-picker"
 import { clientSocket } from "@/utils/socket/client-socket"
 import { EMessagingEvents } from "@/utils/socket/events"
+import { PageLayoutHelper } from "@/utils/layout"
 
 const fileOptions = [
   { icon: <ImageIcon size={20} />, label: "Photo or video", value: "photo" },
@@ -46,8 +47,25 @@ type TFileTypeMenuProps = {
 }
 
 function FileTypeMenu({ onSelect, onClose }: TFileTypeMenuProps) {
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  const detectCollisionWithViewportEdges = () => {
+    requestAnimationFrame(() => {
+      if (menuRef.current) {
+        // PageLayoutHelper.detectFixedCollisionWithViewportEdges(menuRef.current, 10)
+      }
+    })
+  }
+
+  useEffect(() => {
+    detectCollisionWithViewportEdges()
+  }, [])
+
   return (
-    <div className="absolute bottom-12 left-0 z-50 bg-regular-dark-gray-cl shadow-lg rounded-lg p-2 w-56 border border-gray-700">
+    <div
+      ref={menuRef}
+      className="absolute bottom-12 left-0 z-50 bg-regular-dark-gray-cl shadow-lg rounded-lg p-2 w-56 border border-gray-700"
+    >
       {fileOptions.map((opt) => (
         <button
           key={opt.value}

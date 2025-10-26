@@ -36,8 +36,8 @@
   --tdc-info-bar-width: 24vw;
   --tdc-info-bar-mb-width: 360px;
   --tdc-chat-n-info-container-width: calc(100% - var(--tdc-convs-card-width));
-  --tdc-messages-list-width: 496px;
-  --tdc-type-message-bar-width: var(--tdc-messages-list-width);
+  --tdc-messages-list-width: calc(496px + 60px);
+  --tdc-type-message-bar-width: 496px;
   --tdc-msgs-container-width: calc(100% - var(--tdc-info-bar-width));
   --tdc-expression-picker-width: 324px;
   --tdc-type-msg-bar-emoji-width: 20px;

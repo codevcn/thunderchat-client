@@ -28,7 +28,6 @@ export class FileService {
     onUploadProgress?: (loaded: number, total?: number) => void
   ): Promise<TUploadMultipleFilesResult> {
     const { data } = await uploadMultipleFiles(files, onUploadProgress)
-    console.log(">>> data:", data)
     return data
   }
 }

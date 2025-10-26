@@ -33,6 +33,7 @@ const SW_PATH = "/service-workers/service.worker.js"
 
 export function usePushNotification(): TUsePushNotification {
   // Xin quyền
+
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
     return await Notification.requestPermission()
   }, [])
@@ -40,7 +41,6 @@ export function usePushNotification(): TUsePushNotification {
   // Đăng ký push
   const subscribe = useCallback(async (): Promise<TSubscribePushNotificationRes | null> => {
     try {
-      // Unregister tất cả SW cũ
       const regs = await navigator.serviceWorker.getRegistrations()
       for (const r of regs) {
         await r.unregister()
@@ -52,6 +52,7 @@ export function usePushNotification(): TUsePushNotification {
         scope: "/service-workers/",
       })
 
+      console.log("SW registered:", registration)
       // Xin quyền push
       const perm = await requestPermission()
       if (perm !== "granted") {

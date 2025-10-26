@@ -37,7 +37,6 @@ self.addEventListener("push", (event) => {
       data = { body: event.data.text() }
     }
   }
-  console.log(">>> [Service Worker] data analyzed:", data)
 
   event.waitUntil(
     (async () => {
@@ -55,8 +54,8 @@ self.addEventListener("push", (event) => {
         const title = "New notification"
         const options: NotificationOptions = {
           body: "You have a new notification.",
-          icon: "/icons/icon-192x192.png",
-          badge: "/icons/badge-72x72.png",
+          icon: "/public/icons/icon-128.png",
+          badge: "/public/icons/icon-128.png",
           vibrate: [100, 50, 100],
           data,
         }

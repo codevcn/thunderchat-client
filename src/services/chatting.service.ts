@@ -11,7 +11,7 @@ class ChattingService {
   private offlineMessages: TOfflineMessage[]
   private messagesQueue: ObjectQueue<TChattingPayload>
   private acknowledgmentFlag: boolean
-  private readonly MAX_TIMEOUT_MESSAGING: number = 5000
+  private readonly MAX_TIMEOUT_MESSAGING: number = 50000
 
   constructor() {
     this.offlineMessages = []

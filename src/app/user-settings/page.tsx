@@ -82,8 +82,16 @@ const Notification = () => {
         toaster.error("Push notification is not supported on this browser.")
       }
     } else {
+      userSettingService
+        .updateUserSettings({ pushNotificationEnabled: false })
+        .then(() => {
+          dispatch(setPushNotificationEnabled(false))
+        })
+        .catch((error) => {
+          toaster.error(axiosErrorHandler.handleHttpError(error).message)
+          dispatch(setPushNotificationEnabled(true)) // rollback nếu lỗi
+        })
       await unsubscribe()
-      dispatch(setPushNotificationEnabled(false))
     }
   }
 

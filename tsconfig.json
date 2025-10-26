@@ -29,6 +29,13 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.scss", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.scss",
+    ".next/types/**/*.ts",
+    "src/workers/service.worker.ts"
+  ],
   "exclude": ["node_modules"]
 }

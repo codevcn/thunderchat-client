@@ -12,6 +12,7 @@ import { NON_GUARD_ROUTES } from "@/configs/layout"
 import { Toaster } from "@/components/materials/sonner"
 import { ErrorIconForToast } from "@/components/layout/icons"
 import { SuccessIconForToast } from "@/components/layout/icons"
+import { GlobalCallManager } from "@/components/voice-call/global-call-manager"
 
 export const metadata: Metadata = {
   title: "Thunder Chat",
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <RouteGuard nonGuardRoutes={NON_GUARD_ROUTES}>
               <SocketProvider>
                 <AppLayoutProvider>
-                  <AccountModalProvider>{children}</AccountModalProvider>
+                  <AccountModalProvider>
+                    <GlobalCallManager>{children}</GlobalCallManager>
+                  </AccountModalProvider>
                 </AppLayoutProvider>
               </SocketProvider>
             </RouteGuard>

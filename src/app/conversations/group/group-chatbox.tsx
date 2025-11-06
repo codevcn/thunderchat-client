@@ -31,6 +31,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { groupChatService } from "@/services/group-chat.service"
 import { toaster } from "@/utils/toaster"
 import { setOpenConvsList } from "@/redux/layout/layout.slice"
+import { VoiceCall } from "../direct-chat/call"
 
 const TYPING_TIMEOUT: number = 5000
 
@@ -181,7 +182,10 @@ const Header = ({ infoBarIsOpened, onOpenInfoBar, groupChat }: THeaderProps) => 
             </IconButton>
           </div>
         </CustomTooltip>
-
+        <VoiceCall
+          canSend={true} // 1. Truyền quyền 'canSend' từ Redux
+          groupChat={groupChat} // 2. Truyền groupChat VÀ đánh dấu nó là group
+        />
         {/* <CustomTooltip title="Call" placement="bottom" align="end">
           <IconButton className="flex justify-center items-center text-regular-icon-cl w-[40px] h-[40px]">
             <Phone />

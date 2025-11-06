@@ -24,6 +24,8 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@reduxjs/toolkit": "2.5.0",
     "@types/dompurify": "^3.0.5",
+    "agora-rtc-sdk-ng": "^4.24.0",
+    "agora-rtm-sdk": "2.2.3-1",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

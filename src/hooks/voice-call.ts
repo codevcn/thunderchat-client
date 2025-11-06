@@ -1,727 +1,166 @@
 import { useEffect, useRef, useState } from "react"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import { clientSocket } from "@/utils/socket/client-socket"
-import { EVoiceCallEvents } from "@/utils/socket/events"
-import type {
-  TActionSendIcon,
-  TActiveVoiceCallSession,
-  TUnknownFunction,
-} from "@/utils/types/global"
-import type { TCallRequestEmitRes } from "@/utils/types/socket"
-import { EHangupReason, EMessageTypeAllTypes, ESDPType, EVoiceCallStatus } from "@/utils/enums"
 import {
   resetCallSession,
   setCallSession,
   updateCallSession,
   resetIncomingCallSession,
-  updateIncomingCallSession,
   setIncomingCallSession,
 } from "@/redux/call/layout.slice"
 import { toaster } from "@/utils/toaster"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import store from "@/redux/store"
-import { emitLog } from "@/utils/helpers"
+import { EHangupReason, EMessageTypeAllTypes, EVoiceCallStatus } from "@/utils/enums"
+import type {
+  TActionSendIcon,
+  TActiveVoiceCallSession2,
+  TUnknownFunction,
+} from "@/utils/types/global"
+import type { TCallRequestEmitRes } from "@/utils/types/socket"
+import AgoraRTC, {
+  IAgoraRTCClient,
+  ICameraVideoTrack,
+  IMicrophoneAudioTrack,
+  IAgoraRTCRemoteUser,
+} from "agora-rtc-sdk-ng"
+// THAY ĐỔI IMPORT: Import 'RTM' từ default export thay vì 'RTMClient'
+import AgoraRTM from "agora-rtm-sdk"
 import { chattingService } from "@/services/chatting.service"
 
-const DEFAULT_STUN_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
-  {
-    urls: "turn:openrelay.metered.ca:80",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: "turns:openrelay.metered.ca:443",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-]
-const AUTO_CLEANUP_TIMEOUT: number = 10000000
+const APP_ID = "bf206a5c93854a8591320eb085bfd71f"
 
-export function useVoiceCall() {
-  const { callSession, incomingCallSession } = useAppSelector(
-    ({ "voice-call": voiceCall }) => voiceCall
-  )
-  const p2pConnectionRef = useRef<RTCPeerConnection | null>(null)
-  const localStreamRef = useRef<MediaStream | null>(null)
-  const remoteStreamRef = useRef<MediaStream | null>(null)
-  const receivedOfferRef = useRef<boolean>(false)
-  const tempActiveCallSessionRef = useRef<TActiveVoiceCallSession | null>(null)
+type RtmCallMessage =
+  | {
+      type: "CALL_REQUEST"
+      roomId: string // Channel RTC để tham gia
+      isVideoCall: boolean
+      chatId: number
+      isGroupCall: boolean
+    }
+  | { type: "CALL_REJECTED" }
+  | { type: "CALL_HUNGUP" }
+
+// Biến client toàn cục để giữ instance
+// THAY ĐỔI TYPE: RTMClient -> RTM
+let rtmClient: InstanceType<typeof AgoraRTM.RTM> | null = null
+let rtcClient: IAgoraRTCClient | null = null
+
+// Đặt tên kênh mời gọi (invite channel) theo quy ước
+const getInviteChannelName = (userId: string | number) => `invite_${userId}`
+
+export function useAgoraCall() {
   const dispatch = useAppDispatch()
-  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([])
+  const { callSession, incomingCallSession } = useAppSelector((state) => state["voice-call"])
+  const currentUser = useAppSelector((state) => state.user.user) // Tracks
 
-  // **VIDEO: Thêm state để track video**
+  const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null)
+  const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null) // State
+
+  const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([])
   const [isVideoEnabled, setIsVideoEnabled] = useState(false)
-  const isVideoCallRef = useRef(false) // Track xem đây có phải video call không
+  const [isMicEnabled, setIsMicEnabled] = useState(true)
+  const isJoiningRef = useRef(false) // --- 1. XỬ LÝ RTM (Signaling 1-1) ---
+  // Xử lý tin nhắn RTM đến (chỉ cho 1-1)
+  // THAY ĐỔI CHỮ KÝ HÀM: message.text -> messagePayload (vì v2 trả về string)
 
-  const isCallerRef = useRef<boolean>(false)
-  const makingOfferRef = useRef<boolean>(false)
-  const isSettingRemoteDescriptionRef = useRef<boolean>(false)
+  const handleRtmMessage = (messagePayload: string, peerId: string) => {
+    // THAY ĐỔI PARSING: v2 message là string payload, không phải object { text: '...' }
+    const data: RtmCallMessage = JSON.parse(messagePayload)
+    console.log("RTM Message received from:", peerId, data)
 
-  function flushIceCandidates() {
-    const p2pConnection = p2pConnectionRef.current
-    if (!p2pConnection || pendingIceCandidatesRef.current.length === 0) {
-      return
-    }
-    pendingIceCandidatesRef.current.forEach(async (candidate) => {
-      try {
-        await p2pConnection.addIceCandidate(candidate)
-        emitLog(`Flushed ICE candidate: ${candidate.candidate}`)
-      } catch (error) {
-        emitLog(`Failed to flush ICE candidate: ${error}`)
-      }
-    })
-    pendingIceCandidatesRef.current = []
-  }
+    switch (data.type) {
+      case "CALL_REQUEST":
+        // 1. CHỈ từ chối cuộc gọi 1-1 NẾU đang bận
+        if (!data.isGroupCall && (callSession || incomingCallSession)) {
+          console.log("User is busy with a 1-1 call, rejecting new call.")
+          publishRtmMessage(peerId, { type: "CALL_REJECTED" })
+          return
+        } // 2. CHỈ bỏ qua cuộc gọi NHÓM NẾU đã ở trong phòng đó
+        // (callSession?.id vẫn hợp lệ ở đây vì logic (1) không loại trừ nó)
 
-  function createPeerConnection(
-    iceServers: RTCIceServer[] = DEFAULT_STUN_SERVERS
-  ): RTCPeerConnection {
-    const p2pConnection = new RTCPeerConnection({ iceServers })
-
-    p2pConnection.onconnectionstatechange = () => {
-      emitLog(`[P2P Connection] state: ${p2pConnection.connectionState}`)
-      console.log(">>> [P2P Connection] state:", p2pConnection.connectionState)
-    }
-
-    return p2pConnection
-  }
-
-  async function ensurePeer() {
-    if (p2pConnectionRef.current) {
-      emitLog("Peer connection already established")
-      return
-    }
-    p2pConnectionRef.current = createPeerConnection()
-    initRemoteStream()
-
-    p2pConnectionRef.current.ontrack = (e) => {
-      console.log(">>> [ontrack] Received track:", e.track.kind, e.track.enabled)
-
-      const stream = e.streams[0]
-      if (stream) {
-        if (e.track.kind === "audio") {
-          remoteStreamRef.current?.getAudioTracks().forEach((track) => {
-            remoteStreamRef.current?.removeTrack(track)
-          })
-          stream.getAudioTracks().forEach((track) => {
-            remoteStreamRef.current?.addTrack(track)
-          })
-        } else if (e.track.kind === "video") {
-          remoteStreamRef.current?.getVideoTracks().forEach((track) => {
-            remoteStreamRef.current?.removeTrack(track)
-          })
-
-          stream.getVideoTracks().forEach((track) => {
-            remoteStreamRef.current?.addTrack(track)
-          })
-
-          if (remoteStreamRef.current) {
-            console.log(">>> Refreshing remote video element")
-            eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current)
-
-            setTimeout(() => {
-              eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current!)
-            }, 100)
-          }
-        }
-      } else {
-        remoteStreamRef.current?.addTrack(e.track)
-        if (e.track.kind === "video") {
-          if (remoteStreamRef.current) {
-            eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current)
-            setTimeout(() => {
-              eventEmitter.emit(EInternalEvents.REMOTE_VIDEO_UPDATED, remoteStreamRef.current!)
-            }, 100)
-          }
-        }
-      }
-    }
-
-    p2pConnectionRef.current.onicecandidate = (event) => {
-      const callSession = store.getState()["voice-call"].callSession
-      emitLog(`[P2P Connection] on ice candidate: ${{ event, callSession }}`)
-      if (!event.candidate || !callSession) return
-      clientSocket.callSocket.emit(EVoiceCallEvents.call_ice, {
-        sessionId: callSession.id,
-        candidate: event.candidate.candidate,
-        sdpMid: event.candidate.sdpMid || undefined,
-        sdpMLineIndex: event.candidate.sdpMLineIndex || undefined,
-      })
-    }
-
-    p2pConnectionRef.current.onnegotiationneeded = async () => {
-      try {
-        makingOfferRef.current = true
-        emitLog("[P2P Connection] negotiation needed")
-
-        const callSession = store.getState()["voice-call"].callSession
-        if (!callSession) return
-
-        const offer = await p2pConnectionRef.current!.createOffer()
-
-        if (p2pConnectionRef.current!.signalingState !== "stable") {
-          console.log(">>> Skip negotiation: Not in stable state")
+        if (data.isGroupCall && callSession?.id === data.roomId) {
+          console.log("Already in this group call, ignoring invite.")
           return
         }
-
-        await p2pConnectionRef.current!.setLocalDescription(offer)
-
-        clientSocket.callSocket.emit(EVoiceCallEvents.call_offer_answer, {
-          sessionId: callSession.id,
-          SDP: offer.sdp!,
-          type: ESDPType.OFFER,
-        })
-      } catch (error) {
-        emitLog(`Failed to handle negotiation needed: ${error}`)
-      } finally {
-        makingOfferRef.current = false
-      }
-    }
-  }
-
-  // **VIDEO: Sửa lại hàm lấy media stream để hỗ trợ video**
-  async function getMediaStream(withVideo: boolean = false): Promise<MediaStream> {
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      throw new Error("Media devices not supported in this environment")
-    }
-    return navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: withVideo
-        ? {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          }
-        : false,
-    })
-  }
-
-  function toggleMic(): boolean {
-    if (!localStreamRef.current) {
-      console.log(">>> [useVoiceCall] No local stream to toggle mic")
-      emitLog("No local stream to toggle mic")
-      return false
-    }
-
-    const audioTracks = localStreamRef.current.getAudioTracks()
-    if (audioTracks.length === 0) {
-      console.log(">>> [useVoiceCall] No audio tracks found")
-      emitLog("No audio tracks found")
-      return false
-    }
-
-    const isEnabled = audioTracks[0].enabled
-    audioTracks.forEach((track) => {
-      track.enabled = !isEnabled
-    })
-
-    const p2pConnection = p2pConnectionRef.current
-    if (p2pConnection) {
-      p2pConnection.getSenders().forEach((sender) => {
-        if (sender.track?.kind === "audio") {
-          sender.track.enabled = !isEnabled
-        }
-      })
-    }
-
-    console.log(`>>> [useVoiceCall] Mic ${isEnabled ? "disabled" : "enabled"}`)
-    emitLog(`Mic ${isEnabled ? "muted" : "unmuted"}`)
-    return !isEnabled
-  }
-
-  // **VIDEO: Thêm hàm toggle video**
-  async function toggleVideo(): Promise<boolean> {
-    const p2pConnection = p2pConnectionRef.current
-
-    if (!localStreamRef.current) {
-      console.log(">>> [toggleVideo] No local stream")
-      return false
-    }
-
-    const videoTracks = localStreamRef.current.getVideoTracks()
-
-    if (isVideoEnabled && videoTracks.length > 0) {
-      // Tắt video
-      videoTracks.forEach((track) => {
-        track.stop()
-        localStreamRef.current?.removeTrack(track)
-      })
-
-      // Remove video sender
-      if (p2pConnection) {
-        const senders = p2pConnection.getSenders()
-        senders.forEach((sender) => {
-          if (sender.track?.kind === "video") {
-            p2pConnection.removeTrack(sender)
-          }
-        })
-      }
-
-      setIsVideoEnabled(false)
-      console.log(">>> Video disabled")
-      return false
-    } else {
-      // Bật video
-      try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        })
-
-        const videoTrack = videoStream.getVideoTracks()[0]
-        localStreamRef.current.addTrack(videoTrack)
-
-        // Add video track to peer connection
-        if (p2pConnection) {
-          p2pConnection.addTrack(videoTrack, localStreamRef.current)
-        }
-
-        setIsVideoEnabled(true)
-        console.log(">>> Video enabled")
-        return true
-      } catch (error) {
-        console.error(">>> Failed to enable video:", error)
-        toaster.error("Không thể bật camera")
-        return false
-      }
-    }
-  }
-
-  function initRemoteStream() {
-    remoteStreamRef.current = new MediaStream()
-    eventEmitter.emit(EInternalEvents.INIT_REMOTE_STREAM)
-  }
-
-  // **VIDEO: Sửa attachMic thành attachMedia để hỗ trợ video**
-  async function attachMedia(withVideo: boolean = false) {
-    // ← THÊM LOG NÀY
-    console.log("🎥 [attachMedia] Called with withVideo:", withVideo)
-    console.log("🎥 [attachMedia] localStreamRef.current:", localStreamRef.current)
-    if (localStreamRef.current) {
-      console.log("🎙️ [attachMedia] Stream already exists, reusing")
-      return
-    }
-
-    try {
-      const stream = await getMediaStream(withVideo)
-      localStreamRef.current = stream
-      console.log("🎙️ [attachMedia] Got local stream:", stream)
-
-      // Track video state
-      if (withVideo) {
-        setIsVideoEnabled(true)
-      }
-
-      stream.getTracks().forEach((track) => {
-        console.log("🎙️ [attachMedia] Adding track:", track.kind)
-        p2pConnectionRef.current?.addTrack(track, stream)
-      })
-    } catch (err) {
-      console.error("❌ [attachMedia] Failed to get media:", err)
-      throw err
-    }
-  }
-
-  function getLocalStream() {
-    return localStreamRef.current
-  }
-
-  function getRemoteStream() {
-    return remoteStreamRef.current
-  }
-
-  async function startCall(
-    calleeUserId: number,
-    directChatId: number,
-    callback: TUnknownFunction<TCallRequestEmitRes, void>,
-    isVideoCall: boolean = false
-  ) {
-    isCallerRef.current = true
-    isVideoCallRef.current = isVideoCall
-
-    await ensurePeer()
-    await attachMedia(isVideoCall) // Truyền flag video vào
-
-    emitLog("sent a call request")
-
-    clientSocket.callSocket.emit(
-      EVoiceCallEvents.call_request,
-      { calleeUserId, directChatId, isVideoCall },
-      (res) => {
-        callback(res)
-        sendPhoneIconMessage(directChatId, calleeUserId, "start")
-      }
-    )
-  }
-
-  async function sendOffer() {
-    try {
-      const p2pConnection = p2pConnectionRef.current
-      if (!p2pConnection) {
-        throw new Error("Cannot establish peer connection")
-      }
-      if (p2pConnection.signalingState !== "stable") {
-        console.warn(
-          `[sendOffer] Skip creating offer, signaling state = ${p2pConnection.signalingState}`
-        )
-        return
-      }
-      emitLog("creating an offer")
-      const offer = await p2pConnection.createOffer()
-      emitLog("setting local description")
-      await p2pConnection.setLocalDescription(offer)
-
-      const offerSdp = offer.sdp
-      const callSession = store.getState()["voice-call"].callSession
-      emitLog(`offer sdp: ${offerSdp}, callSession: ${callSession?.id}`)
-
-      if (callSession && offerSdp) {
-        emitLog("sending an offer to peer")
-        clientSocket.callSocket.emit(EVoiceCallEvents.call_offer_answer, {
-          sessionId: callSession.id,
-          SDP: offerSdp,
-          type: ESDPType.OFFER,
-        })
-      }
-
-      console.log(">>> Sending offer - SDP:", offer.sdp)
-    } catch (error) {
-      if (error instanceof Error) {
-        toaster.error(error.message)
-      } else {
-        toaster.error("Failed to send offer")
-      }
-    }
-  }
-
-  async function acceptCall() {
-    try {
-      isCallerRef.current = false
-
-      const activeCallSession = incomingCallSession || tempActiveCallSessionRef.current
-      console.log("activeCallSession in accept:", activeCallSession)
-      console.log(">>> [acceptCall] Full activeCallSession:", activeCallSession)
-      console.log(">>> [acceptCall] activeCallSession.isVideoCall:", activeCallSession?.isVideoCall)
-      console.log(">>> [acceptCall] isVideoCallRef.current:", isVideoCallRef.current)
-      if (!activeCallSession) {
-        console.log("No session for accept - return early")
-        return
-      }
-      const shouldUseVideo = activeCallSession?.isVideoCall ?? false
-      dispatch(setCallSession(activeCallSession))
-      dispatch(resetIncomingCallSession())
-
-      await ensurePeer()
-      console.log(">>> [acceptCall] Calling attachMedia with video:", isVideoCallRef.current)
-      await attachMedia(shouldUseVideo)
-
-      console.log("Peer connection:", p2pConnectionRef.current)
-      emitLog(`[acceptCall] ensurePeer done: ${p2pConnectionRef.current}`)
-
-      clientSocket.callSocket.emit(EVoiceCallEvents.call_accept, {
-        sessionId: activeCallSession.id,
-      })
-      console.log("Emitted call_accept", activeCallSession.id)
-
-      autoCleanup()
-    } catch (error) {
-      emitLog(`Failed to accept call: ${error}`)
-      toaster.error("Failed to accept call, please try again!")
-    }
-  }
-
-  function rejectCall() {
-    const sessionToUse = incomingCallSession || callSession || tempActiveCallSessionRef.current
-    console.log("rejectCall >>", sessionToUse)
-
-    if (!sessionToUse) {
-      console.log("No session for reject - return early")
-      return
-    }
-
-    dispatch(updateCallSession({ status: EVoiceCallStatus.REJECTED }))
-    dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.REJECTED }))
-    clientSocket.callSocket.emit(EVoiceCallEvents.call_reject, { sessionId: sessionToUse.id })
-    cleanup()
-  }
-
-  function hangupCall(reason: EHangupReason = EHangupReason.NORMAL) {
-    const session = callSession || incomingCallSession
-    if (!session) {
-      emitLog(">>> [useVoiceCall] No session found for hangup", "error")
-      return
-    }
-
-    const directChatId = session.directChatId
-    const currentUserId = store.getState().user.user?.id
-
-    if (!currentUserId) {
-      emitLog(">>> [useVoiceCall] No current user ID found for hangup", "error")
-      toaster.error("Cannot end call: User not authenticated")
-      return
-    }
-
-    const receiverId =
-      session.callerUserId === currentUserId ? session.calleeUserId : session.callerUserId
-
-    sendPhoneIconMessage(directChatId, receiverId, "end")
-
-    emitLog(
-      `>>> [useVoiceCall] User ended call for session ${session.id}, chat ${session.directChatId}, reason: ${reason}`,
-      "info"
-    )
-
-    dispatch(updateCallSession({ status: EVoiceCallStatus.ENDED }))
-    dispatch(updateIncomingCallSession({ status: EVoiceCallStatus.ENDED }))
-
-    clientSocket.callSocket.emit(EVoiceCallEvents.call_hangup, {
-      sessionId: session.id,
-      reason,
-    })
-
-    eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {
-      directChatId: session.directChatId,
-    })
-
-    cleanup()
-  }
-
-  function cleanup() {
-    try {
-      localStreamRef.current?.getTracks().forEach((t) => t.stop())
-    } catch {
-      toaster.error("Failed to stop local stream, please try again later!")
-    }
-    localStreamRef.current = null
-
-    try {
-      remoteStreamRef.current?.getTracks().forEach((t) => t.stop())
-    } catch {
-      toaster.error("Failed to stop remote stream, please try again later!")
-    }
-    remoteStreamRef.current = null
-
-    try {
-      p2pConnectionRef.current
-        ?.getSenders()
-        .forEach((s) => p2pConnectionRef.current?.removeTrack(s))
-    } catch {
-      toaster.error("Failed to remove tracks, please try again later!")
-    }
-
-    p2pConnectionRef.current?.close()
-    p2pConnectionRef.current = null
-
-    dispatch(resetCallSession())
-    dispatch(resetIncomingCallSession())
-
-    isCallerRef.current = false
-    makingOfferRef.current = false
-    isSettingRemoteDescriptionRef.current = false
-    receivedOfferRef.current = false
-    pendingIceCandidatesRef.current = []
-
-    // **VIDEO: Reset video state**
-    setIsVideoEnabled(false)
-    isVideoCallRef.current = false
-  }
-
-  function autoCleanup() {
-    setTimeout(() => {
-      if (!receivedOfferRef.current) {
-        cleanup()
-      }
-    }, AUTO_CLEANUP_TIMEOUT)
-  }
-
-  function registerSocketListeners() {
-    console.log("🎯 [registerSocketListeners] Starting registration")
-    console.log("🔌 [Socket] Connected:", clientSocket.callSocket.connected)
-    console.log("🔌 [Socket] ID:", clientSocket.callSocket.id)
-
-    clientSocket.callSocket.on(EVoiceCallEvents.call_request, (activeCallSession) => {
-      emitLog("Call request received")
-      // ← THÊM LOGS ĐẦY ĐỦ
-      console.log(">>> [call_request] ========== START ==========")
-      console.log(">>> [call_request] Raw session:", activeCallSession)
-      console.log(">>> [call_request] Session keys:", Object.keys(activeCallSession))
-      console.log(">>> [call_request] isVideoCall value:", activeCallSession.isVideoCall)
-      console.log(">>> [call_request] isVideoCall type:", typeof activeCallSession.isVideoCall)
-
-      isVideoCallRef.current = activeCallSession.isVideoCall || false
-      dispatch(
-        setIncomingCallSession({
-          ...activeCallSession,
+        const session: TActiveVoiceCallSession2 = {
+          id: data.roomId,
+          callerUserId: Number(peerId),
+          calleeUserId: currentUser!.id,
+          directChatId: data.chatId,
+          isVideoCall: data.isVideoCall,
           status: EVoiceCallStatus.RINGING,
-        })
-      )
-      tempActiveCallSessionRef.current = activeCallSession
-      eventEmitter.emit(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED)
+          isGroupCall: data.isGroupCall,
+        }
+        dispatch(setIncomingCallSession(session))
+        eventEmitter.emit(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED)
+        break
+      case "CALL_REJECTED":
+        toaster.info("Call rejected by user")
+        eventEmitter.emit(EInternalEvents.CALL_REJECTED_BY_PEER, {})
+        cleanup()
+        break
+      case "CALL_HUNGUP":
+        toaster.info("Call ended by peer")
+        eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {})
+        cleanup()
+        break
+    }
+  } // Khởi tạo RTM Client (chỉ 1 lần)
+
+  useEffect(() => {
+    if (!currentUser?.id || rtmClient) return // THAY ĐỔI KHỞI TẠO (THEO DOCS V2)
+    console.log("current user", currentUser)
+    const { RTM } = AgoraRTM
+    const uid = String(currentUser.id)
+    const token = null as any
+    const rtmConfig = { logLevel: "debug" as const } // Thêm config log từ docs
+    // Dùng 'new RTM()' thay vì 'AgoraRTM.createInstance()'
+
+    const client = new RTM(APP_ID, uid, rtmConfig)
+    rtmClient = client
+    console.log(">>check token", token)
+
+    // THAY ĐỔI EVENT LISTENER (THEO DOCS V2)
+    // Thêm listener cho 'status' (khuyến nghị trong docs)
+    client.addEventListener("status", (event) => {
+      console.log("RTM Connection Status:", event.state, event.reason)
     })
 
-    clientSocket.callSocket.on(EVoiceCallEvents.call_hangup, (reason: EHangupReason) => {
-      console.log(">>> Received call_hangup from server:", reason)
-      toaster.info("Call ended by peer.")
-      eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {})
-      cleanup()
+    // Dùng 'addEventListener("message", ...)'
+    client.addEventListener("message", (event) => {
+      // event.publisher là người gửi, event.message là payload (string)
+      handleRtmMessage(event.message as string, event.publisher)
     })
 
-    clientSocket.callSocket.on(EVoiceCallEvents.call_status, async (status, callSession) => {
-      switch (status) {
-        case EVoiceCallStatus.ACCEPTED:
-          const shouldUseVideo = callSession?.isVideoCall ?? false
-          emitLog("call accepted, sending an offer")
-          if (callSession) {
-            console.log("callSession >>", callSession)
-            dispatch(setCallSession(callSession))
-            isVideoCallRef.current = callSession.isVideoCall || false
-          }
-          await ensurePeer()
-          await attachMedia(shouldUseVideo) // Sử dụng flag video
-          sendOffer()
-          break
+    client
+      // Dùng 'client.login({ token })'
+      .login({ token })
+      .then(() => {
+        console.log("RTM client logged in")
 
-        case EVoiceCallStatus.REJECTED:
-          if (callSession) {
-            eventEmitter.emit(EInternalEvents.CALL_REJECTED_BY_PEER, {
-              directChatId: callSession.directChatId,
-            })
-          } else {
-            eventEmitter.emit(EInternalEvents.CALL_REJECTED_BY_PEER, {})
-          }
-          toaster.info("Call rejected")
-          break
+        // *** BƯỚC QUAN TRỌNG CỦA V2 ***
+        // Phải subscribe vào kênh "invite" của chính mình để nhận cuộc gọi
+        const myInviteChannel = getInviteChannelName(uid)
+        return client.subscribe(myInviteChannel)
+      })
+      .then((res) => {
+        console.log(`RTM subscribed to my invite channel: ${getInviteChannelName(uid)}`, res)
+      })
+      .catch((err) => console.error("RTM login or subscribe failed:", err))
 
-        case EVoiceCallStatus.CANCELLED:
-          if (callSession) {
-            eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {
-              directChatId: callSession.directChatId,
-            })
-          } else {
-            eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {})
-          }
-          cleanup()
-          toaster.info("Call cancelled")
-          break
-
-        case EVoiceCallStatus.ENDED:
-          toaster.info("End call!")
-          if (callSession) {
-            eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {
-              directChatId: callSession.directChatId,
-            })
-          }
-          cleanup()
-          break
+    // Thêm hàm cleanup khi component unmount
+    return () => {
+      if (rtmClient) {
+        rtmClient
+          .logout()
+          .then(() => console.log("RTM client logged out on unmount"))
+          .catch((err: any) => console.error("RTM logout on unmount failed:", err))
+        rtmClient = null
       }
-    })
+    }
+  }, [currentUser?.id])
 
-    clientSocket.callSocket.on(EVoiceCallEvents.call_offer_answer, async (SDP, type) => {
-      emitLog("received an offer or answer")
-      const p2pConnection = p2pConnectionRef.current
-      const signalingState = p2pConnection?.signalingState
-
-      console.log(
-        ">>> [SDP Handler] Type:",
-        type,
-        "SignalingState:",
-        signalingState,
-        "CallSession:",
-        callSession?.id
-      )
-
-      if (!p2pConnection || !callSession) {
-        console.log(">>> Skip SDP: No connection or session")
-        return
-      }
-
-      try {
-        if (type === ESDPType.OFFER) {
-          emitLog("received an offer")
-          receivedOfferRef.current = true
-
-          const offerCollision =
-            type === ESDPType.OFFER &&
-            (makingOfferRef.current || p2pConnection.signalingState !== "stable")
-
-          const ignoreOffer = !isCallerRef.current && offerCollision
-
-          if (ignoreOffer) {
-            console.log(">>> Ignoring offer due to collision (polite peer)")
-            return
-          }
-
-          if (offerCollision) {
-            console.log(">>> Rollback local description")
-            await Promise.all([p2pConnection.setLocalDescription({ type: "rollback" })])
-          }
-
-          isSettingRemoteDescriptionRef.current = true
-          const shouldUseVideo = callSession?.isVideoCall ?? false
-          await ensurePeer()
-          await attachMedia(shouldUseVideo)
-          await p2pConnection.setRemoteDescription({ sdp: SDP, type: "offer" })
-
-          flushIceCandidates()
-
-          const answer = await p2pConnection.createAnswer()
-          await p2pConnection.setLocalDescription(answer)
-
-          clientSocket.callSocket.emit(EVoiceCallEvents.call_offer_answer, {
-            sessionId: callSession.id,
-            SDP: answer.sdp!,
-            type: ESDPType.ANSWER,
-          })
-
-          isSettingRemoteDescriptionRef.current = false
-        } else if (type === ESDPType.ANSWER) {
-          emitLog("received an answer")
-          if (p2pConnection.signalingState !== "have-local-offer") {
-            console.warn(
-              `>>> [SDP Handler] Ignoring answer because signaling state is not 'have-local-offer'. Current state: ${p2pConnection.signalingState}`
-            )
-            return
-          }
-          isSettingRemoteDescriptionRef.current = true
-          await p2pConnection.setRemoteDescription({ sdp: SDP, type: "answer" })
-          flushIceCandidates()
-          isSettingRemoteDescriptionRef.current = false
-
-          dispatch(updateCallSession({ status: EVoiceCallStatus.CONNECTED }))
-        }
-      } catch (error) {
-        console.error(`Failed to process SDP: ${error}`)
-        isSettingRemoteDescriptionRef.current = false
-      }
-    })
-
-    clientSocket.callSocket.on(
-      EVoiceCallEvents.call_ice,
-      async (candidate: string, sdpMid?: string, sdpMLineIndex?: number) => {
-        const p2pConnection = p2pConnectionRef.current
-
-        if (!p2pConnection) {
-          pendingIceCandidatesRef.current.push({ candidate, sdpMid, sdpMLineIndex })
-          return
-        }
-
-        if (!p2pConnection.remoteDescription) {
-          pendingIceCandidatesRef.current.push({ candidate, sdpMid, sdpMLineIndex })
-          return
-        }
-
-        try {
-          await p2pConnection.addIceCandidate({ candidate, sdpMid, sdpMLineIndex })
-        } catch (err) {
-          console.error(" addIceCandidate error:", err)
-        }
-      }
-    )
-  }
-
+  // Dán hàm này vào bên trong hook 'useAgoraCall'
   function sendPhoneIconMessage(directChatId: number, receiverId: number, action: TActionSendIcon) {
     const content =
       action === "start"
@@ -737,42 +176,352 @@ export function useVoiceCall() {
 
     chattingService.sendMessage(EMessageTypeAllTypes.TEXT, msgPayload, (data) => {
       if ("success" in data && data.success) {
-        console.log(`>>> [useVoiceCall] Sent phone icon message (${action})`)
+        console.log(`>>> [useAgoraCall] Sent phone icon message (${action})`)
         chattingService.recursiveSendingQueueMessages()
       } else if ("isError" in data && data.isError) {
         console.error(
-          `>>> [useVoiceCall] Failed to send phone icon message (${action}):`,
+          `>>> [useAgoraCall] Failed to send phone icon message (${action}):`,
           data.message
         )
       }
     })
   }
+  const publishRtmMessage = async (targetUserId: string, message: RtmCallMessage) => {
+    if (!rtmClient) return
 
-  useEffect(() => {
-    console.log("🔧 [useVoiceCall] REGISTERING socket listeners")
-    registerSocketListeners()
-    return () => {
-      clientSocket.callSocket.off(EVoiceCallEvents.call_request)
-      clientSocket.callSocket.off(EVoiceCallEvents.call_status)
-      clientSocket.callSocket.off(EVoiceCallEvents.call_offer_answer)
-      clientSocket.callSocket.off(EVoiceCallEvents.call_ice)
-      clientSocket.callSocket.off(EVoiceCallEvents.call_hangup)
+    // Logic v2: publish tới kênh invite của người nhận
+    const channelName = getInviteChannelName(targetUserId)
+    const payload = JSON.stringify(message)
+    // Thêm options như trong docs
+    const publishOptions = { channelType: "MESSAGE" as const }
+
+    try {
+      // Dùng 'rtmClient.publish(channelName, payload, options)'
+      await rtmClient.publish(channelName, payload, publishOptions)
+    } catch (error) {
+      console.error("Failed to publish RTM message:", error)
     }
-  }, [callSession])
+  } // --- 2. XỬ LÝ RTC (Media) ---
+  // Hàm chung để tham gia kênh RTC (Phần này không thay đổi vì là RTC, không phải RTM)
+  const joinRtcChannel = async (roomId: string, isVideo: boolean): Promise<boolean> => {
+    if (isJoiningRef.current || rtcClient) return false
+    isJoiningRef.current = true
 
+    try {
+      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" })
+      rtcClient = client
+
+      // ✅ SETUP TẤT CẢ EVENT LISTENERS TRƯỚC KHI JOIN
+      client.on("user-joined", (user) => {
+        console.log(">>> User joined:", user.uid)
+        setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid))
+        dispatch(updateCallSession({ status: EVoiceCallStatus.CONNECTED }))
+      })
+
+      client.on("user-left", (user) => {
+        console.log(">>> User left:", user.uid)
+        setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid))
+      })
+
+      client.on("user-published", async (user, mediaType) => {
+        console.log(">>> User published:", user.uid, mediaType)
+
+        try {
+          // Subscribe to the track
+          await client.subscribe(user, mediaType)
+          console.log(">>> Subscribed to", user.uid, mediaType)
+
+          // Play audio immediately
+          if (mediaType === "audio") {
+            user.audioTrack?.play()
+          }
+
+          // Update remote users list
+          setRemoteUsers((prevUsers) => {
+            const existingUserIndex = prevUsers.findIndex((u) => u.uid === user.uid)
+
+            if (existingUserIndex > -1) {
+              const updatedUsers = [...prevUsers]
+              updatedUsers[existingUserIndex] = user
+              console.log(">>> Updated existing remote user:", user.uid)
+              return updatedUsers
+            } else {
+              console.log(">>> Added new remote user:", user.uid)
+              return [...prevUsers, user]
+            }
+          })
+        } catch (error) {
+          console.error(">>> Failed to subscribe:", error)
+        }
+      })
+
+      client.on("user-unpublished", (user, mediaType) => {
+        console.log(">>> User unpublished:", user.uid, mediaType)
+
+        setRemoteUsers((prevUsers) => {
+          const existingUserIndex = prevUsers.findIndex((u) => u.uid === user.uid)
+
+          if (existingUserIndex > -1) {
+            const updatedUsers = [...prevUsers]
+            updatedUsers[existingUserIndex] = user
+            return updatedUsers
+          }
+          return prevUsers
+        })
+      })
+
+      // ✅ JOIN CHANNEL SAU KHI SETUP EVENTS
+      console.log(">>> Joining RTC channel:", roomId)
+      await client.join(APP_ID, roomId, null, String(currentUser!.id))
+      console.log(">>> Successfully joined RTC channel")
+
+      // ✅ CREATE AND PUBLISH LOCAL TRACKS
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
+      localAudioTrackRef.current = audioTrack
+      setIsMicEnabled(true)
+
+      let tracksToPublish: (IMicrophoneAudioTrack | ICameraVideoTrack)[] = [audioTrack]
+
+      if (isVideo) {
+        const videoTrack = await AgoraRTC.createCameraVideoTrack()
+        localVideoTrackRef.current = videoTrack
+        tracksToPublish.push(videoTrack)
+        setIsVideoEnabled(true)
+        console.log(">>> Created local video track")
+      }
+
+      console.log(">>> Publishing local tracks:", tracksToPublish.length)
+      await client.publish(tracksToPublish)
+      console.log(">>> Successfully published local tracks")
+
+      // ✅ CHỜ 1 CHÚT ĐỂ ĐẢM BẢO NETWORK SYNC
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      dispatch(updateCallSession({ status: EVoiceCallStatus.CONNECTED }))
+      return true
+    } catch (error) {
+      console.error(">>> Failed to join RTC channel:", error)
+      toaster.error("Failed to connect to call.")
+      await cleanup()
+      return false
+    } finally {
+      isJoiningRef.current = false
+    }
+  }
+  /** Bắt đầu cuộc gọi 1-1 */
+  async function startPeerCall(
+    calleeUserId: number,
+    directChatId: number,
+    callback: TUnknownFunction<TCallRequestEmitRes, void>,
+    isVideoCall: boolean = false
+  ) {
+    if (!rtmClient || !currentUser?.id) return toaster.error("Signaling not ready.")
+
+    const roomId = `call_1on1_${currentUser.id}_${calleeUserId}_${Date.now()}`
+    const success = await joinRtcChannel(roomId, isVideoCall)
+    if (!success) return
+
+    // THAY ĐỔI: Dùng hàm publish mới
+    await publishRtmMessage(String(calleeUserId), {
+      type: "CALL_REQUEST",
+      roomId,
+      isVideoCall,
+      chatId: directChatId,
+      isGroupCall: false,
+    })
+
+    const session: TActiveVoiceCallSession2 = {
+      id: roomId,
+      callerUserId: currentUser.id,
+      calleeUserId,
+      directChatId,
+      isVideoCall,
+      status: EVoiceCallStatus.RINGING,
+      isGroupCall: false,
+    }
+    dispatch(setCallSession(session)) // callback({ success: true, session })
+    sendPhoneIconMessage(directChatId, calleeUserId, "start")
+  } /** Bắt đầu/Tham gia cuộc gọi nhóm */
+
+  async function startGroupCall(
+    groupChatId: number,
+    memberIds: number[],
+    callback: TUnknownFunction<TCallRequestEmitRes, void>,
+    isVideoCall: boolean = false
+  ) {
+    // Logic này vẫn giữ nguyên vì nó không dùng RTM 1-1
+    if (!currentUser?.id) return toaster.error("User not found.")
+
+    const roomId = `group_call_${groupChatId}`
+    const success = await joinRtcChannel(roomId, isVideoCall)
+    if (!success) return
+    const rtmMessage: RtmCallMessage = {
+      type: "CALL_REQUEST",
+      roomId,
+      isVideoCall,
+      chatId: groupChatId, // ID của Group Chat
+      isGroupCall: true, // <-- BẮT BUỘC
+    }
+    const session: TActiveVoiceCallSession2 = {
+      id: roomId,
+      callerUserId: currentUser.id,
+      calleeUserId: -1,
+      directChatId: groupChatId,
+      isVideoCall,
+      status: EVoiceCallStatus.CONNECTED,
+      isGroupCall: true,
+    }
+    for (const memberId of memberIds) {
+      // Gửi đến kênh invite *cá nhân* của từng người
+      await publishRtmMessage(String(memberId), rtmMessage)
+    }
+    dispatch(setCallSession(session)) //  callback({ success: true, session })
+  }
+
+  async function acceptCall() {
+    if (!incomingCallSession) return toaster.error("No incoming call.")
+
+    const { id: roomId, isVideoCall } = incomingCallSession
+    // Không cần gửi RTM message, chỉ cần join kênh RTC
+    const success = await joinRtcChannel(roomId, isVideoCall) // Sửa lại
+
+    // **THÊM KHỐI NÀY VÀO:**
+    if (success) {
+      dispatch(updateCallSession({ status: EVoiceCallStatus.CONNECTED }))
+    }
+  }
+
+  async function rejectCall() {
+    if (!incomingCallSession) return
+    // THAY ĐỔI: Dùng hàm publish mới
+    await publishRtmMessage(String(incomingCallSession.callerUserId), {
+      type: "CALL_REJECTED",
+    })
+    dispatch(resetIncomingCallSession())
+  }
+
+  async function hangupCall(reason: EHangupReason = EHangupReason.NORMAL) {
+    // Gửi tin nhắn gác máy (chỉ cho cuộc gọi 1-1)
+    if (callSession && !callSession.isGroupCall && currentUser) {
+      const otherUserId =
+        callSession.callerUserId === currentUser.id
+          ? callSession.calleeUserId
+          : callSession.callerUserId
+      // THAY ĐỔI: Dùng hàm publish mới
+      await publishRtmMessage(String(otherUserId), { type: "CALL_HUNGUP" })
+      sendPhoneIconMessage(callSession.directChatId, otherUserId, "end")
+    }
+
+    await cleanup()
+  }
+
+  async function cleanup() {
+    // Không logout RTM ở đây, vì client cần giữ kết nối để nhận cuộc gọi mới
+    // RTM client sẽ tự logout khi component unmount (xem trong useEffect)
+
+    localAudioTrackRef.current?.stop()
+    localAudioTrackRef.current?.close()
+    localVideoTrackRef.current?.stop()
+    localVideoTrackRef.current?.close()
+    localAudioTrackRef.current = null
+    localVideoTrackRef.current = null
+
+    if (rtcClient) {
+      await rtcClient.leave()
+      rtcClient = null
+    }
+
+    setRemoteUsers([])
+    setIsVideoEnabled(false)
+    setIsMicEnabled(true)
+    isJoiningRef.current = false
+    dispatch(resetCallSession())
+    dispatch(resetIncomingCallSession())
+  }
+
+  function toggleMic(): boolean {
+    if (!localAudioTrackRef.current) return false
+    const isMuted = localAudioTrackRef.current.muted
+    localAudioTrackRef.current.setMuted(!isMuted)
+    setIsMicEnabled(isMuted)
+    return isMuted
+  }
+
+  async function toggleVideo(): Promise<boolean> {
+    const videoTrack = localVideoTrackRef.current
+    if (videoTrack) {
+      await rtcClient?.unpublish(videoTrack)
+      videoTrack.stop()
+      videoTrack.close()
+      localVideoTrackRef.current = null
+      setIsVideoEnabled(false)
+      return false
+    } else {
+      try {
+        const newVideoTrack = await AgoraRTC.createCameraVideoTrack()
+        localVideoTrackRef.current = newVideoTrack
+        await rtcClient?.publish(newVideoTrack)
+        setIsVideoEnabled(true)
+        return true
+      } catch (error) {
+        toaster.error("Không thể bật camera")
+        return false
+      }
+    }
+  }
+  // ✅ HÀM MỚI ĐỂ SWITCH CAMERA
+  async function switchCamera() {
+    const currentTrack = localVideoTrackRef.current
+
+    if (!currentTrack) {
+      toaster.error("Video đang tắt.")
+      return
+    }
+
+    try {
+      // 1. Lấy tất cả camera
+      const allCameras = await AgoraRTC.getCameras()
+      if (!allCameras || allCameras.length < 2) {
+        toaster.info("Không tìm thấy camera khác để chuyển.")
+        return
+      }
+
+      // 2. Lấy ID của camera hiện tại
+      const currentCameraId = currentTrack.getMediaStreamTrack().getSettings().deviceId
+
+      // 3. Tìm index của camera hiện tại
+      const currentIndex = allCameras.findIndex((camera) => camera.deviceId === currentCameraId)
+      if (currentIndex === -1) {
+        console.error("Không tìm thấy camera hiện tại trong danh sách.")
+        return
+      }
+
+      // 4. Xác định camera tiếp theo (quay vòng)
+      const nextIndex = (currentIndex + 1) % allCameras.length
+      const nextCamera = allCameras[nextIndex]
+
+      // 5. Chuyển thiết bị
+      await currentTrack.setDevice(nextCamera.deviceId)
+
+      console.log("Đã chuyển camera sang:", nextCamera.label || nextCamera.deviceId)
+    } catch (error) {
+      console.error("Lỗi khi chuyển camera:", error)
+      toaster.error("Không thể chuyển camera.")
+    }
+  }
   return {
-    startCall,
+    startPeerCall,
+    startGroupCall,
     acceptCall,
     rejectCall,
     hangupCall,
     cleanup,
-    sendOffer,
-    getLocalStream,
-    getRemoteStream,
-    getP2pConnection: () => p2pConnectionRef.current,
-    incomingCallSession,
     toggleMic,
-    toggleVideo, // **VIDEO: Export toggleVideo**
-    isVideoEnabled, // **VIDEO: Export isVideoEnabled state**
+    toggleVideo,
+    switchCamera,
+    isVideoEnabled,
+    isMicEnabled,
+    remoteUsers,
+    localVideoTrack: localVideoTrackRef.current,
   }
 }

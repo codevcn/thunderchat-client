@@ -1,59 +1,66 @@
 "use client"
 
-import { useEffect, useRef } from "react" // Xóa useState pulse
-import { Phone, PhoneOff, User, Video } from "lucide-react"
+import { Phone, PhoneOff, User, Video, Users } from "lucide-react"
+import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
+
 interface IncomingCallModalProps {
   open: boolean
-  callerName: string
-  callerAvatar?: string
   onAccept?: () => void
   onReject?: () => void
+  isVideoCall?: boolean
+
+  callType: "DIRECT" | "GROUP"
+  displayName: string
+  avatarUrl?: string
+  initiatorName?: string
 }
 
 const IncomingCallModal = ({
   open,
-  callerName = "Unknown Caller",
-  callerAvatar,
   onAccept,
   onReject,
+  isVideoCall = false,
+  callType,
+  displayName = "TeamFBC",
+  avatarUrl,
+  initiatorName,
 }: IncomingCallModalProps) => {
+  const ringtoneRef = useRef<HTMLAudioElement | null>(null)
+
   const handleAccept = () => {
-    onAccept?.()
+    if (onAccept) onAccept()
   }
-  const ringtoneRef = useRef<HTMLAudioElement>(null)
+
+  const handleReject = () => {
+    if (onReject) onReject()
+  }
+
   useEffect(() => {
-    const audio = ringtoneRef.current
-
-    if (!audio) return
-
-    if (open) {
-      audio.load()
-
-      audio.play().catch((err) => {
-        console.warn("Ringtone play blocked by browser:", err)
+    if (open && ringtoneRef.current) {
+      ringtoneRef.current.play().catch((e) => {
+        console.error("Ringtone play failed:", e)
       })
-    } else {
-      audio.pause()
-      audio.currentTime = 0
+    } else if (!open && ringtoneRef.current) {
+      ringtoneRef.current.pause()
+      ringtoneRef.current.currentTime = 0
     }
-
     return () => {
-      if (audio) {
-        audio.pause()
-        audio.currentTime = 0
+      if (ringtoneRef.current) {
+        ringtoneRef.current.pause()
+        ringtoneRef.current.currentTime = 0
       }
     }
   }, [open])
 
-  const handleReject = () => {
-    onReject?.()
-  }
-
   if (!open) return null
-
   if (typeof document === "undefined") return null
   const portalRoot = document.body
+
+  const callDescription =
+    callType === "GROUP"
+      ? `Incoming group ${isVideoCall ? "video " : ""}call${initiatorName ? ` from ${initiatorName}` : "..."}`
+      : `Incoming ${isVideoCall ? "video " : ""}call...`
 
   const modalContent = (
     <div
@@ -78,16 +85,21 @@ const IncomingCallModal = ({
             borderBottom: "1px solid var(--tdc-regular-border-cl)",
           }}
         >
+          {/* 4. Cập nhật logic Avatar Header */}
           <div className="relative animate-pulse-scale">
-            {callerAvatar ? (
+            {avatarUrl ? (
               <img
-                src={callerAvatar}
-                alt={callerName}
+                src={avatarUrl}
+                alt={displayName}
                 className="w-12 h-12 rounded-full border-2 border-white object-cover"
               />
             ) : (
               <div className="w-12 h-12 rounded-full border-2 border-white flex items-center justify-center bg-[var(--tdc-regular-hover-bgcl)]">
-                <User className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
+                {callType === "GROUP" ? (
+                  <Users className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
+                ) : (
+                  <User className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
+                )}
               </div>
             )}
             <div className="absolute inset-0 rounded-full border-2 border-white/40 animate-ping"></div>
@@ -95,13 +107,13 @@ const IncomingCallModal = ({
 
           <div className="flex-1">
             <h3 className="font-semibold text-base text-[var(--tdc-regular-white-cl)]">
-              {callerName}
+              {displayName}
             </h3>
-            <p className="text-sm text-[var(--tdc-regular-text-secondary-cl)]">Incoming call...</p>
+            <p className="text-sm text-[var(--tdc-regular-text-secondary-cl)]">{callDescription}</p>
           </div>
         </div>
 
-        {/* Avatar main */}
+        {/* Body (Avatar lớn) */}
         <div
           className="flex-1 flex justify-center items-center py-20"
           style={{
@@ -110,10 +122,10 @@ const IncomingCallModal = ({
           }}
         >
           <div className="relative animate-pulse-scale">
-            {callerAvatar ? (
+            {avatarUrl ? (
               <img
-                src={callerAvatar}
-                alt={callerName}
+                src={avatarUrl}
+                alt={displayName}
                 className="w-44 h-44 rounded-full border-4 shadow-xl object-cover"
                 style={{
                   borderColor: "var(--tdc-gradient-blue-from-cl)",
@@ -127,21 +139,19 @@ const IncomingCallModal = ({
                   border: "4px solid var(--tdc-gradient-blue-from-cl)",
                 }}
               >
-                <User className="w-20 h-20 text-[var(--tdc-regular-icon-cl)]" />
+                {callType === "GROUP" ? (
+                  <Users className="w-20 h-20 text-[var(--tdc-regular-icon-cl)]" />
+                ) : (
+                  <User className="w-20 h-20 text-[var(--tdc-regular-icon-cl)]" />
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Actions */}
-        <div
-          className="px-8 py-6 flex justify-center items-center gap-10 shrink-0"
-          style={{
-            backgroundColor: "var(--tdc-regular-modal-board-bgcl)",
-            borderTop: "1px solid var(--tdc-regular-border-cl)",
-          }}
-        >
-          {/* Decline */}
+        {/* Actions (Giữ nguyên) */}
+        <div className="px-8 py-6 flex justify-center items-center gap-10 shrink-0">
+          {/* Nút Decline */}
           <button
             onClick={handleReject}
             className="group flex flex-col items-center gap-2 focus:outline-none"
@@ -157,7 +167,7 @@ const IncomingCallModal = ({
             </span>
           </button>
 
-          {/* Answer */}
+          {/* Nút Answer */}
           <button
             onClick={handleAccept}
             className="group flex flex-col items-center gap-2 focus:outline-none"
@@ -166,7 +176,11 @@ const IncomingCallModal = ({
               className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-105 animate-pulse"
               style={{ backgroundColor: "var(--tdc-regular-green-cl)" }}
             >
-              <Phone className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
+              {isVideoCall ? (
+                <Video className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
+              ) : (
+                <Phone className="w-6 h-6 text-[var(--tdc-regular-white-cl)]" />
+              )}
             </div>
             <span className="text-sm font-medium text-[var(--tdc-regular-text-secondary-cl)]">
               Answer

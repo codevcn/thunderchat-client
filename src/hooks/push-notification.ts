@@ -73,7 +73,6 @@ export function usePushNotification(): TUsePushNotification {
         applicationServerKey: new Uint8Array(urlBase64ToUint8Array(vapidPublicKey.publicKey)),
       })
 
-      // Gửi subscription mới lên server
       const data = await pushNotificationService.subscribe({
         endpoint: newSub.endpoint,
         keys: {
@@ -81,13 +80,26 @@ export function usePushNotification(): TUsePushNotification {
           auth: arrayBufferToBase64Url(newSub.getKey("auth")),
         },
       })
-
+      console.log("data sub", data)
       return {
         subscription: newSub,
         subscriptionData: data,
       }
     } catch (err) {
-      toaster.error((err as any).message || "Failed to subscribe to push notification.")
+      console.error("❌ Push notification subscription error:", err)
+      console.error("Error details:", {
+        message: (err as any).message,
+        stack: (err as any).stack,
+        response: (err as any).response?.data,
+        status: (err as any).response?.status,
+      })
+
+      // Hiển thị lỗi chi tiết hơn
+      const errorMessage =
+        axiosErrorHandler.handleHttpError(err).message ||
+        (err as any).message ||
+        "Failed to subscribe to push notification."
+      toaster.error(errorMessage)
       return null
     }
   }, [])

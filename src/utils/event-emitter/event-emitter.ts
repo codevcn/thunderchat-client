@@ -1,7 +1,12 @@
 import EventEmitter from "eventemitter3"
 import type { EInternalEvents } from "./events"
 import type { TMsgContent } from "./types"
-import type { TGetMessagesMessage, TGetFriendRequestsData, TGroupChat } from "../types/be-api"
+import type {
+  TGetMessagesMessage,
+  TGetFriendRequestsData,
+  TGroupChat,
+  TDirectChat,
+} from "../types/be-api"
 import type { EChatType } from "../enums"
 import type { TEmitLogMessage } from "../types/global"
 
@@ -46,6 +51,14 @@ interface IEventEmitter {
     type: string
     timestamp: Date
   }) => void
+  [EInternalEvents.START_OUTGOING_CALL]: (payload: {
+    directChat?: TDirectChat
+    groupChat?: TGroupChat
+    isVideo: boolean
+  }) => void
+  [EInternalEvents.CALL_ACCEPTED_BY_PEER]: (data: { directChatId?: number }) => void // ĐÃ CÓ
+  [EInternalEvents.USER_JOINED_CALL]: (data: { userId: number; chatId: string | number }) => void
+  [EInternalEvents.USER_LEFT_CALL]: (data: { userId: number; chatId: string | number }) => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

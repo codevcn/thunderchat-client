@@ -225,6 +225,7 @@ export type TActiveVoiceCallSession = {
   calleeUserId: number
   directChatId: number
   isVideoCall: boolean
+  isGroupCall: boolean
 }
 
 export type TEmitLogMessage = {
@@ -241,3 +242,13 @@ export type TDetectCollisionWithViewportEdgesResult = {
 }
 
 export type TActionSendIcon = "start" | "end"
+
+export type TActiveVoiceCallSession2 = {
+  id: string
+  status: EVoiceCallStatus
+  callerUserId: number
+  calleeUserId: number
+  directChatId: number
+  isVideoCall: boolean
+  isGroupCall: boolean
+}

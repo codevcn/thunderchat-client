@@ -75,6 +75,8 @@ const Notification = () => {
       const isSupported = await checkIfSupported()
       if (isSupported) {
         const sub = await subscribe()
+
+        console.log("check sub", sub)
         if (sub && sub.subscriptionData) {
           dispatch(setPushNotificationEnabled(true))
         }

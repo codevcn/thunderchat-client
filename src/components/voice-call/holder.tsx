@@ -1,342 +1,377 @@
 "use client"
-import { useState, useEffect, useRef } from "react"
-import { PhoneOff, MicOff, Video, VideoOff, X, Mic } from "lucide-react"
-import type { RefObject } from "react"
+
+import { PhoneOff, MicOff, Video, VideoOff, X, Mic, User, Users } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { EVoiceCallStatus } from "@/utils/enums"
 import { createPortal } from "react-dom"
-import { useAppDispatch } from "@/hooks/redux"
-import { eventEmitter } from "@/utils/event-emitter/event-emitter"
-import { EInternalEvents } from "@/utils/event-emitter/events"
+import type { IAgoraRTCRemoteUser, ICameraVideoTrack } from "agora-rtc-sdk-ng"
+import { userService } from "@/services/user.service"
 
-const emitLog = (message: string) => console.log(message)
+type RemoteUserPlayerProps = {
+  user: IAgoraRTCRemoteUser
+  name?: string
+  isPinned?: boolean
+  onPin?: (uid: string) => void
+  isMainView?: boolean
+}
+
+const RemoteUserPlayer = ({
+  user,
+  name = "Unknown",
+  isPinned,
+  onPin,
+  isMainView = false,
+}: RemoteUserPlayerProps) => {
+  const videoRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (videoRef.current && user.videoTrack) {
+      user.videoTrack.play(videoRef.current)
+    }
+    return () => {
+      user.videoTrack?.stop()
+    }
+  }, [user.videoTrack])
+
+  useEffect(() => {
+    if (user.audioTrack) {
+      user.audioTrack.play()
+    }
+  }, [user.audioTrack])
+
+  return (
+    <div
+      className={`relative w-full h-full bg-gray-900 rounded-lg overflow-hidden shadow-lg transition-all duration-300 ${
+        isPinned ? "ring-4 ring-blue-500" : "cursor-pointer hover:ring-2 hover:ring-white/50"
+      }`}
+      onClick={() => !isPinned && onPin?.(String(user.uid))}
+      title={isPinned ? "Pinned" : "Click to pin"}
+    >
+      <div ref={videoRef} className="w-full h-full">
+        {!user.hasVideo && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+            <User className="w-16 h-16 text-gray-400" />
+          </div>
+        )}
+      </div>
+
+      <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-white text-sm flex items-center gap-2">
+        {name}
+        {!user.hasAudio && <MicOff className="w-3 h-3 text-red-400" />}
+      </div>
+
+      {isPinned && (
+        <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500 rounded text-white text-xs font-semibold">
+          Pinned
+        </div>
+      )}
+    </div>
+  )
+}
+
+type MoreUsersCardProps = {
+  count: number
+  onClick: () => void
+}
+
+const MoreUsersCard = ({ count, onClick }: MoreUsersCardProps) => {
+  return (
+    <div
+      onClick={onClick}
+      className="relative w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer hover:bg-gray-700 transition-all duration-300 flex flex-col items-center justify-center"
+    >
+      <Users className="w-12 h-12 text-white mb-2" />
+      <span className="text-2xl font-bold text-white">+{count}</span>
+      <span className="text-sm text-gray-300 mt-1">more participants</span>
+    </div>
+  )
+}
 
 type HolderUIProps = {
   onClose: () => void
   calleeName?: string
   callState: EVoiceCallStatus
-  remoteAudioEleRef: RefObject<HTMLAudioElement>
-  localVideoRef: RefObject<HTMLVideoElement | null>
-  remoteVideoRef: RefObject<HTMLVideoElement | null>
+  localVideoTrack: ICameraVideoTrack | null
+  remoteUsers: IAgoraRTCRemoteUser[]
   toggleVideo: () => void
   isVideoEnabled: boolean
-  toggleMic: () => boolean
+  toggleMic: () => void
+  isMicEnabled: boolean
+  switchCamera: () => Promise<void>
 }
 
 const HolderUI = ({
   onClose,
   calleeName,
   callState,
-  remoteAudioEleRef,
-  localVideoRef,
-  remoteVideoRef,
+  localVideoTrack,
+  remoteUsers,
   toggleVideo,
   isVideoEnabled,
   toggleMic,
+  isMicEnabled,
+  switchCamera,
 }: HolderUIProps) => {
+  const localVideoRef = useRef<HTMLVideoElement>(null)
   const ringtoneRef = useRef<HTMLAudioElement>(null)
-  const dispatch = useAppDispatch()
-  const [isMicEnabled, setIsMicEnabled] = useState(true)
-  const [isRemoteVideoActive, setIsRemoteVideoActive] = useState(false)
-  const [isLocalVideoReady, setIsLocalVideoReady] = useState(false) // **NEW: Track local video**
+  const [userNames, setUserNames] = useState<Record<string, string>>({})
+  const [pinnedUserId, setPinnedUserId] = useState<string | null>(null)
+  const [showAllUsers, setShowAllUsers] = useState(false)
 
-  console.log("calleeName>>", calleeName)
+  // LOGIC CHÍNH: Phân chia users
+  const mainUser = pinnedUserId
+    ? remoteUsers.find((u) => String(u.uid) === pinnedUserId)
+    : remoteUsers[0] || null
 
-  // **FIX: Kiểm tra local video stream**
+  const remainingUsers = pinnedUserId
+    ? remoteUsers.filter((u) => String(u.uid) !== pinnedUserId)
+    : remoteUsers.slice(1)
+
+  // Hiển thị tối đa 2 màn phụ
+  const MAX_VISIBLE_SECONDARY = 1
+  const visibleSecondaryUsers = remainingUsers.slice(0, MAX_VISIBLE_SECONDARY)
+  const hiddenUsersCount = remainingUsers.length - MAX_VISIBLE_SECONDARY
+
+  const handlePin = (uid: string) => {
+    if (pinnedUserId === uid) {
+      setPinnedUserId(null)
+    } else {
+      setPinnedUserId(uid)
+      setShowAllUsers(false) // Đóng modal khi pin
+    }
+  }
+
+  // Fetch user names
   useEffect(() => {
-    const localVideo = localVideoRef.current
-    if (!localVideo) return
-
-    const checkLocalVideo = () => {
-      const stream = localVideo.srcObject as MediaStream
-      if (stream) {
-        const videoTracks = stream.getVideoTracks()
-        const hasVideo = videoTracks.some((track) => track.readyState === "live" && track.enabled)
-        console.log(">>> Local video check:", hasVideo, videoTracks.length)
-        setIsLocalVideoReady(hasVideo)
-      } else {
-        console.log(">>> Local video: No stream")
-        setIsLocalVideoReady(false)
+    const fetchUserNames = async () => {
+      const names: Record<string, string> = {}
+      for (const user of remoteUsers) {
+        try {
+          const userInfo = await userService.getUserById(Number(user.uid))
+          names[user.uid] = userInfo.Profile?.fullName || "Unknown"
+        } catch (error) {
+          console.error(`Failed to fetch user ${user.uid}:`, error)
+          names[user.uid] = "Unknown"
+        }
       }
+      setUserNames(names)
     }
 
-    checkLocalVideo()
-
-    // Listen for loadedmetadata event
-    const handleLoadedMetadata = () => {
-      console.log(">>> Local video metadata loaded")
-      checkLocalVideo()
-    }
-
-    localVideo.addEventListener("loadedmetadata", handleLoadedMetadata)
-
-    const interval = setInterval(checkLocalVideo, 500)
-
-    return () => {
-      clearInterval(interval)
-      localVideo.removeEventListener("loadedmetadata", handleLoadedMetadata)
-    }
-  }, [localVideoRef, isVideoEnabled])
+    fetchUserNames()
+  }, [remoteUsers])
 
   useEffect(() => {
-    const remoteVideo = remoteVideoRef.current
-    if (!remoteVideo) return
-
-    const checkRemoteVideo = () => {
-      const stream = remoteVideo.srcObject as MediaStream
-      if (stream) {
-        const videoTracks = stream.getVideoTracks()
-        const hasActiveVideo = videoTracks.some(
-          (track) => track.readyState === "live" && track.enabled
-        )
-        setIsRemoteVideoActive(hasActiveVideo)
-      } else {
-        setIsRemoteVideoActive(false)
-      }
+    if (localVideoRef.current && localVideoTrack) {
+      localVideoTrack.play(localVideoRef.current)
     }
-
-    checkRemoteVideo()
-    const interval = setInterval(checkRemoteVideo, 1000)
-
-    return () => clearInterval(interval)
-  }, [remoteVideoRef])
-
-  useEffect(() => {
-    const handleRemoteVideoUpdate = (stream: MediaStream) => {
-      console.log(">>> Remote video updated:", stream?.getVideoTracks().length)
-
-      if (!stream) return
-
-      const videoTracks = stream.getVideoTracks()
-      const hasActiveVideo = videoTracks.some((t) => t.enabled && t.readyState === "live")
-
-      console.log(">>> Setting isRemoteVideoActive:", hasActiveVideo)
-      setIsRemoteVideoActive(hasActiveVideo)
-    }
-
-    eventEmitter.on(EInternalEvents.REMOTE_VIDEO_UPDATED, handleRemoteVideoUpdate)
-
     return () => {
-      eventEmitter.off(EInternalEvents.REMOTE_VIDEO_UPDATED, handleRemoteVideoUpdate)
+      localVideoTrack?.stop()
     }
-  }, [])
+  }, [localVideoTrack])
 
   useEffect(() => {
     const audio = ringtoneRef.current
-
     if (!audio) return
 
     if (callState === EVoiceCallStatus.RINGING) {
       audio.load()
-      audio.play().catch((err) => console.warn("Ringtone play blocked:", err))
-    } else if (
-      callState === EVoiceCallStatus.CONNECTED ||
-      callState === EVoiceCallStatus.ENDED ||
-      callState === EVoiceCallStatus.REJECTED
-    ) {
+      audio.play().catch(console.warn)
+    } else {
       audio.pause()
       audio.currentTime = 0
     }
   }, [callState])
 
-  const handleToggleMic = () => {
-    const newMicState = toggleMic()
-    setIsMicEnabled(newMicState)
-    emitLog(`Toggle mic: Mic is now ${newMicState ? "enabled" : "disabled"}`)
-  }
-
-  const handleEndCall = () => {
-    emitLog("User ended call")
-    onClose()
-  }
-
-  const handleToggleVideo = () => {
-    console.log(">>> Toggle video clicked, current state:", isVideoEnabled)
-    toggleVideo()
-  }
-
   if (typeof document === "undefined") return null
   const portalRoot = document.body
 
+  const showVoiceCallFallback = remoteUsers.length === 0 && !isVideoEnabled
+  const showWaitingFallback = remoteUsers.length === 0 && isVideoEnabled
+
   const holder = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm p-4"
-      style={{
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
-      }}
+      className="fixed inset-0 z-[9999] flex flex-col backdrop-blur-sm"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
     >
+      <audio ref={ringtoneRef} src="/sounds/outgoing-call.mp3" loop style={{ display: "none" }} />
+
+      {/* Top Bar */}
+      <div className="w-full p-4 flex justify-between items-center text-white shrink-0">
+        <div>
+          <span className="text-lg font-semibold">
+            {callState === EVoiceCallStatus.CONNECTED ? "Connected" : "Connecting..."}
+          </span>
+          <span className="ml-4">{remoteUsers.length + 1} participants</span>
+        </div>
+        <button onClick={onClose} aria-label="Close">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Main Content Area */}
       <div
-        className="modal-container rounded-lg shadow-2xl w-[70vw] mx-auto min-h-[600px] max-h-[90vh] overflow-hidden flex flex-col relative border"
-        style={{
-          minWidth: "400px",
-          maxWidth: "800px",
-          backgroundColor: "var(--tdc-regular-modal-board-bgcl)",
-          borderColor: "var(--tdc-regular-border-cl)",
-        }}
+        className="flex-1 w-full h-full p-4 relative"
+        style={{ maxHeight: "calc(100vh - 180px)" }}
       >
-        {/* Audio element */}
-        <audio ref={remoteAudioEleRef} autoPlay playsInline style={{ display: "none" }} />
-        {/* <audio ref={ringtoneRef} src="/sounds/ringtone.mp3" loop style={{ display: "none" }} /> */}
-        {/* Main video area */}
-        <div
-          className="flex-1 relative flex items-center justify-center overflow-hidden"
-          style={{
-            backgroundColor: "var(--tdc-regular-dark-gray-cl)",
-          }}
-        >
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className={`w-full h-full object-cover transition-opacity duration-300 ${
-              isRemoteVideoActive ? "opacity-100" : "opacity-0"
-            }`}
-          />
-
-          {/* Placeholder when remote video is off */}
-          {!isRemoteVideoActive && (
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center text-white p-4"
-              style={{
-                backgroundColor: "rgba(0,0,0,0.65)",
-              }}
-            >
-              <span className="text-xl font-medium">{calleeName}</span>
-              <span className="text-sm text-white/70">Video is off</span>
-            </div>
-          )}
-
-          {/* Header */}
-          <div
-            className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start"
-            style={{
-              background: "linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)",
-            }}
-          >
-            <div className="text-white text-lg font-semibold">
-              {calleeName}
-              <p className="text-sm font-normal text-white/80">
-                {callState === EVoiceCallStatus.CONNECTED ? "Connected" : "Connecting..."}
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="inline-flex items-center justify-center rounded-full w-8 h-8 text-white/90 hover:text-white transition"
-              style={{
-                backgroundColor: "rgba(0,0,0,0.3)",
-              }}
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        {/* LAYOUT: Main + Fixed Sidebar */}
+        <div className="w-full h-full flex gap-4">
+          {/* Main Video Area - 75% */}
+          <div className="flex-1 h-full">
+            {mainUser ? (
+              <RemoteUserPlayer
+                user={mainUser}
+                name={userNames[mainUser.uid] || "Loading..."}
+                isPinned={String(mainUser.uid) === pinnedUserId}
+                onPin={handlePin}
+                isMainView={true}
+              />
+            ) : showVoiceCallFallback ? (
+              <div className="w-full h-full flex flex-col items-center justify-center text-white bg-gray-900 rounded-lg">
+                <Mic className="w-24 h-24" />
+                <span className="text-xl font-medium mt-4">{calleeName}</span>
+                <span className="text-sm text-white/70">
+                  {callState === EVoiceCallStatus.RINGING ? "Ringing..." : "Voice Call"}
+                </span>
+              </div>
+            ) : showWaitingFallback ? (
+              <div className="w-full h-full flex flex-col items-center justify-center text-white bg-gray-900 rounded-lg">
+                <Users className="w-24 h-24" />
+                <span className="text-xl font-medium mt-4">Waiting for others to join...</span>
+                <span className="text-sm text-white/70 mt-1">You are the only one here.</span>
+              </div>
+            ) : null}
           </div>
 
-          {/* **FIX: Local video với background để debug** */}
-          {isVideoEnabled && (
-            <div
-              className="absolute bottom-4 right-4 w-40 h-28 rounded-lg border-2 shadow-xl overflow-hidden z-10"
-              style={{
-                borderColor: "var(--tdc-regular-white-cl)",
-                backgroundColor: isLocalVideoReady ? "transparent" : "#1a1a1a", // Debug background
-              }}
-            >
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover ${
-                  isLocalVideoReady ? "opacity-100" : "opacity-0"
-                }`}
-              />
-              {/* Debug overlay */}
-              {!isLocalVideoReady && (
-                <div className="absolute inset-0 flex items-center justify-center text-white text-xs">
-                  <span>Loading...</span>
+          {/* Fixed Sidebar - 25% (ALWAYS show when there are remote users OR local video) */}
+          {(remoteUsers.length > 0 || isVideoEnabled) && (
+            <div className="w-64 h-full flex flex-col gap-4">
+              {/* Local Video - Fixed at top of sidebar */}
+              {isVideoEnabled && (
+                <div className="w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg border-2 border-gray-700 relative shrink-0">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-white text-sm">
+                    You
+                  </div>
+                </div>
+              )}
+
+              {/* Secondary remote users */}
+              {visibleSecondaryUsers.map((user) => (
+                <div key={user.uid} className="flex-1 min-h-0">
+                  <RemoteUserPlayer
+                    user={user}
+                    name={userNames[user.uid] || "Loading..."}
+                    isPinned={false}
+                    onPin={handlePin}
+                  />
+                </div>
+              ))}
+
+              {/* Card "+N" */}
+              {hiddenUsersCount > 0 && (
+                <div className="flex-1 min-h-0">
+                  <MoreUsersCard count={hiddenUsersCount} onClick={() => setShowAllUsers(true)} />
                 </div>
               )}
             </div>
           )}
         </div>
+      </div>
 
-        {/* Footer / Controls */}
-        <div
-          className="px-8 py-4 flex items-center justify-center gap-6 box-content shrink-0 border-t"
-          style={{
-            backgroundColor: "var(--tdc-regular-button-bgcl)",
-            borderColor: "var(--tdc-regular-divider-cl)",
-          }}
+      {/* Control Bar */}
+      <div
+        className="px-8 py-4 flex items-center justify-center gap-6 box-content shrink-0 border-t"
+        style={{
+          backgroundColor: "var(--tdc-regular-button-bgcl)",
+          borderColor: "var(--tdc-regular-divider-cl)",
+        }}
+      >
+        <button
+          onClick={toggleVideo}
+          className={`flex flex-col items-center gap-2 ${
+            isVideoEnabled ? "text-white" : "text-gray-400"
+          }`}
         >
-          {/* Toggle Video */}
-          <div className="flex flex-col items-center gap-2">
-            <button
-              onClick={handleToggleVideo}
-              className={`w-14 h-14 rounded-full inline-flex items-center justify-center transition shadow-md ${
-                isVideoEnabled ? "text-white" : "text-gray-300"
-              }`}
-              style={{
-                backgroundColor: isVideoEnabled
-                  ? "var(--tdc-gradient-blue-from-cl)"
-                  : "var(--tdc-regular-icon-btn-cl)",
-              }}
-              aria-label={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
-            >
-              {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
-            </button>
-            <span
-              className="text-sm font-medium"
-              style={{ color: "var(--tdc-regular-text-secondary-cl)" }}
-            >
-              {isVideoEnabled ? "Video On" : "Video Off"}
-            </span>
+          <div
+            className={`w-14 h-14 rounded-full inline-flex items-center justify-center transition shadow-md ${
+              isVideoEnabled ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
           </div>
+          <span className="text-sm font-medium">Video</span>
+        </button>
 
-          {/* Toggle Mic */}
-          <div className="flex flex-col items-center gap-2">
-            <button
-              onClick={handleToggleMic}
-              className="w-14 h-14 rounded-full inline-flex items-center justify-center transition shadow-md"
-              style={{
-                backgroundColor: isMicEnabled
-                  ? "var(--tdc-gradient-blue-from-cl)"
-                  : "var(--tdc-regular-icon-btn-cl)",
-                color: isMicEnabled ? "#fff" : "#ccc",
-              }}
-              aria-label={isMicEnabled ? "Mute mic" : "Unmute mic"}
-            >
-              {isMicEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-            </button>
-            <span
-              className="text-sm font-medium"
-              style={{ color: "var(--tdc-regular-text-secondary-cl)" }}
-            >
-              {isMicEnabled ? "Mic On" : "Mic Off"}
-            </span>
+        <button
+          onClick={toggleMic}
+          className={`flex flex-col items-center gap-2 ${
+            isMicEnabled ? "text-white" : "text-gray-400"
+          }`}
+        >
+          <div
+            className={`w-14 h-14 rounded-full inline-flex items-center justify-center transition shadow-md ${
+              isMicEnabled ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            {isMicEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
           </div>
+          <span className="text-sm font-medium">Mic</span>
+        </button>
 
-          {/* End Call */}
-          <div className="flex flex-col items-center gap-2 ml-4">
-            <button
-              onClick={handleEndCall}
-              className="w-14 h-14 rounded-full inline-flex items-center justify-center shadow-lg transition duration-200 hover:scale-105"
-              style={{
-                backgroundColor: "var(--tdc-regular-red-cl)",
-                color: "#fff",
-              }}
-              aria-label="End call"
-            >
-              <PhoneOff className="w-7 h-7" />
-            </button>
-            <span
-              className="text-sm font-medium"
-              style={{ color: "var(--tdc-regular-text-secondary-cl)" }}
-            >
-              End Call
-            </span>
+        <button onClick={onClose} className="flex flex-col items-center gap-2 text-white">
+          <div className="w-14 h-14 rounded-full inline-flex items-center justify-center shadow-lg bg-red-600 hover:bg-red-700 transition">
+            <PhoneOff className="w-7 h-7" />
+          </div>
+          <span className="text-sm font-medium">End Call</span>
+        </button>
+      </div>
+
+      {/* Modal: Tất cả participants */}
+      {showAllUsers && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-8"
+          onClick={() => setShowAllUsers(false)}
+        >
+          <div
+            className="bg-gray-900 rounded-xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">
+                All Participants ({remoteUsers.length})
+              </h2>
+              <button
+                onClick={() => setShowAllUsers(false)}
+                className="text-white hover:text-gray-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {remoteUsers.map((user) => (
+                <div key={user.uid} className="aspect-video">
+                  <RemoteUserPlayer
+                    user={user}
+                    name={userNames[user.uid] || "Loading..."}
+                    isPinned={String(user.uid) === pinnedUserId}
+                    onPin={handlePin}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
+
   return createPortal(holder, portalRoot)
 }
 

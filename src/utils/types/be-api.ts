@@ -142,6 +142,7 @@ export type TGroupChat = {
   createdAt: string
   lastSentMessageId?: number
   inviteCode?: string
+  Members?: TGroupChatMemberWithUser[]
 }
 
 export type TGroupChatMember = {

@@ -154,112 +154,110 @@ const Content = ({ content, stickerUrl, type, Media, message, user }: TContentPr
       <div className="max-w-full break-words whitespace-pre-wrap text-sm inline">{messageText}</div>
     )
   }
+  // Hiển thị media (ảnh, video, document, audio)
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
+    // Hiển thị ảnh
+    if (mediaType === EMessageMediaTypes.IMAGE) {
+      return (
+        <>
+          <div className="max-w-xs relative group">
+            <Image
+              src={mediaUrl}
+              alt="sent image"
+              width={300}
+              height={200}
+              className="rounded-lg max-w-full cursor-pointer hover:opacity-90 transition-opacity"
+              priority
+              onClick={() => setIsImageModalOpen(true)}
+            />
+          </div>
+          {createPortal(
+            <ImageModal
+              imageUrl={mediaUrl}
+              isOpen={isImageModalOpen}
+              onClose={() => setIsImageModalOpen(false)}
+            />,
+            document.body
+          )}
+        </>
+      )
+    }
 
-  // Hiển thị ảnh
-  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.IMAGE && mediaUrl) {
-    return (
-      <>
-        <div className="max-w-xs relative group">
-          <Image
+    // Hiển thị video
+    if (mediaType === EMessageMediaTypes.VIDEO) {
+      return (
+        <div className="max-w-[320px] h-[180px]">
+          <video
             src={mediaUrl}
-            alt="sent image"
-            width={300}
-            height={200}
-            className="rounded-lg max-w-full cursor-pointer hover:opacity-90 transition-opacity"
-            priority
-            onClick={() => setIsImageModalOpen(true)}
+            controls
+            className="rounded-lg max-w-full h-full"
+            preload="metadata"
           />
-          {/* XÓA NÚT TẢI XUỐNG Ở ĐÂY */}
         </div>
-        {createPortal(
-          <ImageModal
-            imageUrl={mediaUrl}
-            isOpen={isImageModalOpen}
-            onClose={() => setIsImageModalOpen(false)}
-          />,
-          document.body
-        )}
-      </>
-    )
-  }
+      )
+    }
 
-  // Hiển thị video
-  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.VIDEO && mediaUrl) {
-    return (
-      <div className="max-w-[320px] h-[180px]">
-        <video
-          src={mediaUrl}
-          controls
-          className="rounded-lg max-w-full h-full"
-          preload="metadata"
-        />
-      </div>
-    )
-  }
-  // Hiển thị document
-  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT && mediaUrl) {
-    const downloadFile = async (e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation()
-      e.preventDefault()
-      const fileIconEle = e.currentTarget
-      try {
-        const response = await FileService.downloadFile(mediaUrl, (loaded, total) => {
-          const percent = Math.round((loaded * 100) / (total || 1))
-          fileIconEle.classList.add("downloading")
-          fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = `${percent}%`
-        })
+    // Hiển thị document
+    if (mediaType === EMessageMediaTypes.DOCUMENT) {
+      const downloadFile = async (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation()
+        e.preventDefault()
+        const fileIconEle = e.currentTarget
+        try {
+          const response = await FileService.downloadFile(mediaUrl, (loaded, total) => {
+            const percent = Math.round((loaded * 100) / (total || 1))
+            fileIconEle.classList.add("downloading")
+            fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = `${percent}%`
+          })
 
-        fileIconEle.classList.remove("downloading")
-        fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = ""
+          fileIconEle.classList.remove("downloading")
+          fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = ""
 
-        // Tạo URL từ blob để tải
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const link = document.createElement("a")
-        link.href = url
-        link.download = fileName || "file"
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-      } catch (error) {
-        fileIconEle.classList.remove("downloading")
-        fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = ""
+          // Tạo URL từ blob để tải
+          const url = window.URL.createObjectURL(new Blob([response.data]))
+          const link = document.createElement("a")
+          link.href = url
+          link.download = fileName || "file"
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+        } catch (error) {
+          fileIconEle.classList.remove("downloading")
+          fileIconEle.querySelector(".STYLE-file-icon-progress")!.textContent = ""
+        }
       }
-    }
 
-    const formatBytes = (bytes?: number) => {
-      if (!bytes) return ""
-      if (bytes < 1024) return bytes + " B"
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
-      return (bytes / (1024 * 1024)).toFixed(1) + " MB"
-    }
+      const formatBytes = (bytes?: number) => {
+        if (!bytes) return ""
+        if (bytes < 1024) return bytes + " B"
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+      }
 
-    return (
-      <div className="max-w-xs">
-        <div className="flex items-center gap-1.5 p-1 pb-0 rounded-lg">
-          <FileIcon
-            fileTypeText={mediaType || fileName?.split(".").pop()?.toUpperCase() || "Unknown"}
-            onDownload={downloadFile}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="truncate font-medium text-sm text-regular-white-cl">
-              {fileName || "File"}
+      return (
+        <div className="max-w-xs">
+          <div className="flex items-center gap-1.5 p-1 pb-0 rounded-lg">
+            <FileIcon
+              fileTypeText={mediaType || fileName?.split(".").pop()?.toUpperCase() || "Unknown"}
+              onDownload={downloadFile}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="truncate font-medium text-sm text-regular-white-cl">
+                {fileName || "File"}
+              </div>
+              <div className="text-xs text-white/70 mt-1">{formatBytes(fileSize)}</div>
             </div>
-            <div className="text-xs text-white/70 mt-1">{formatBytes(fileSize)}</div>
           </div>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
-  if (
-    type === EMessageTypes.MEDIA &&
-    mediaType === EMessageMediaTypes.AUDIO &&
-    mediaUrl &&
-    message
-  ) {
-    const isSender = user.id === message.authorId
-    return <VoiceMessage audioUrl={mediaUrl} message={message} isSender={isSender} />
+    // Hiển thị audio
+    if (mediaType === EMessageMediaTypes.AUDIO && message) {
+      const isSender = user.id === message.authorId
+      return <VoiceMessage audioUrl={mediaUrl} message={message} isSender={isSender} />
+    }
   }
 
   // Hiển thị sticker
@@ -315,41 +313,45 @@ const getReplyPreview = (replyTo: NonNullable<TMessageFullInfo["ReplyTo"]>) => {
     return <span className="text-xs rounded mt-0.5 inline-block text-white/80">{messageText}</span>
   }
 
-  // Nếu là ảnh
-  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.IMAGE && mediaUrl) {
-    return (
-      <div className="flex items-center gap-2 rounded p-0.5 mt-0.5">
-        <img src={mediaUrl} alt="img" className="object-cover h-8" />
-      </div>
-    )
+  // Nếu là media (ảnh, video, audio, document)
+  if (type === EMessageTypes.MEDIA && mediaUrl) {
+    // Hiển thị ảnh
+    if (mediaType === EMessageMediaTypes.IMAGE) {
+      return (
+        <div className="flex items-center gap-2 rounded p-0.5 mt-0.5">
+          <img src={mediaUrl} alt="img" className="object-cover h-8" />
+        </div>
+      )
+    }
+    // Hiển thị audio
+    if (mediaType === EMessageMediaTypes.AUDIO) {
+      return (
+        <div className="flex items-center gap-2 mt-0.5">
+          <Mic size={16} />
+          <span className="text-xs rounded mt-0.5 inline-block">Voice message</span>
+        </div>
+      )
+    }
+    // Hiển thị video
+    if (mediaType === EMessageMediaTypes.VIDEO) {
+      return (
+        <div className="flex items-center gap-2 mt-0.5">
+          <FileVideo size={16} />
+          <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
+        </div>
+      )
+    }
+    // Hiển thị file tài liệu
+    if (mediaType === EMessageMediaTypes.DOCUMENT) {
+      return (
+        <div className="flex items-center gap-2 mt-0.5">
+          <Paperclip size={16} />
+          <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
+        </div>
+      )
+    }
   }
-  // Nếu là audio
-  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.AUDIO && mediaUrl) {
-    return (
-      <div className="flex items-center gap-2 mt-0.5">
-        <Mic size={16} />
-        <span className="text-xs rounded mt-0.5 inline-block">Voice message</span>
-      </div>
-    )
-  }
-  // Nếu là video
-  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.VIDEO && mediaUrl) {
-    return (
-      <div className="flex items-center gap-2 mt-0.5">
-        <FileVideo size={16} />
-        <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
-      </div>
-    )
-  }
-  // Nếu là file tài liệu
-  if (type === EMessageTypes.MEDIA && mediaType === EMessageMediaTypes.DOCUMENT && mediaUrl) {
-    return (
-      <div className="flex items-center gap-2 mt-0.5">
-        <Paperclip size={16} />
-        <span className="text-xs rounded mt-0.5 inline-block">{fileName}</span>
-      </div>
-    )
-  }
+
   // Nếu là sticker
   if (type === EMessageTypes.STICKER && stickerUrl) {
     return (

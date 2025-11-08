@@ -40,11 +40,6 @@ const navs = (unreadFriendRequestsCount: number): TNav[] => [
     icon: <Users size={20} color="white" />,
     counter: unreadFriendRequestsCount,
   },
-  {
-    label: "Voice Call",
-    href: "/dev/voice-call",
-    icon: <Phone size={20} color="white" />,
-  },
 ]
 
 export const AppNavigation = memo(() => {

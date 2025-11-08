@@ -231,8 +231,6 @@ const Main = ({ directChat, canSend = true }: TMainProps) => {
 
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
-    // Remove toàn bộ listener cũ trước khi đăng ký mới
-    clientSocket.socket.off(EMessagingEvents.pin_message)
     const handlePinMessage = (data: TPinMessageEventData) => {
       const currentChatId = directChatIdRef.current
 

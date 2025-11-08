@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useCallback } from "react"
 import {
   ChevronDown,
   ChevronUp,
@@ -206,45 +206,42 @@ const MediaPanel = React.memo(() => {
     [directChat?.id, currentUser, playAudio, setShowPlayer]
   )
 
-  const handleDownload = useMemo(
-    () => async (item: TMediaData) => {
-      if (!item.mediaUrl) return
-      const url = item.mediaUrl
-      try {
-        const response = await fetch(url)
-        if (!response.ok) throw new Error("Cannot download file")
-        const blob = await response.blob()
-        const blobUrl = window.URL.createObjectURL(blob)
-        const link = document.createElement("a")
-        link.href = blobUrl
-        const fileNameWithExt = item.fileName || "media"
-        const hasExtension = fileNameWithExt.includes(".")
-        const finalFileName = hasExtension
-          ? fileNameWithExt
-          : `${fileNameWithExt}.${item.mediaType || "dat"}`
-        link.download = finalFileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(blobUrl)
-      } catch (error) {
-        // Fallback: tải trực tiếp từ URL
-        const link = document.createElement("a")
-        link.href = url
-        const fileNameWithExt = item.fileName || "media"
-        const hasExtension = fileNameWithExt.includes(".")
-        const finalFileName = hasExtension
-          ? fileNameWithExt
-          : `${fileNameWithExt}.${item.mediaType || "dat"}`
-        link.download = finalFileName
-        link.target = "_blank"
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-      }
-    },
-    []
-  )
+  const handleDownload = useCallback(async (item: TMediaData) => {
+    if (!item.mediaUrl) return
+    const url = item.mediaUrl
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error("Cannot download file")
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = blobUrl
+      const fileNameWithExt = item.fileName || "media"
+      const hasExtension = fileNameWithExt.includes(".")
+      const finalFileName = hasExtension
+        ? fileNameWithExt
+        : `${fileNameWithExt}.${item.mediaType || "dat"}`
+      link.download = finalFileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      // Fallback: tải trực tiếp từ URL
+      const link = document.createElement("a")
+      link.href = url
+      const fileNameWithExt = item.fileName || "media"
+      const hasExtension = fileNameWithExt.includes(".")
+      const finalFileName = hasExtension
+        ? fileNameWithExt
+        : `${fileNameWithExt}.${item.mediaType || "dat"}`
+      link.download = finalFileName
+      link.target = "_blank"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }, [])
 
   // Memoized helper functions
   const getFileIcon = useMemo(

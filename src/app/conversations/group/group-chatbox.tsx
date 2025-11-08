@@ -256,9 +256,6 @@ const Main = ({ groupChat }: TMainProps) => {
 
   // Đăng ký listener pin_message một lần duy nhất khi mount, remove toàn bộ listener cũ trước khi đăng ký mới
   useEffect(() => {
-    // Remove toàn bộ listener cũ trước khi đăng ký mới
-    clientSocket.socket.off(EMessagingEvents.pin_message_group)
-
     const handlePinMessage = (data: TPinGroupMessageEventData) => {
       const currentChatId = groupChatIdRef.current
       // Kiểm tra xem event có thuộc về chat hiện tại không

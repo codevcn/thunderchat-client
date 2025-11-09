@@ -2,7 +2,6 @@
 
 import { LoginForm } from "./login-form"
 import { useEffect, useState } from "react"
-import Image from "next/image"
 import { useDebounce } from "@/hooks/debounce"
 import validator from "validator"
 import { userService } from "@/services/user.service"
@@ -116,7 +115,15 @@ const HomePage = () => {
     <div className="flex flex-col justify-center items-center min-h-screen px-4 py-8">
       <div className="flex flex-col items-center justify-center text-white p-4">
         <div className="w-20 h-20 p-4 rounded-full bg-regular-violet-cl flex items-center justify-center mb-6">
-          <Image src="/images/logo.svg" alt="App Logo" width={150} height={150} />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="#fff"
+            viewBox="11.53 1.39 41.08 61.26"
+            height="150px"
+            width="150px"
+          >
+            <path d="M52.5,2.2c0.3-0.4-0.1-0.9-0.5-0.8L26.1,7.2c-0.1,0-0.3,0.1-0.3,0.3L13.9,29.6c-0.2,0.4,0.1,0.9,0.6,0.8l6.5-1.4  c0.4-0.1,0.8,0.4,0.6,0.7l-8.4,16.7c-0.2,0.4,0.2,0.8,0.6,0.7l5.1-1.2c0.4-0.1,0.8,0.4,0.6,0.8l-7.9,15.2c-0.3,0.5,0.4,1,0.8,0.6  l20.8-18.8c0.4-0.3,0.1-1-0.4-0.9l-2.3,0.3c-0.5,0.1-0.8-0.4-0.5-0.8L42,24.9c0.3-0.4-0.1-0.9-0.5-0.8l-4.6,1  c-0.5,0.1-0.8-0.4-0.5-0.8L52.5,2.2z M19.3,26.3c0.1,0.2,0.4,0.3,0.7,0.3l2-0.4c0.9-0.2,1.8,0.1,2.3,0.8c0.6,0.7,0.6,1.7,0.2,2.5  l-6.7,13.3l2.2-0.5c0.9-0.2,1.8,0.1,2.3,0.8c0.5,0.7,0.6,1.7,0.2,2.5l-2.5,4.7C20,50.4,20,50.6,20,50.7v2.6c0,0.3-0.1,0.6-0.4,0.8  L14,59.2L21.4,45c0.2-0.4,0.2-0.8-0.1-1.1c-0.2-0.3-0.5-0.4-0.8-0.4c-0.1,0-0.2,0-0.2,0l-4.8,1.1l7.9-15.7c0.2-0.4,0.1-0.8-0.1-1.1  c-0.2-0.3-0.7-0.5-1.1-0.4l-6.1,1.3l9.9-18.4h1.4l-8.3,15.4C19.2,25.9,19.2,26.1,19.3,26.3z"></path>
+          </svg>
         </div>
 
         <h1 className="text-4xl font-bold mb-4">Thunder Chat</h1>

@@ -60,6 +60,8 @@ export const EditGroup = ({ open, onClose, groupChat, members, user }: TEditGrou
       setUpdateFields((prev) => [...prev, "avatar"])
     } catch (err) {
       toaster.error(axiosErrorHandler.handleHttpError(err).message)
+      input.value = ""
+      input.files = null
     } finally {
       setLoading(undefined)
     }

@@ -13,7 +13,7 @@ import { EInternalEvents } from "@/utils/event-emitter/events"
 import { EHangupReason, EMessageTypeAllTypes, EVoiceCallStatus } from "@/utils/enums"
 import type {
   TActionSendIcon,
-  TActiveVoiceCallSession2,
+  TActiveVoiceCallSession,
   TUnknownFunction,
 } from "@/utils/types/global"
 import type { TCallRequestEmitRes } from "@/utils/types/socket"
@@ -82,7 +82,7 @@ export function useAgoraCall() {
           console.log("Already in this group call, ignoring invite.")
           return
         }
-        const session: TActiveVoiceCallSession2 = {
+        const session: TActiveVoiceCallSession = {
           id: data.roomId,
           callerUserId: Number(peerId),
           calleeUserId: currentUser!.id,
@@ -330,7 +330,7 @@ export function useAgoraCall() {
       isGroupCall: false,
     })
 
-    const session: TActiveVoiceCallSession2 = {
+    const session: TActiveVoiceCallSession = {
       id: roomId,
       callerUserId: currentUser.id,
       calleeUserId,
@@ -362,7 +362,7 @@ export function useAgoraCall() {
       chatId: groupChatId, // ID của Group Chat
       isGroupCall: true, // <-- BẮT BUỘC
     }
-    const session: TActiveVoiceCallSession2 = {
+    const session: TActiveVoiceCallSession = {
       id: roomId,
       callerUserId: currentUser.id,
       calleeUserId: -1,

@@ -1,10 +1,16 @@
 import type {
   TGlobalSearchData,
   TMessageSearchOffset,
+  TSmartSearchPayload,
+  TSmartSearchResponse,
   TUserSearchOffset,
 } from "@/utils/types/be-api"
 import type { TConversationSearchResult } from "@/utils/types/global"
-import { searchGlobally, searchConversations as searchConversationsAPI } from "@/apis/search"
+import {
+  searchGlobally,
+  searchConversations as searchConversationsAPI,
+  postSmartSearch,
+} from "@/apis/search"
 
 class SearchService {
   async searchGlobally(
@@ -20,6 +26,11 @@ class SearchService {
       userSearchOffset
     )
     console.log(">>> data 22:", data)
+    return data
+  }
+
+  async search(payload: TSmartSearchPayload): Promise<TSmartSearchResponse> {
+    const { data } = await postSmartSearch(payload)
     return data
   }
 }

@@ -109,6 +109,17 @@ const ConversationCards = () => {
     isChatPinned,
     getPinnedChat,
   } = usePinChats()
+  useEffect(() => {
+    const handleFetchChat = (chatId: number) => {
+      navToConversation(chatId, EChatType.DIRECT)
+    }
+
+    eventEmitter.on(EInternalEvents.FETCH_DIRECT_CHAT, handleFetchChat)
+
+    return () => {
+      eventEmitter.off(EInternalEvents.FETCH_DIRECT_CHAT, handleFetchChat)
+    }
+  }, [])
 
   const setLastId = () => {
     if (conversations && conversations.length > 0) {

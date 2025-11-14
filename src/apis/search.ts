@@ -2,6 +2,8 @@ import { clientAxios, requestConfig } from "@/configs/axios"
 import type {
   TGlobalSearchData,
   TMessageSearchOffset,
+  TSmartSearchPayload,
+  TSmartSearchResponse,
   TUserSearchOffset,
 } from "@/utils/types/be-api"
 import type { TConversationSearchResult } from "@/utils/types/global"
@@ -40,3 +42,6 @@ export const searchConversations = async (
     throw error
   }
 }
+
+export const postSmartSearch = (data: TSmartSearchPayload) =>
+  clientAxios.post<TSmartSearchResponse>("smart-search/search", data, requestConfig)

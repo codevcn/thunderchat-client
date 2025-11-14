@@ -1,0 +1,918 @@
+Tree view of: F:\DO_ANTN\CLONE\thunderchat-client
+
+├── .env
+├── .env.development
+├── .eslintrc.json
+├── .gitignore
+├── .next
+│   ├── app-build-manifest.json
+│   ├── build-manifest.json
+│   ├── cache
+│   │   ├── .rscinfo
+│   │   ├── chrome-devtools-workspace-uuid
+│   │   ├── next-devtools-config.json
+│   │   ├── swc
+│   │   │   └── plugins
+│   │   │       └── windows_x86_64_18.0.0
+│   │   └── webpack
+│   │       ├── client-development
+│   │       │   ├── 0.pack.gz
+│   │       │   ├── 1.pack.gz
+│   │       │   ├── 10.pack.gz
+│   │       │   ├── 11.pack.gz
+│   │       │   ├── 12.pack.gz
+│   │       │   ├── 13.pack.gz
+│   │       │   ├── 14.pack.gz
+│   │       │   ├── 15.pack.gz
+│   │       │   ├── 16.pack.gz
+│   │       │   ├── 17.pack.gz
+│   │       │   ├── 18.pack.gz
+│   │       │   ├── 19.pack.gz
+│   │       │   ├── 2.pack.gz
+│   │       │   ├── 20.pack.gz
+│   │       │   ├── 21.pack.gz
+│   │       │   ├── 22.pack.gz
+│   │       │   ├── 23.pack.gz
+│   │       │   ├── 24.pack.gz
+│   │       │   ├── 25.pack.gz
+│   │       │   ├── 26.pack.gz
+│   │       │   ├── 27.pack.gz
+│   │       │   ├── 28.pack.gz
+│   │       │   ├── 29.pack.gz
+│   │       │   ├── 3.pack.gz
+│   │       │   ├── 30.pack.gz
+│   │       │   ├── 31.pack.gz
+│   │       │   ├── 4.pack.gz
+│   │       │   ├── 5.pack.gz
+│   │       │   ├── 6.pack.gz
+│   │       │   ├── 7.pack.gz
+│   │       │   ├── 8.pack.gz
+│   │       │   ├── 9.pack.gz
+│   │       │   ├── index.pack.gz
+│   │       │   └── index.pack.gz.old
+│   │       ├── client-development-fallback
+│   │       │   ├── 0.pack.gz
+│   │       │   └── index.pack.gz
+│   │       └── server-development
+│   │           ├── 0.pack.gz
+│   │           ├── 1.pack.gz
+│   │           ├── 10.pack.gz
+│   │           ├── 11.pack.gz
+│   │           ├── 11.pack.gz_
+│   │           ├── 12.pack.gz
+│   │           ├── 13.pack.gz
+│   │           ├── 14.pack.gz
+│   │           ├── 15.pack.gz
+│   │           ├── 15.pack.gz_
+│   │           ├── 16.pack.gz
+│   │           ├── 17.pack.gz
+│   │           ├── 18.pack.gz
+│   │           ├── 19.pack.gz
+│   │           ├── 2.pack.gz
+│   │           ├── 2.pack.gz_
+│   │           ├── 20.pack.gz
+│   │           ├── 21.pack.gz
+│   │           ├── 22.pack.gz
+│   │           ├── 23.pack.gz
+│   │           ├── 24.pack.gz
+│   │           ├── 25.pack.gz
+│   │           ├── 26.pack.gz
+│   │           ├── 27.pack.gz
+│   │           ├── 28.pack.gz
+│   │           ├── 29.pack.gz
+│   │           ├── 3.pack.gz
+│   │           ├── 30.pack.gz
+│   │           ├── 31.pack.gz
+│   │           ├── 32.pack.gz
+│   │           ├── 33.pack.gz
+│   │           ├── 34.pack.gz
+│   │           ├── 35.pack.gz
+│   │           ├── 36.pack.gz
+│   │           ├── 37.pack.gz
+│   │           ├── 38.pack.gz
+│   │           ├── 39.pack.gz
+│   │           ├── 4.pack.gz
+│   │           ├── 5.pack.gz
+│   │           ├── 6.pack.gz
+│   │           ├── 7.pack.gz
+│   │           ├── 8.pack.gz
+│   │           ├── 9.pack.gz
+│   │           ├── index.pack.gz
+│   │           └── index.pack.gz.old
+│   ├── package.json
+│   ├── prerender-manifest.json
+│   ├── react-loadable-manifest.json
+│   ├── routes-manifest.json
+│   ├── server
+│   │   ├── _ssr_src_components_materials_emoji-picker_tsx.js
+│   │   ├── _ssr_src_components_materials_sticker-picker_tsx.js
+│   │   ├── app
+│   │   │   ├── conversations
+│   │   │   │   ├── page.js
+│   │   │   │   └── page_client-reference-manifest.js
+│   │   │   └── smart-search
+│   │   │       ├── page.js
+│   │   │       └── page_client-reference-manifest.js
+│   │   ├── app-paths-manifest.json
+│   │   ├── interception-route-rewrite-manifest.js
+│   │   ├── middleware-build-manifest.js
+│   │   ├── middleware-manifest.json
+│   │   ├── middleware-react-loadable-manifest.js
+│   │   ├── next-font-manifest.js
+│   │   ├── next-font-manifest.json
+│   │   ├── pages-manifest.json
+│   │   ├── server-reference-manifest.js
+│   │   ├── server-reference-manifest.json
+│   │   ├── vendor-chunks
+│   │   │   ├── @babel+runtime@7.28.3.js
+│   │   │   ├── @date-fns+tz@1.4.1.js
+│   │   │   ├── @floating-ui+core@1.7.3.js
+│   │   │   ├── @floating-ui+dom@1.7.4.js
+│   │   │   ├── @floating-ui+react-dom@2.1._f82a496250e76dc74322e83e62288561.js
+│   │   │   ├── @floating-ui+utils@0.2.10.js
+│   │   │   ├── @radix-ui+primitive@1.1.3.js
+│   │   │   ├── @radix-ui+react-arrow@1.1.7_e3cfa72c347aab00dee611b17cd3bd06.js
+│   │   │   ├── @radix-ui+react-avatar@1.1._64c44ee82b6b6963ac7743a20a22dcdf.js
+│   │   │   ├── @radix-ui+react-collection@_7d222202f12a0c099ea75a7a531b43eb.js
+│   │   │   ├── @radix-ui+react-compose-ref_4d427a51d8c28368845cccb939f621fd.js
+│   │   │   ├── @radix-ui+react-context@1.1_6b26c735a9f0750078330dab9b75c5f3.js
+│   │   │   ├── @radix-ui+react-dialog@1.1._41dc47d6cc53530819b81d9d62614de6.js
+│   │   │   ├── @radix-ui+react-direction@1_5b82eab503d54dc48b7a55af918208f6.js
+│   │   │   ├── @radix-ui+react-dismissable_5d6f67b9072d3d6264ebdfaf27058313.js
+│   │   │   ├── @radix-ui+react-dropdown-me_8732dec247bc3a5f5e866f90f113fa7f.js
+│   │   │   ├── @radix-ui+react-focus-guard_a3edf6b3070a7a4b43bd6df0c6e223f2.js
+│   │   │   ├── @radix-ui+react-focus-scope_59910ef035bdb4b661fa0af7f43c4346.js
+│   │   │   ├── @radix-ui+react-id@1.1.1_@types+react@19.1.12_react@19.1.1.js
+│   │   │   ├── @radix-ui+react-menu@2.1.16_71f3923840302fed06c28912332d5c01.js
+│   │   │   ├── @radix-ui+react-popover@1.1_5c3d9abd0bc2b1218a690a5c9e95c8a2.js
+│   │   │   ├── @radix-ui+react-popper@1.2._8e0a517a30d704bac8b7cc868ba24e2e.js
+│   │   │   ├── @radix-ui+react-portal@1.1._273e8b086351f37cd3fef90f157abb89.js
+│   │   │   ├── @radix-ui+react-presence@1._036b60b9b3566d9e23da89fb6ecd3fac.js
+│   │   │   ├── @radix-ui+react-primitive@2_b9c2185a83da9b5a5b29516a206c6013.js
+│   │   │   ├── @radix-ui+react-roving-focu_4a87986aa660d09c1f5aee283b118284.js
+│   │   │   ├── @radix-ui+react-slot@1.2.3_@types+react@19.1.12_react@19.1.1.js
+│   │   │   ├── @radix-ui+react-tabs@1.1.13_0141b667d775a58b183c4ab55a98e64e.js
+│   │   │   ├── @radix-ui+react-tooltip@1.2_f373f8126b4356cc390c2e755d25fb9e.js
+│   │   │   ├── @radix-ui+react-use-callbac_062fe2a53d47669ef5904d61b0114d6e.js
+│   │   │   ├── @radix-ui+react-use-control_e69ccd9d03ab4402b22e5372565c108d.js
+│   │   │   ├── @radix-ui+react-use-effect-_92b9f6af7706f0fc51c2ff96f82c5fb4.js
+│   │   │   ├── @radix-ui+react-use-escape-_511624366e5c1d37f915b2703bfee4b6.js
+│   │   │   ├── @radix-ui+react-use-is-hydr_71e46cb4cda980557ebf2d2b40542315.js
+│   │   │   ├── @radix-ui+react-use-layout-_f8643097f2824c92ededcdfea1f0055b.js
+│   │   │   ├── @radix-ui+react-use-size@1._d506a86e1adfc8ecf5567ce9f8efb42e.js
+│   │   │   ├── @radix-ui+react-visually-hi_06819615e573976835a32a7fad987db8.js
+│   │   │   ├── @reduxjs+toolkit@2.5.0_reac_daaca38bfbbd243225eda3c94fafb903.js
+│   │   │   ├── @socket.io+component-emitter@3.1.2.js
+│   │   │   ├── @swc+helpers@0.5.15.js
+│   │   │   ├── agora-rtc-sdk-ng@4.24.0.js
+│   │   │   ├── agora-rtm-sdk@2.2.3-1_agora-rtc-sdk-ng@4.24.0.js
+│   │   │   ├── aria-hidden@1.2.6.js
+│   │   │   ├── asynckit@0.4.0.js
+│   │   │   ├── axios@1.11.0.js
+│   │   │   ├── call-bind-apply-helpers@1.0.2.js
+│   │   │   ├── class-variance-authority@0.7.1.js
+│   │   │   ├── clsx@2.1.1.js
+│   │   │   ├── combined-stream@1.0.8.js
+│   │   │   ├── date-fns@4.1.0.js
+│   │   │   ├── dayjs@1.11.14.js
+│   │   │   ├── debug@4.3.7.js
+│   │   │   ├── debug@4.4.1.js
+│   │   │   ├── delayed-stream@1.0.0.js
+│   │   │   ├── dompurify@3.2.6.js
+│   │   │   ├── dunder-proto@1.0.1.js
+│   │   │   ├── engine.io-client@6.6.3.js
+│   │   │   ├── engine.io-parser@5.2.3.js
+│   │   │   ├── es-define-property@1.0.1.js
+│   │   │   ├── es-errors@1.3.0.js
+│   │   │   ├── es-object-atoms@1.1.1.js
+│   │   │   ├── es-set-tostringtag@2.1.0.js
+│   │   │   ├── eventemitter3@5.0.1.js
+│   │   │   ├── follow-redirects@1.15.11.js
+│   │   │   ├── form-data@4.0.4.js
+│   │   │   ├── function-bind@1.1.2.js
+│   │   │   ├── get-intrinsic@1.3.0.js
+│   │   │   ├── get-nonce@1.0.1.js
+│   │   │   ├── get-proto@1.0.1.js
+│   │   │   ├── gopd@1.2.0.js
+│   │   │   ├── has-flag@4.0.0.js
+│   │   │   ├── has-symbols@1.1.0.js
+│   │   │   ├── has-tostringtag@1.0.2.js
+│   │   │   ├── hasown@2.0.2.js
+│   │   │   ├── immer@10.1.1.js
+│   │   │   ├── linkify-react@4.3.2_linkifyjs@4.3.2_react@19.1.1.js
+│   │   │   ├── linkifyjs@4.3.2.js
+│   │   │   ├── lucide-react@0.477.0_react@19.1.1.js
+│   │   │   ├── math-intrinsics@1.1.0.js
+│   │   │   ├── memoize-one@5.2.1.js
+│   │   │   ├── mime-db@1.52.0.js
+│   │   │   ├── mime-types@2.1.35.js
+│   │   │   ├── ms@2.1.3.js
+│   │   │   ├── next-themes@0.4.6_react-dom_13aa3294eb836767e52da316e3121154.js
+│   │   │   ├── next@15.5.2_react-dom@19.1._5c0f77273ab4d0996890e6e607c1f589.js
+│   │   │   ├── proxy-from-env@1.1.0.js
+│   │   │   ├── qrcode.react@4.2.0_react@19.1.1.js
+│   │   │   ├── react-day-picker@9.9.0_react@19.1.1.js
+│   │   │   ├── react-redux@9.2.0_@types+re_e1810d5b73aba5e721b8d65b81f1addb.js
+│   │   │   ├── react-remove-scroll-bar@2.3_5804c9910e07169e1108080c42c8ed9b.js
+│   │   │   ├── react-remove-scroll@2.7.1_@types+react@19.1.12_react@19.1.1.js
+│   │   │   ├── react-style-singleton@2.2.3_6e2aa25bab56280cf69ef1078a1cd89e.js
+│   │   │   ├── react-window@1.8.11_react-d_1db8652b6116ec3fae8e1e7e8dc4b48b.js
+│   │   │   ├── redux-thunk@3.1.0_redux@5.0.1.js
+│   │   │   ├── redux@5.0.1.js
+│   │   │   ├── reselect@5.1.1.js
+│   │   │   ├── socket.io-client@4.8.1.js
+│   │   │   ├── socket.io-parser@4.2.4.js
+│   │   │   ├── sonner@2.0.7_react-dom@19.1.1_react@19.1.1__react@19.1.1.js
+│   │   │   ├── supports-color@7.2.0.js
+│   │   │   ├── tailwind-merge@3.3.1.js
+│   │   │   ├── tslib@2.8.1.js
+│   │   │   ├── use-callback-ref@1.3.3_@types+react@19.1.12_react@19.1.1.js
+│   │   │   ├── use-sidecar@1.1.3_@types+react@19.1.12_react@19.1.1.js
+│   │   │   ├── use-sync-external-store@1.5.0_react@19.1.1.js
+│   │   │   ├── waveform-data@4.5.2.js
+│   │   │   ├── ws@8.17.1.js
+│   │   │   └── xmlhttprequest-ssl@2.1.2.js
+│   │   └── webpack-runtime.js
+│   ├── static
+│   │   ├── chunks
+│   │   │   ├── _app-pages-browser_node_modules_pnpm_next_15_5_2_react-dom_19_1__5c0f77273ab4d0996890e6e607c1-904436.js
+│   │   │   ├── _app-pages-browser_src_components_materials_emoji-picker_tsx.js
+│   │   │   ├── _app-pages-browser_src_components_materials_sticker-picker_tsx.js
+│   │   │   ├── app
+│   │   │   │   ├── conversations
+│   │   │   │   │   └── page.js
+│   │   │   │   ├── layout.js
+│   │   │   │   ├── not-found.js
+│   │   │   │   └── smart-search
+│   │   │   │       └── page.js
+│   │   │   ├── app-pages-internals.js
+│   │   │   ├── main-app.js
+│   │   │   ├── polyfills.js
+│   │   │   └── webpack.js
+│   │   ├── css
+│   │   │   └── app
+│   │   │       ├── conversations
+│   │   │       │   └── page.css
+│   │   │       ├── layout.css
+│   │   │       └── smart-search
+│   │   │           └── page.css
+│   │   ├── development
+│   │   │   ├── _buildManifest.js
+│   │   │   └── _ssgManifest.js
+│   │   ├── media
+│   │   │   ├── 0d580af215996300-s.woff2
+│   │   │   ├── 14254a1c498c2b09-s.woff2
+│   │   │   ├── 320d9f5d177d6ec2-s.woff2
+│   │   │   ├── 3794f505ceb4aef5-s.woff2
+│   │   │   ├── 4036a8cc6ad3520f-s.woff2
+│   │   │   ├── 80512c49369d7ad3-s.woff2
+│   │   │   ├── c4a2ca76cbcd952a-s.p.woff2
+│   │   │   ├── c7128a8004343716-s.woff2
+│   │   │   └── ca9e8d8193aed290-s.woff2
+│   │   └── webpack
+│   │       ├── 224d16ff1d71e810.webpack.hot-update.json
+│   │       ├── 633457081244afec._.hot-update.json
+│   │       ├── 7ed1266fca01dedd.webpack.hot-update.json
+│   │       ├── a6d6925f3aef7505.webpack.hot-update.json
+│   │       ├── app
+│   │       │   ├── layout.7ed1266fca01dedd.hot-update.js
+│   │       │   ├── layout.a6d6925f3aef7505.hot-update.js
+│   │       │   ├── layout.c1721c3727911573.hot-update.js
+│   │       │   ├── layout.c42a95a6b155ed1f.hot-update.js
+│   │       │   ├── layout.e3d6822d9988e02f.hot-update.js
+│   │       │   ├── layout.eb013a3556f7d4d1.hot-update.js
+│   │       │   ├── layout.edf2a02c16a7b39b.hot-update.js
+│   │       │   └── smart-search
+│   │       │       ├── page.a6d6925f3aef7505.hot-update.js
+│   │       │       ├── page.c42a95a6b155ed1f.hot-update.js
+│   │       │       ├── page.eb013a3556f7d4d1.hot-update.js
+│   │       │       └── page.edf2a02c16a7b39b.hot-update.js
+│   │       ├── c1721c3727911573.webpack.hot-update.json
+│   │       ├── c42a95a6b155ed1f.webpack.hot-update.json
+│   │       ├── e3d6822d9988e02f.webpack.hot-update.json
+│   │       ├── eb013a3556f7d4d1.webpack.hot-update.json
+│   │       ├── edf2a02c16a7b39b.webpack.hot-update.json
+│   │       ├── webpack.224d16ff1d71e810.hot-update.js
+│   │       ├── webpack.7ed1266fca01dedd.hot-update.js
+│   │       ├── webpack.a6d6925f3aef7505.hot-update.js
+│   │       ├── webpack.c1721c3727911573.hot-update.js
+│   │       ├── webpack.c42a95a6b155ed1f.hot-update.js
+│   │       ├── webpack.e3d6822d9988e02f.hot-update.js
+│   │       ├── webpack.eb013a3556f7d4d1.hot-update.js
+│   │       └── webpack.edf2a02c16a7b39b.hot-update.js
+│   ├── trace
+│   └── types
+│       ├── app
+│       │   ├── conversations
+│       │   │   └── page.ts
+│       │   ├── layout.ts
+│       │   └── smart-search
+│       │       └── page.ts
+│       ├── cache-life.d.ts
+│       ├── package.json
+│       ├── routes.d.ts
+│       └── validator.ts
+├── .prettierignore
+├── .prettierrc.json
+├── README.md
+├── check-ts.cmd
+├── complie-sw.cmd
+├── components.json
+├── declarations.d.ts
+├── dev.cmd
+├── enviroment.d.ts
+├── next-env.d.ts
+├── next.config.js
+├── note.txt
+├── package-lock.json
+├── package.json
+├── pnpm-lock.yaml
+├── postcss.config.js
+├── print_project_tree.py
+├── project_tree.txt
+├── public
+│   ├── emojis
+│   │   ├── activity
+│   │   │   ├── 1st-place-medal_1f947.webp
+│   │   │   ├── 2nd-place-medal_1f948.webp
+│   │   │   ├── 3rd-place-medal_1f949.webp
+│   │   │   ├── admission-tickets_1f39f-fe0f.webp
+│   │   │   ├── american-football_1f3c8.webp
+│   │   │   ├── artist-palette_1f3a8.webp
+│   │   │   ├── badminton_1f3f8.webp
+│   │   │   ├── balloon_1f388.webp
+│   │   │   ├── baseball_26be.webp
+│   │   │   ├── basketball_1f3c0.webp
+│   │   │   ├── bowling_1f3b3.webp
+│   │   │   ├── boxing-glove_1f94a.webp
+│   │   │   ├── carp-streamer_1f38f.webp
+│   │   │   ├── chess-pawn_265f-fe0f.webp
+│   │   │   ├── christmas-tree_1f384.webp
+│   │   │   ├── club-suit_2663-fe0f.webp
+│   │   │   ├── confetti-ball_1f38a.webp
+│   │   │   ├── cricket-game_1f3cf.webp
+│   │   │   ├── crystal-ball_1f52e.webp
+│   │   │   ├── curling-stone_1f94c.webp
+│   │   │   ├── diamond-suit_2666-fe0f.webp
+│   │   │   ├── direct-hit_1f3af.webp
+│   │   │   ├── diving-mask_1f93f.webp
+│   │   │   ├── field-hockey_1f3d1.webp
+│   │   │   ├── firecracker_1f9e8.webp
+│   │   │   ├── fireworks_1f386.webp
+│   │   │   ├── fishing-pole_1f3a3.webp
+│   │   │   ├── flag-in-hole_26f3.webp
+│   │   │   ├── flower-playing-cards_1f3b4.webp
+│   │   │   ├── flying-disc_1f94f.webp
+│   │   │   ├── framed-picture_1f5bc-fe0f.webp
+│   │   │   ├── game-die_1f3b2.webp
+│   │   │   ├── goal-net_1f945.webp
+│   │   │   ├── heart-suit_2665-fe0f.webp
+│   │   │   ├── ice-hockey_1f3d2.webp
+│   │   │   ├── ice-skate_26f8-fe0f.webp
+│   │   │   ├── jack-o-lantern_1f383.webp
+│   │   │   ├── japanese-dolls_1f38e.webp
+│   │   │   ├── joker_1f0cf.webp
+│   │   │   ├── joystick_1f579-fe0f.webp
+│   │   │   ├── kite_1fa81.webp
+│   │   │   ├── lacrosse_1f94d.webp
+│   │   │   ├── magic-wand_1fa84.webp
+│   │   │   ├── mahjong-red-dragon_1f004.webp
+│   │   │   ├── martial-arts-uniform_1f94b.webp
+│   │   │   ├── military-medal_1f396-fe0f.webp
+│   │   │   ├── mirror-ball_1faa9.webp
+│   │   │   ├── moon-viewing-ceremony_1f391.webp
+│   │   │   ├── nesting-dolls_1fa86.webp
+│   │   │   ├── party-popper_1f389.webp
+│   │   │   ├── performing-arts_1f3ad.webp
+│   │   │   ├── pinata_1fa85.webp
+│   │   │   ├── pine-decoration_1f38d.webp
+│   │   │   ├── ping-pong_1f3d3.webp
+│   │   │   ├── pistol_1f52b.webp
+│   │   │   ├── pool-8-ball_1f3b1.webp
+│   │   │   ├── puzzle-piece_1f9e9.webp
+│   │   │   ├── red-envelope_1f9e7.webp
+│   │   │   ├── rugby-football_1f3c9.webp
+│   │   │   ├── running-shirt_1f3bd.webp
+│   │   │   ├── skis_1f3bf.webp
+│   │   │   ├── sled_1f6f7.webp
+│   │   │   ├── slot-machine_1f3b0.webp
+│   │   │   ├── soccer-ball_26bd.webp
+│   │   │   ├── softball_1f94e.webp
+│   │   │   ├── spade-suit_2660-fe0f.webp
+│   │   │   ├── sparkler_1f387.webp
+│   │   │   ├── sparkles_2728.webp
+│   │   │   ├── sports-medal_1f3c5.webp
+│   │   │   ├── tanabata-tree_1f38b.webp
+│   │   │   ├── tennis_1f3be.webp
+│   │   │   ├── ticket_1f3ab.webp
+│   │   │   ├── trophy_1f3c6.webp
+│   │   │   ├── video-game_1f3ae.webp
+│   │   │   ├── volleyball_1f3d0.webp
+│   │   │   ├── wind-chime_1f390.webp
+│   │   │   ├── wrapped-gift_1f381.webp
+│   │   │   └── yo-yo_1fa80.webp
+│   │   ├── food-drink
+│   │   │   ├── amphora_1f3fa.webp
+│   │   │   ├── baby-bottle_1f37c.webp
+│   │   │   ├── beer-mug_1f37a.webp
+│   │   │   ├── beverage-box_1f9c3.webp
+│   │   │   ├── birthday-cake_1f382.webp
+│   │   │   ├── bottle-with-popping-cork_1f37e.webp
+│   │   │   ├── candy_1f36c.webp
+│   │   │   ├── chocolate-bar_1f36b.webp
+│   │   │   ├── chopsticks_1f962.webp
+│   │   │   ├── clinking-beer-mugs_1f37b.webp
+│   │   │   ├── clinking-glasses_1f942.webp
+│   │   │   ├── cocktail-glass_1f378.webp
+│   │   │   ├── cookie_1f36a.webp
+│   │   │   ├── cup-with-straw_1f964.webp
+│   │   │   ├── cupcake_1f9c1.webp
+│   │   │   ├── custard_1f36e.webp
+│   │   │   ├── fork-and-knife-with-plate_1f37d-fe0f.webp
+│   │   │   ├── fork-and-knife_1f374.webp
+│   │   │   ├── glass-of-milk_1f95b.webp
+│   │   │   ├── honey-pot_1f36f.webp
+│   │   │   ├── hot-beverage_2615.webp
+│   │   │   ├── ice_1f9ca.webp
+│   │   │   ├── jar_1fad9.webp
+│   │   │   ├── kitchen-knife_1f52a.webp
+│   │   │   ├── lollipop_1f36d.webp
+│   │   │   ├── mate_1f9c9.webp
+│   │   │   ├── pie_1f967.webp
+│   │   │   ├── pouring-liquid_1fad7.webp
+│   │   │   ├── sake_1f376.webp
+│   │   │   ├── shortcake_1f370.webp
+│   │   │   ├── spoon_1f944.webp
+│   │   │   ├── teacup-without-handle_1f375.webp
+│   │   │   ├── teapot_1fad6.webp
+│   │   │   ├── tropical-drink_1f379.webp
+│   │   │   ├── tumbler-glass_1f943.webp
+│   │   │   └── wine-glass_1f377.webp
+│   │   ├── smiley-people
+│   │   │   ├── beaming-face-with-smiling-eyes_1f601.webp
+│   │   │   ├── cold-face_1f976.webp
+│   │   │   ├── confused-face_1f615.webp
+│   │   │   ├── cowboy-hat-face_1f920.webp
+│   │   │   ├── disguised-face_1f978.webp
+│   │   │   ├── dizzy-face_1f635.webp
+│   │   │   ├── dotted-line-face_1fae5.webp
+│   │   │   ├── drooling-face_1f924.webp
+│   │   │   ├── exploding-head_1f92f.webp
+│   │   │   ├── expressionless-face_1f611.webp
+│   │   │   ├── face-blowing-a-kiss_1f618.webp
+│   │   │   ├── face-exhaling_1f62e-200d-1f4a8.webp
+│   │   │   ├── face-in-clouds_1f636-200d-1f32b-fe0f.webp
+│   │   │   ├── face-savoring-food_1f60b.webp
+│   │   │   ├── face-vomiting_1f92e.webp
+│   │   │   ├── face-with-diagonal-mouth_1fae4.webp
+│   │   │   ├── face-with-hand-over-mouth_1f92d.webp
+│   │   │   ├── face-with-head-bandage_1f915.webp
+│   │   │   ├── face-with-medical-mask_1f637.webp
+│   │   │   ├── face-with-monocle_1f9d0.webp
+│   │   │   ├── face-with-open-eyes-and-hand-over-mouth_1fae2.webp
+│   │   │   ├── face-with-peeking-eye_1fae3.webp
+│   │   │   ├── face-with-raised-eyebrow_1f928.webp
+│   │   │   ├── face-with-rolling-eyes_1f644.webp
+│   │   │   ├── face-with-spiral-eyes_1f635-200d-1f4ab.webp
+│   │   │   ├── face-with-tears-of-joy_1f602.webp
+│   │   │   ├── face-with-thermometer_1f912.webp
+│   │   │   ├── face-with-tongue_1f61b.webp
+│   │   │   ├── face-without-mouth_1f636.webp
+│   │   │   ├── frowning-face_2639-fe0f.webp
+│   │   │   ├── grimacing-face_1f62c.webp
+│   │   │   ├── grinning-face-with-big-eyes_1f603.webp
+│   │   │   ├── grinning-face-with-smiling-eyes_1f604.webp
+│   │   │   ├── grinning-face-with-sweat_1f605.webp
+│   │   │   ├── grinning-face_1f600.webp
+│   │   │   ├── grinning-squinting-face_1f606.webp
+│   │   │   ├── hot-face_1f975.webp
+│   │   │   ├── hugging-face_1f917.webp
+│   │   │   ├── kissing-face-with-closed-eyes_1f61a.webp
+│   │   │   ├── kissing-face-with-smiling-eyes_1f619.webp
+│   │   │   ├── kissing-face_1f617.webp
+│   │   │   ├── lying-face_1f925.webp
+│   │   │   ├── melting-face_1fae0.webp
+│   │   │   ├── money-mouth-face_1f911.webp
+│   │   │   ├── nauseated-face_1f922.webp
+│   │   │   ├── nerd-face_1f913.webp
+│   │   │   ├── neutral-face_1f610.webp
+│   │   │   ├── partying-face_1f973.webp
+│   │   │   ├── pensive-face_1f614.webp
+│   │   │   ├── relieved-face_1f60c.webp
+│   │   │   ├── rolling-on-the-floor-laughing_1f923.webp
+│   │   │   ├── saluting-face_1fae1.webp
+│   │   │   ├── shaking-face_1fae8.webp
+│   │   │   ├── shushing-face_1f92b.webp
+│   │   │   ├── sleeping-face_1f634.webp
+│   │   │   ├── sleepy-face_1f62a.webp
+│   │   │   ├── slightly-frowning-face_1f641.webp
+│   │   │   ├── slightly-smiling-face_1f642.webp
+│   │   │   ├── smiling-face-with-halo_1f607.webp
+│   │   │   ├── smiling-face-with-heart-eyes_1f60d.webp
+│   │   │   ├── smiling-face-with-hearts_1f970.webp
+│   │   │   ├── smiling-face-with-smiling-eyes_1f60a.webp
+│   │   │   ├── smiling-face-with-sunglasses_1f60e.webp
+│   │   │   ├── smiling-face-with-tear_1f972.webp
+│   │   │   ├── smiling-face_263a-fe0f.webp
+│   │   │   ├── smirking-face_1f60f.webp
+│   │   │   ├── sneezing-face_1f927.webp
+│   │   │   ├── squinting-face-with-tongue_1f61d.webp
+│   │   │   ├── star-struck_1f929.webp
+│   │   │   ├── thinking-face_1f914.webp
+│   │   │   ├── unamused-face_1f612.webp
+│   │   │   ├── upside-down-face_1f643.webp
+│   │   │   ├── winking-face-with-tongue_1f61c.webp
+│   │   │   ├── winking-face_1f609.webp
+│   │   │   ├── woozy-face_1f974.webp
+│   │   │   ├── worried-face_1f61f.webp
+│   │   │   ├── zany-face_1f92a.webp
+│   │   │   └── zipper-mouth-face_1f910.webp
+│   │   └── travel-places
+│   │       ├── bank_1f3e6.webp
+│   │       ├── beach-with-umbrella_1f3d6-fe0f.webp
+│   │       ├── brick_1f9f1.webp
+│   │       ├── building-construction_1f3d7-fe0f.webp
+│   │       ├── camping_1f3d5-fe0f.webp
+│   │       ├── castle_1f3f0.webp
+│   │       ├── classical-building_1f3db-fe0f.webp
+│   │       ├── compass_1f9ed.webp
+│   │       ├── convenience-store_1f3ea.webp
+│   │       ├── department-store_1f3ec.webp
+│   │       ├── derelict-house_1f3da-fe0f.webp
+│   │       ├── desert-island_1f3dd-fe0f.webp
+│   │       ├── desert_1f3dc-fe0f.webp
+│   │       ├── factory_1f3ed.webp
+│   │       ├── globe-showing-americas_1f30e.webp
+│   │       ├── globe-showing-asia-australia_1f30f.webp
+│   │       ├── globe-showing-europe-africa_1f30d.webp
+│   │       ├── globe-with-meridians_1f310.webp
+│   │       ├── hospital_1f3e5.webp
+│   │       ├── hotel_1f3e8.webp
+│   │       ├── house-with-garden_1f3e1.webp
+│   │       ├── house_1f3e0.webp
+│   │       ├── houses_1f3d8-fe0f.webp
+│   │       ├── hut_1f6d6.webp
+│   │       ├── japanese-castle_1f3ef.webp
+│   │       ├── japanese-post-office_1f3e3.webp
+│   │       ├── love-hotel_1f3e9.webp
+│   │       ├── map-of-japan_1f5fe.webp
+│   │       ├── mount-fuji_1f5fb.webp
+│   │       ├── mountain_26f0-fe0f.webp
+│   │       ├── national-park_1f3de-fe0f.webp
+│   │       ├── office-building_1f3e2.webp
+│   │       ├── post-office_1f3e4.webp
+│   │       ├── school_1f3eb.webp
+│   │       ├── snow-capped-mountain_1f3d4-fe0f.webp
+│   │       ├── stadium_1f3df-fe0f.webp
+│   │       ├── volcano_1f30b.webp
+│   │       ├── wedding_1f492.webp
+│   │       └── world-map_1f5fa-fe0f.webp
+│   ├── favicon.ico
+│   ├── icons
+│   │   ├── icon-128.png
+│   │   └── pinned-conv.svg
+│   ├── images
+│   │   ├── chat_bg
+│   │   │   └── chat-bg-pattern-dark.ad38368a9e8140d0ac7d.webp
+│   │   ├── logo.svg
+│   │   ├── logo.webp
+│   │   └── user
+│   │       ├── avatar.png
+│   │       ├── default-avatar-black.webp
+│   │       └── default-avatar-white.webp
+│   ├── service-workers
+│   │   └── service.worker.js
+│   └── sounds
+│       └── ringtone.mp3
+├── src
+│   ├── apis
+│   │   ├── admin.ts
+│   │   ├── auth.ts
+│   │   ├── direct-chat.ts
+│   │   ├── expression.ts
+│   │   ├── friend-request.ts
+│   │   ├── friend.ts
+│   │   ├── group-chat.ts
+│   │   ├── group-member.ts
+│   │   ├── messages.ts
+│   │   ├── pin.ts
+│   │   ├── profile.ts
+│   │   ├── push-notification.ts
+│   │   ├── search.ts
+│   │   ├── statistics.ts
+│   │   ├── upload.ts
+│   │   ├── user-report.ts
+│   │   ├── user-setting.ts
+│   │   └── user.ts
+│   ├── app
+│   │   ├── admin
+│   │   │   ├── admin-dashboard-management
+│   │   │   │   ├── admin-dashboard-management.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── admin-message-management
+│   │   │   │   ├── admin-message-management.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── admin-user-management
+│   │   │   │   ├── admin-user-management.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── admin-violation-management
+│   │   │   │   ├── admin-violation-management.tsx
+│   │   │   │   ├── components
+│   │   │   │   │   ├── badges
+│   │   │   │   │   │   ├── category-badge.tsx
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── message-type-badge.tsx
+│   │   │   │   │   │   └── status-badge.tsx
+│   │   │   │   │   ├── modals
+│   │   │   │   │   │   ├── ban-user-modal.tsx
+│   │   │   │   │   │   ├── confirmation-modal.tsx
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── message-selection-section.tsx
+│   │   │   │   │   │   └── warning-user-modal.tsx
+│   │   │   │   │   └── sections
+│   │   │   │   │       ├── basic-information-section.tsx
+│   │   │   │   │       ├── evidence-summary-section.tsx
+│   │   │   │   │       ├── index.ts
+│   │   │   │   │       └── user-information-section.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── user-history-violation-model.tsx
+│   │   │   │   └── violation-detail-modal.tsx
+│   │   │   ├── layout.tsx
+│   │   │   ├── login
+│   │   │   │   └── page.tsx
+│   │   │   └── page.tsx
+│   │   ├── admin-check-user-form.tsx
+│   │   ├── admin-login-form.tsx
+│   │   ├── api
+│   │   │   ├── emojis
+│   │   │   │   └── route.ts
+│   │   │   └── upload
+│   │   │       └── route.ts
+│   │   ├── conversations
+│   │   │   ├── conversation-card.tsx
+│   │   │   ├── conversation-context-menu.tsx
+│   │   │   ├── conversations.tsx
+│   │   │   ├── delete-chat-dialogs.tsx
+│   │   │   ├── direct-chat
+│   │   │   │   ├── ShareMessageModal.tsx
+│   │   │   │   ├── call.tsx
+│   │   │   │   ├── chatbox.tsx
+│   │   │   │   ├── expression-picker.tsx
+│   │   │   │   ├── info-bar.tsx
+│   │   │   │   ├── message-textfield.tsx
+│   │   │   │   ├── message.tsx
+│   │   │   │   ├── messages.tsx
+│   │   │   │   ├── pin-message.tsx
+│   │   │   │   └── type-message-bar.tsx
+│   │   │   ├── global-search.tsx
+│   │   │   ├── group
+│   │   │   │   ├── create-group-chat.tsx
+│   │   │   │   ├── edit-group.tsx
+│   │   │   │   ├── group-actions.tsx
+│   │   │   │   ├── group-chatbox.tsx
+│   │   │   │   ├── group-message.tsx
+│   │   │   │   ├── group-messages.tsx
+│   │   │   │   ├── info-bar.tsx
+│   │   │   │   ├── invite
+│   │   │   │   │   └── [token]
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── member
+│   │   │   │   │   ├── add-member.tsx
+│   │   │   │   │   ├── approve-members.tsx
+│   │   │   │   │   └── manage-members.tsx
+│   │   │   │   ├── message-textfield.tsx
+│   │   │   │   ├── pin-message.tsx
+│   │   │   │   ├── preview-info.tsx
+│   │   │   │   ├── share-message-modal.tsx
+│   │   │   │   └── type-message-bar.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── scroll-to-bottom-msg-btn.tsx
+│   │   │   ├── sharings.ts
+│   │   │   └── switch-chatbox.tsx
+│   │   ├── dev
+│   │   │   ├── page.tsx
+│   │   │   └── voice-call
+│   │   │       └── page.tsx
+│   │   ├── faq
+│   │   │   └── page.tsx
+│   │   ├── friends
+│   │   │   ├── add-friend.tsx
+│   │   │   ├── blocked.tsx
+│   │   │   ├── friend-requests.tsx
+│   │   │   ├── friends-list.tsx
+│   │   │   ├── page.tsx
+│   │   │   └── sharing.ts
+│   │   ├── layout.tsx
+│   │   ├── login-form.tsx
+│   │   ├── not-found.tsx
+│   │   ├── page.tsx
+│   │   ├── register-form.tsx
+│   │   ├── sharings.ts
+│   │   ├── smart-search
+│   │   │   ├── page.tsx
+│   │   │   ├── smart-bar.tsx
+│   │   │   └── smart-search.tsx
+│   │   └── user-settings
+│   │       └── page.tsx
+│   ├── components
+│   │   ├── account
+│   │   │   ├── change-password-modal.tsx
+│   │   │   ├── edit-profile-modal.tsx
+│   │   │   ├── forgot-password-modal.tsx
+│   │   │   └── page.tsx
+│   │   ├── admin
+│   │   │   └── admin-header.tsx
+│   │   ├── chatbox
+│   │   │   ├── media-viewer-modal.tsx
+│   │   │   └── user-report
+│   │   │       ├── report-model.tsx
+│   │   │       ├── select-image-model.tsx
+│   │   │       ├── select-message-content.tsx
+│   │   │       ├── select-message-item.tsx
+│   │   │       └── select-message-model.tsx
+│   │   ├── conversation-media
+│   │   │   ├── filter.tsx
+│   │   │   ├── media-archive-panel.tsx
+│   │   │   ├── media-grid.tsx
+│   │   │   └── media-panel.tsx
+│   │   ├── layout
+│   │   │   ├── admin-navigation.tsx
+│   │   │   ├── admin-route-guard.tsx
+│   │   │   ├── app-loading.tsx
+│   │   │   ├── app-navigation.tsx
+│   │   │   ├── icons.tsx
+│   │   │   ├── not-found.tsx
+│   │   │   └── resource-guard.tsx
+│   │   ├── materials
+│   │   │   ├── action-icons.tsx
+│   │   │   ├── auto-resize-text-field.tsx
+│   │   │   ├── avatar-components.tsx
+│   │   │   ├── avatar-cropper-modal.tsx
+│   │   │   ├── avatar.tsx
+│   │   │   ├── badge.tsx
+│   │   │   ├── button.tsx
+│   │   │   ├── calendar.tsx
+│   │   │   ├── checkbox.tsx
+│   │   │   ├── circular-progress.tsx
+│   │   │   ├── date-picker.tsx
+│   │   │   ├── dialog.tsx
+│   │   │   ├── divider.tsx
+│   │   │   ├── dropdown-menu.tsx
+│   │   │   ├── dropdown-message.tsx
+│   │   │   ├── emoji-picker.tsx
+│   │   │   ├── icon-button.tsx
+│   │   │   ├── icons.tsx
+│   │   │   ├── index.tsx
+│   │   │   ├── loading-spinner.tsx
+│   │   │   ├── msg-appendix.tsx
+│   │   │   ├── pin-button.tsx
+│   │   │   ├── pinned-chats-list.tsx
+│   │   │   ├── popover.tsx
+│   │   │   ├── progressive-image.tsx
+│   │   │   ├── separator.tsx
+│   │   │   ├── skeleton.tsx
+│   │   │   ├── sonner.tsx
+│   │   │   ├── spinner.tsx
+│   │   │   ├── sticker-picker.tsx
+│   │   │   ├── tabs.tsx
+│   │   │   ├── text-field.tsx
+│   │   │   └── tooltip.tsx
+│   │   ├── smart-search
+│   │   │   ├── page.tsx
+│   │   │   └── smart-search.tsx
+│   │   ├── voice-call
+│   │   │   ├── global-call-manager.tsx
+│   │   │   ├── holder.tsx
+│   │   │   └── in-coming-call-modal.tsx
+│   │   └── voice-message
+│   │       ├── voice-message-player-props.tsx
+│   │       └── voice-message.tsx
+│   ├── configs
+│   │   ├── axios.ts
+│   │   ├── css-variables.ts
+│   │   └── layout.ts
+│   ├── contexts
+│   │   ├── account-modal.context.tsx
+│   │   ├── chat-background.context.ts
+│   │   ├── root-layout.context.ts
+│   │   └── voice-player.context.tsx
+│   ├── hooks
+│   │   ├── admin-auth.ts
+│   │   ├── admin-navigation.ts
+│   │   ├── auth.ts
+│   │   ├── conversation.ts
+│   │   ├── debounce.ts
+│   │   ├── layout.ts
+│   │   ├── navigation.ts
+│   │   ├── pin-chats.ts
+│   │   ├── pin-messages.ts
+│   │   ├── push-notification.ts
+│   │   ├── redux.ts
+│   │   ├── use-admin-violation-reports.ts
+│   │   ├── use-global-voice-call.ts
+│   │   ├── use-media-messages.ts
+│   │   ├── use-media-pagination.ts
+│   │   ├── use-user-report.ts
+│   │   ├── user-profile.ts
+│   │   ├── user.ts
+│   │   ├── video-call.ts
+│   │   ├── voice-call.ts
+│   │   └── voice-messages.ts
+│   ├── lib
+│   │   └── utils.ts
+│   ├── providers
+│   │   ├── admin-auth-provider.tsx
+│   │   ├── app-layout-provider.tsx
+│   │   ├── auth-provider.tsx
+│   │   ├── redux-provider.tsx
+│   │   └── socket-provider.tsx
+│   ├── redux
+│   │   ├── auth
+│   │   │   ├── admin-auth.slice.ts
+│   │   │   └── auth.slice.ts
+│   │   ├── call
+│   │   │   └── layout.slice.ts
+│   │   ├── conversations
+│   │   │   ├── conversations.selectors.ts
+│   │   │   └── conversations.slice.ts
+│   │   ├── layout
+│   │   │   └── layout.slice.ts
+│   │   ├── messages
+│   │   │   ├── messages.slice.ts
+│   │   │   └── report-messages.slice.ts
+│   │   ├── search
+│   │   │   └── search.slice.ts
+│   │   ├── settings
+│   │   │   └── settings.slice.ts
+│   │   ├── store.ts
+│   │   └── user
+│   │       ├── profile.slice.ts
+│   │       └── user.slice.ts
+│   ├── services
+│   │   ├── admin.service.ts
+│   │   ├── auth.service.ts
+│   │   ├── chatting.service.ts
+│   │   ├── direct-chat.service.ts
+│   │   ├── expression.service.ts
+│   │   ├── file.service.ts
+│   │   ├── friend-request.service.ts
+│   │   ├── friend.service.ts
+│   │   ├── group-chat.service.ts
+│   │   ├── group-member.service.ts
+│   │   ├── message.service.ts
+│   │   ├── pin.service.ts
+│   │   ├── profile.service.ts
+│   │   ├── push-notification.service.ts
+│   │   ├── search.service.ts
+│   │   ├── user-report.service.ts
+│   │   ├── user-setting.service.ts
+│   │   └── user.service.ts
+│   ├── styles
+│   │   ├── globals.scss
+│   │   ├── index.scss
+│   │   ├── keyframes.scss
+│   │   └── variables.scss
+│   ├── utils
+│   │   ├── UI-constants.ts
+│   │   ├── admin-error-handler.ts
+│   │   ├── algorithms
+│   │   │   ├── queue.ts
+│   │   │   └── types.ts
+│   │   ├── axios-error-handler.ts
+│   │   ├── cookie.ts
+│   │   ├── custom-errors.ts
+│   │   ├── data-convertors
+│   │   │   ├── conversations-convertor.ts
+│   │   │   ├── static-data-convertor.ts
+│   │   │   └── user-settings-convertor.ts
+│   │   ├── date-time.ts
+│   │   ├── enums.ts
+│   │   ├── event-emitter
+│   │   │   ├── event-emitter.ts
+│   │   │   ├── events.ts
+│   │   │   └── types.ts
+│   │   ├── fonts.ts
+│   │   ├── helpers.ts
+│   │   ├── layout.ts
+│   │   ├── local-storage.ts
+│   │   ├── regex.ts
+│   │   ├── socket
+│   │   │   ├── client-socket.ts
+│   │   │   ├── enums.ts
+│   │   │   ├── events.ts
+│   │   │   └── interfaces.ts
+│   │   ├── toaster.ts
+│   │   ├── tsx-helpers.tsx
+│   │   └── types
+│   │       ├── be-api.ts
+│   │       ├── fe-api.ts
+│   │       ├── global.ts
+│   │       ├── socket.ts
+│   │       ├── statistics.ts
+│   │       └── utility-types.ts
+│   └── workers
+│       └── service.worker.ts
+├── tailwind.config.ts
+├── tsconfig.json
+├── tsconfig.sw.json
+└── vercel.json

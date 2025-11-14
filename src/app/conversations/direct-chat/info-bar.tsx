@@ -26,6 +26,8 @@ import { setBlockedUserId } from "@/redux/messages/messages.slice"
 import { useUser } from "@/hooks/user"
 import { DeleteDirectChatDialog } from "../delete-chat-dialogs"
 import { friendRequestService } from "@/services/friend-request.service"
+import { eventEmitter } from "@/utils/event-emitter/event-emitter"
+import { EInternalEvents } from "@/utils/event-emitter/events"
 
 type TAddFriendDialogProps = {
   recipient: TUser
@@ -307,7 +309,19 @@ export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
   const handleOpenInfoBar = (open: boolean) => {
     dispatch(openInfoBar(open))
   }
+  const handleMessageClick = (messageId: number) => {
+    console.log("Jumping to message:", messageId)
 
+    eventEmitter.emit(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, messageId)
+  }
+  const chatMembers: TUserWithProfile[] = [
+    {
+      id: user.id,
+      email: user.email,
+      Profile: user.Profile,
+    } as TUserWithProfile,
+    friendInfo,
+  ]
   return (
     <div
       className={`${infoBarIsOpened ? "right-0" : "-right-slide-info-mb-bar screen-large-chatting:-right-slide-info-bar"} flex flex-col bg-regular-info-bar-bgcl screen-large-chatting:bg-regular-dark-gray-cl w-info-bar-mb screen-large-chatting:w-info-bar h-full overflow-hidden border-l-regular-hover-card-cl border-l z-[110] transition-[right] absolute duration-[0.4s] screen-large-chatting:duration-300 ease-slide-info-bar-timing`}
@@ -357,6 +371,7 @@ export const InfoBar = ({ friendInfo }: TInfoBarProps) => {
           ) : (
             <>
               <ProfileInfo recipient={friendInfo} directChatId={directChatId} />
+
               <MediaPanel />
             </>
           )}

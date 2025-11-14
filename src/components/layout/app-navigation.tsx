@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Settings, MessageCircle, Users, Phone } from "lucide-react"
+import { Home, Settings, MessageCircle, Users, Phone, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { memo, JSX, useEffect, useState } from "react"
 import { CounterBadge, CustomAvatar, CustomTooltip } from "../materials"
@@ -41,10 +41,15 @@ const navs = (unreadFriendRequestsCount: number): TNav[] => [
     counter: unreadFriendRequestsCount,
   },
   {
-    label: "Voice Call",
-    href: "/dev/voice-call",
-    icon: <Phone size={20} color="white" />,
+    label: "Smart search",
+    href: "/smart-search",
+    icon: <Sparkles size={20} color="white" />,
   },
+  // {
+  //   label: "Voice Call",
+  //   href: "/dev/voice-call",
+  //   icon: <Phone size={20} color="white" />,
+  // },
 ]
 
 export const AppNavigation = memo(() => {

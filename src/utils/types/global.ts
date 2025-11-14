@@ -252,3 +252,25 @@ export type TActiveVoiceCallSession2 = {
   isVideoCall: boolean
   isGroupCall: boolean
 }
+
+export interface SearchSource {
+  messageId: number
+  content: string
+  author: string
+  date: string
+  relevanceScore: number
+}
+
+export interface SearchResults {
+  answer: string
+  sources: SearchSource[]
+  hasResults: boolean
+}
+
+export interface ChatSearchFilters {
+  query: string
+  startDate: string
+  endDate: string
+  authorId: string
+  chatId: string
+}

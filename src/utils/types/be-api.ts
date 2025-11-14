@@ -854,3 +854,27 @@ export type TUploadMultipleFilesResult = {
       }
   )[]
 }
+
+export type TSmartSearchPayload = {
+  query: string
+  startDate?: string
+  endDate?: string
+  authorId?: number
+  chatId?: number
+}
+
+export type TSearchResultSource = {
+  messageId: number
+  content: string
+  author: string
+  chatId: number
+  chatType: EChatType
+  date: string
+  relevanceScore: number
+}
+
+export type TSmartSearchResponse = {
+  answer?: string
+  sources: TSearchResultSource[]
+  hasResults: boolean
+}

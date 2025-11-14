@@ -135,7 +135,6 @@ export enum EMessageTypeAllTypes {
   AUDIO = "AUDIO",
   DOCUMENT = "DOCUMENT",
   PIN_NOTICE = "PIN_NOTICE",
-  CALL = "CALL",
 }
 
 export enum EGroupChatErrMsgs {

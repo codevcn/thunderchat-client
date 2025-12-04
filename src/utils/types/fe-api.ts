@@ -28,8 +28,15 @@ export type TUserWithProfileFE = TUserWithoutPassword & { Profile: Omit<TProfile
 export type TGetUserSettingsRes = TUserSettings
 
 export type TUpdateUserSettingsReq = {
-  onlyReceiveFriendMessage: boolean
-  pushNotificationEnabled: boolean
+  onlyReceiveFriendMessage?: boolean
+  pushNotificationEnabled?: boolean
+  voiceAssistantEnabled?: boolean
+  ttsEnabled?: boolean
+  sttEnabled?: boolean
+  autoReadMessages?: boolean
+  speechRate?: number // 0.5 - 2.0
+  voiceActivationMode?: "LONG_PRESS" | "WAKE_WORD" | "DOUBLE_TAP"
+  wakeWordPhrase?: string
 }
 
 export type TCheckCanSendDirectMessageRes = {

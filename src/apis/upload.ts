@@ -18,6 +18,7 @@ export const uploadMultipleFiles = async (
   files: File[],
   onUploadProgress?: (loaded: number, total?: number) => void
 ) => {
+  console.log("[multe]")
   const formData = new FormData()
   for (const file of files) {
     formData.append("files", file)

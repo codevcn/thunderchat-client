@@ -13,6 +13,9 @@ import { Toaster } from "@/components/materials/sonner"
 import { ErrorIconForToast } from "@/components/layout/icons"
 import { SuccessIconForToast } from "@/components/layout/icons"
 import { GlobalCallManager } from "@/components/voice-call/global-call-manager"
+import { NotificationBadgeProvider } from "@/providers/notification-badge-provider"
+import VoiceAssistantWeb from "@/components/voice-assistant/voice-assistant"
+import { UserSettingsProvider } from "@/providers/user-settings-provider"
 
 export const metadata: Metadata = {
   title: "Thunder Chat",
@@ -22,21 +25,28 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
+      </head>
       <body className="bg-white text-white">
         <ReduxProvider>
           <AuthProvider>
-            <RouteGuard nonGuardRoutes={NON_GUARD_ROUTES}>
-              <SocketProvider>
-                <AppLayoutProvider>
-                  <AccountModalProvider>
-                    <GlobalCallManager>{children}</GlobalCallManager>
-                  </AccountModalProvider>
-                </AppLayoutProvider>
-              </SocketProvider>
-            </RouteGuard>
+            <UserSettingsProvider>
+              <RouteGuard nonGuardRoutes={NON_GUARD_ROUTES}>
+                <SocketProvider>
+                  <AppLayoutProvider>
+                    <AccountModalProvider>
+                      <NotificationBadgeProvider>
+                        <GlobalCallManager>{children}</GlobalCallManager>
+                        <VoiceAssistantWeb />
+                      </NotificationBadgeProvider>
+                    </AccountModalProvider>
+                  </AppLayoutProvider>
+                </SocketProvider>
+              </RouteGuard>
+            </UserSettingsProvider>
           </AuthProvider>
         </ReduxProvider>
-
         <Toaster
           position="bottom-right"
           richColors

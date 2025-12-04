@@ -59,6 +59,14 @@ interface IEventEmitter {
   [EInternalEvents.CALL_ACCEPTED_BY_PEER]: (data: { directChatId?: number }) => void // ĐÃ CÓ
   [EInternalEvents.USER_JOINED_CALL]: (data: { userId: number; chatId: string | number }) => void
   [EInternalEvents.USER_LEFT_CALL]: (data: { userId: number; chatId: string | number }) => void
+  [EInternalEvents.MAKE_DIRECT_CALL]: (data: {
+    directChatId: number
+    isVideo: boolean
+    contactName: string
+  }) => void
+  [EInternalEvents.MAKE_GROUP_CALL]: (data: { groupId: number; isVideo: boolean }) => void
+  [EInternalEvents.VOICE_ACCEPT_CALL_COMMAND]: () => void
+  [EInternalEvents.VOICE_REJECT_CALL_COMMAND]: () => void
 }
 
 export const eventEmitter = new EventEmitter<IEventEmitter>()

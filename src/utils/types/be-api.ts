@@ -878,3 +878,24 @@ export type TSmartSearchResponse = {
   sources: TSearchResultSource[]
   hasResults: boolean
 }
+
+export type TVoiceCommandResponse = {
+  transcript: string
+  response: string
+  audioBase64: string
+  needsConfirmation: boolean
+  pending?: {
+    type: string
+    targetId: number
+    targetName: string
+    content: string
+    chatType: "direct" | "group"
+    directChatId?: number
+    groupId?: number
+  } | null
+}
+
+// Type cho request
+export type TVoiceCommandParams = {
+  audioBase64: string
+}

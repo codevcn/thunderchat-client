@@ -169,6 +169,7 @@ const IncomingCallModal = ({
 
           {/* Nút Answer */}
           <button
+            id="voice-accept-call-button"
             onClick={handleAccept}
             className="group flex flex-col items-center gap-2 focus:outline-none"
           >

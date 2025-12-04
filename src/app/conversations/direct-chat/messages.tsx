@@ -688,8 +688,34 @@ export const Messages = memo(
       return () => observer.disconnect()
     }, [messages])
 
+    // ⚠️ Fetch messages khi directChatId thay đổi (từ voice message event)
     useEffect(() => {
-      startFetchingMessages()
+      if (directChatId && directChatId !== -1) {
+        console.log(`📄 Messages.tsx: Fetching messages for directChatId ${directChatId}`)
+        startFetchingMessages()
+      }
+    }, [directChatId])
+
+    // ⚠️ Listener để fetch messages khi voice message được gửi
+    useEffect(() => {
+      const handleVoiceMessageSent = (fetchDirectChatId: number) => {
+        console.log(`🎤 Messages.tsx: Voice message sent - directChatId: ${fetchDirectChatId}`)
+        console.log(`🎤 Current chat directChatId: ${directChatId}`)
+        if (directChatId === fetchDirectChatId) {
+          console.log(`✅ Voice message in current chat - refetching messages`)
+          startFetchingMessages()
+        } else {
+          console.log(`❌ Voice message in different chat - skip`)
+        }
+      }
+
+      eventEmitter.on(EInternalEvents.FETCH_DIRECT_CHAT, handleVoiceMessageSent)
+      return () => {
+        eventEmitter.off(EInternalEvents.FETCH_DIRECT_CHAT, handleVoiceMessageSent)
+      }
+    }, [directChatId])
+
+    useEffect(() => {
       handleReadyNewMessage()
       eventEmitter.on(EInternalEvents.SCROLL_TO_QUERIED_MESSAGE, scrollToQueriedMessageHandler)
       messagesContainer.current?.addEventListener("scroll", handleScrollMsgsContainer)

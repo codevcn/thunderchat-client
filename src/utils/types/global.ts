@@ -207,6 +207,15 @@ export type TSettingsState = {
   privacy: {
     onlyReceiveFriendMessage: boolean
   }
+  accessibility: {
+    voiceAssistantEnabled: boolean
+    ttsEnabled: boolean
+    sttEnabled: boolean
+    autoReadMessages: boolean
+    speechRate: number
+    voiceActivationMode: TVoiceActivationMode
+    wakeWordPhrase: string
+  }
 }
 
 export type TSubscribePushNotificationRes = {
@@ -274,3 +283,13 @@ export interface ChatSearchFilters {
   authorId: string
   chatId: string
 }
+
+export type TRemoteUser = {
+  uid: number | string
+  hasAudio?: boolean
+  hasVideo?: boolean
+  audioTrack?: any
+  videoTrack?: any
+}
+
+export type TVoiceActivationMode = "WAKE_WORD" | "LONG_PRESS"

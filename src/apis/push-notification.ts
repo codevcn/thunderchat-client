@@ -4,6 +4,8 @@ import type {
   TPushNotificationSubscription,
   TSubscribePushNotificationParams,
   TUnsubscribePushNotificationParams,
+  TVoiceCommandParams,
+  TVoiceCommandResponse,
 } from "@/utils/types/be-api"
 import type { TSuccess } from "@/utils/types/global"
 
@@ -37,4 +39,12 @@ export const getSubscriptionPushNotification = (endpoint: string) => {
       ...requestConfig,
     }
   )
+}
+
+export const postVoiceCommand = (params: TVoiceCommandParams) => {
+  return clientAxios.post<TVoiceCommandResponse>("/voice-assistant/command", params, requestConfig)
+}
+
+export const postResetVoiceAssistantPending = () => {
+  return clientAxios.post<TSuccess>("/voice-assistant/reset-pending", {}, requestConfig)
 }

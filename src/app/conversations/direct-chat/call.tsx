@@ -98,8 +98,8 @@ export const CallBox = ({
     callType: "DIRECT" | "GROUP"
     initiatorName?: string
   }>({
-    name: "Group",
-    callType: directChat ? "DIRECT" : "GROUP",
+    name: "Loading...",
+    callType: "DIRECT", // Default to DIRECT, will be updated in useEffect
   })
   const incomingCallSession = useAppSelector((state) => state["voice-call"]?.incomingCallSession)
 
@@ -149,6 +149,9 @@ export const CallBox = ({
       return toaster.error("Cannot start call: Direct chat not found")
     }
     console.log(">>> Peer cancelled call", data)
+    console.log(
+      "📞 ✅ HANDLE PEER CANCELLED - setShowIncomingModal(false), setCallState(CANCELLED)"
+    )
     if (!data.directChatId || data.directChatId === directChat.id) {
       setCallState(EVoiceCallStatus.CANCELLED)
       setShowIncomingModal(false)
@@ -182,9 +185,17 @@ export const CallBox = ({
       if (!open || !user) return
 
       if (isIncoming && incomingCallSession) {
-        const { isVideoCall, callerUserId, id } = incomingCallSession
-        console.log(">>> Fetching Incoming Group Call info", isVideoCall, groupChat)
-        if (groupChat) {
+        const { isVideoCall, callerUserId, id, isGroupCall } = incomingCallSession
+        console.log(">>> Fetching Incoming Call info", {
+          isVideoCall,
+          isGroupCall,
+          hasGroupChat: !!groupChat,
+          hasDirectChat: !!directChat,
+          groupChatId: groupChat?.id,
+          directChatId: directChat?.id,
+        })
+
+        if (isGroupCall && groupChat) {
           console.log(">>> Fetching Incoming Group Call info")
           const caller = await userService.getUserById(callerUserId)
           setDisplayInfo({
@@ -193,14 +204,35 @@ export const CallBox = ({
             callType: "GROUP",
             initiatorName: caller.Profile?.fullName || "TeamFBC",
           })
-        } else if (!isVideoCall && directChat) {
-          console.log(">>> Fetching Incoming 1-1 Call info")
-          const caller = await userService.getUserById(callerUserId)
-          setDisplayInfo({
-            name: caller.Profile?.fullName || "TeamFBC",
-            avatar: caller.Profile?.avatar || undefined,
-            callType: "DIRECT",
-          })
+        } else if (!isGroupCall && directChat) {
+          console.log(">>> Fetching Incoming Direct Call info", { callerUserId })
+
+          if (!callerUserId) {
+            console.error(">>> callerUserId is null/undefined!")
+            setDisplayInfo({
+              name: "Unknown Caller",
+              callType: "DIRECT",
+            })
+          } else {
+            try {
+              const caller = await userService.getUserById(callerUserId)
+              setDisplayInfo({
+                name: caller.Profile?.fullName || "Unknown",
+                avatar: caller.Profile?.avatar || undefined,
+                callType: "DIRECT",
+              })
+            } catch (error) {
+              console.error(">>> Failed to fetch caller info, using fallback:", error)
+              setDisplayInfo({
+                name: "Unknown Caller",
+                callType: "DIRECT",
+              })
+            }
+          }
+        } else {
+          console.error(
+            ">>> MISMATCH: isGroupCall but no groupChat, or !isGroupCall but no directChat"
+          )
         }
       } else if (!isIncoming) {
         if (groupChat) {
@@ -242,18 +274,17 @@ export const CallBox = ({
   useEffect(() => {
     eventEmitter.on(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED, listenCallRequestReceived)
 
-    if (directChat) {
-      eventEmitter.on(EInternalEvents.CALL_CANCELLED_BY_PEER, handlePeerCancelled)
-      eventEmitter.on(EInternalEvents.CALL_REJECTED_BY_PEER, handlePeerRejected)
-    }
+    // ✅ ALWAYS listen to CALL_CANCELLED_BY_PEER & CALL_REJECTED_BY_PEER (dù isIncoming hay isOutgoing)
+    // để modal tự động đóng khi bên kia tắt hoặc từ chối cuộc gọi
+    eventEmitter.on(EInternalEvents.CALL_CANCELLED_BY_PEER, handlePeerCancelled)
+    eventEmitter.on(EInternalEvents.CALL_REJECTED_BY_PEER, handlePeerRejected)
+
     return () => {
       eventEmitter.off(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED, listenCallRequestReceived)
-      if (directChat) {
-        eventEmitter.off(EInternalEvents.CALL_CANCELLED_BY_PEER, handlePeerCancelled)
-        eventEmitter.off(EInternalEvents.CALL_REJECTED_BY_PEER, handlePeerRejected)
-      }
+      eventEmitter.off(EInternalEvents.CALL_CANCELLED_BY_PEER, handlePeerCancelled)
+      eventEmitter.off(EInternalEvents.CALL_REJECTED_BY_PEER, handlePeerRejected)
     }
-  }, [isIncoming, directChat, onClose])
+  }, [onClose])
 
   const shouldShowIncomingModal =
     isIncoming && callState === EVoiceCallStatus.RINGING && showIncomingModal
@@ -266,6 +297,19 @@ export const CallBox = ({
     )
 
   console.log("checkstate", shouldShowIncomingModal, callState)
+  console.log("📞 🔍 Incoming Modal Visibility:", {
+    shouldShow: shouldShowIncomingModal,
+    isIncoming,
+    callState,
+    showIncomingModal,
+    reason: !isIncoming
+      ? "NOT INCOMING"
+      : callState !== EVoiceCallStatus.RINGING
+        ? `callState=${callState}`
+        : !showIncomingModal
+          ? "showIncomingModal=false"
+          : "SHOULD SHOW",
+  })
   console.log(">>> Render decision:", {
     callState,
     isIncoming,

@@ -144,6 +144,7 @@ const HolderUI = ({
   // Fetch user names
   useEffect(() => {
     const fetchUserNames = async () => {
+      console.log("remote user", remoteUsers)
       const names: Record<string, string> = {}
       for (const user of remoteUsers) {
         try {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { AppNavigation } from "@/components/layout/app-navigation"
-import { Bell, ShieldUser } from "lucide-react"
+import { Bell, ShieldUser, Mic } from "lucide-react"
 import { userSettingService } from "@/services/user-setting.service"
 import { toaster } from "@/utils/toaster"
 import axiosErrorHandler from "@/utils/axios-error-handler"
@@ -129,9 +129,71 @@ const Notification = () => {
   )
 }
 
+const Accessibility = () => {
+  const settings = useAppSelector((state) => state.settings.accessibility) || {}
+  const [voiceAssistantEnabled, setVoiceAssistantEnabled] = useState(
+    settings.voiceAssistantEnabled ?? false
+  )
+  const dispatch = useAppDispatch()
+
+  const toggleVoiceAssistant = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.currentTarget.checked
+
+    try {
+      // Toggle voiceAssistantEnabled master switch
+      const updatedSettings = await userSettingService.updateUserSettings({
+        voiceAssistantEnabled: checked,
+      })
+
+      // ✅ UPDATE Redux store với settings mới từ API
+      dispatch(setSettings(updatedSettings))
+      setVoiceAssistantEnabled(checked)
+      toaster.success(checked ? "Voice Assistant enabled!" : "Voice Assistant disabled")
+    } catch (error) {
+      toaster.error(axiosErrorHandler.handleHttpError(error).message)
+    }
+  }
+
+  return (
+    <div className="w-full h-fit bg-regular-modal-board-bgcl border border-regular-border-cl rounded-2xl px-6 py-4 shadow-lg overflow-auto">
+      <div className="font-bold text-xl text-regular-white-cl">Voice Assistant</div>
+
+      {/* Single Toggle for Voice Assistant */}
+      <div className="bg-regular-dark-gray-cl rounded-xl px-6 py-4 flex items-center justify-between gap-8 mt-4">
+        <div>
+          <h3 className="text-base text-regular-white-cl font-medium">Enable Voice Assistant</h3>
+          <p className="text-xs text-regular-gray-cl mt-2 text-gray-400">
+            Control your app with voice commands. Say "Hey Chat" to activate, then give commands
+            like:
+            <br />• "Send message to [contact name]"
+            <br />• "Call [contact name]"
+            <br />• "Accept call" when receiving incoming calls
+          </p>
+        </div>
+        <label
+          className="relative inline-flex items-center cursor-pointer select-none"
+          htmlFor="toggle-voice-assistant"
+        >
+          <input
+            id="toggle-voice-assistant"
+            type="checkbox"
+            checked={voiceAssistantEnabled}
+            onChange={toggleVoiceAssistant}
+            className="sr-only peer"
+            role="switch"
+          />
+          <div className="w-11 h-6 bg-regular-hover-bgcl peer-checked:bg-regular-violet-cl rounded-full transition-colors duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-regular-violet-cl"></div>
+          <div className="absolute left-1 top-1 w-4 h-4 bg-regular-white-cl rounded-full shadow-md transition-transform duration-200 peer-checked:translate-x-5"></div>
+        </label>
+      </div>
+    </div>
+  )
+}
+
 enum ESettingsTab {
   PRIVACY = "PRIVACY",
   NOTIFICATION = "NOTIFICATION",
+  ACCESSIBILITY = "ACCESSIBILITY",
 }
 
 const sidebarOptions = [
@@ -144,6 +206,11 @@ const sidebarOptions = [
     key: ESettingsTab.NOTIFICATION,
     label: "Notification",
     icon: <Bell size={20} />,
+  },
+  {
+    key: ESettingsTab.ACCESSIBILITY,
+    label: "Voice Assistant",
+    icon: <Mic size={20} />,
   },
 ]
 
@@ -207,6 +274,7 @@ export default function UserSettingsPage() {
           <>
             {selectedTab === ESettingsTab.PRIVACY && <Privacy />}
             {selectedTab === ESettingsTab.NOTIFICATION && <Notification />}
+            {selectedTab === ESettingsTab.ACCESSIBILITY && <Accessibility />}
           </>
         )}
       </div>

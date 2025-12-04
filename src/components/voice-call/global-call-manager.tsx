@@ -58,7 +58,8 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
   useEffect(() => {
     const fetchChatData = async () => {
       if (!incomingCallSession) {
-        if (!isOutgoingCall) {
+        // Only close UI if there's no active call session AND not outgoing call
+        if (!isOutgoingCall && !callSession) {
           setIsCallUiOpen(false)
           setCallContext(null)
         }
@@ -148,10 +149,62 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
       }
     }
 
+    const handleMakeDirectCall = async ({
+      directChatId,
+      isVideo,
+      contactName,
+    }: {
+      directChatId: number
+      isVideo: boolean
+      contactName: string
+    }) => {
+      console.log(">>> GlobalCallManager: MAKE_DIRECT_CALL received", {
+        directChatId,
+        isVideo,
+        contactName,
+      })
+
+      try {
+        const directChat = await directChatService.fetchDirectChat(directChatId)
+        eventEmitter.emit(EInternalEvents.START_OUTGOING_CALL, {
+          directChat,
+          isVideo,
+        })
+      } catch (error) {
+        console.error(">>> Failed to fetch direct chat:", error)
+        toaster.error(`Không thể gọi cho ${contactName}`)
+      }
+    }
+
+    const handleMakeGroupCall = async ({
+      groupId,
+      isVideo,
+    }: {
+      groupId: number
+      isVideo: boolean
+    }) => {
+      console.log(">>> GlobalCallManager: MAKE_GROUP_CALL received", { groupId, isVideo })
+
+      try {
+        const groupChat = await groupChatService.fetchGroupChat(groupId)
+        eventEmitter.emit(EInternalEvents.START_OUTGOING_CALL, {
+          groupChat,
+          isVideo,
+        })
+      } catch (error) {
+        console.error(">>> Failed to fetch group chat:", error)
+        toaster.error("Không thể gọi nhóm")
+      }
+    }
+
     eventEmitter.on(EInternalEvents.START_OUTGOING_CALL, handleStartOutgoingCall)
+    eventEmitter.on(EInternalEvents.MAKE_DIRECT_CALL, handleMakeDirectCall)
+    eventEmitter.on(EInternalEvents.MAKE_GROUP_CALL, handleMakeGroupCall)
 
     return () => {
       eventEmitter.off(EInternalEvents.START_OUTGOING_CALL, handleStartOutgoingCall)
+      eventEmitter.off(EInternalEvents.MAKE_DIRECT_CALL, handleMakeDirectCall)
+      eventEmitter.off(EInternalEvents.MAKE_GROUP_CALL, handleMakeGroupCall)
     }
   }, [user, incomingCallSession, callSession, startGroupCall, startPeerCall])
 
@@ -164,6 +217,38 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
   }, [callSession, incomingCallSession, isOutgoingCall, isCallUiOpen])
 
   useEffect(() => {
+    const handleVoiceAcceptCall = async () => {
+      console.log("📞 VOICE_ACCEPT_CALL_COMMAND received - calling acceptCall()")
+      try {
+        await acceptCall()
+        console.log("✅ Voice accept call successful")
+      } catch (error) {
+        console.error("❌ Voice accept call failed:", error)
+        toaster.error("Failed to accept call via voice")
+      }
+    }
+
+    const handleVoiceRejectCall = async () => {
+      console.log("📞 VOICE_REJECT_CALL_COMMAND received - calling rejectCall()")
+      try {
+        await rejectCall()
+        console.log("✅ Voice reject call successful")
+      } catch (error) {
+        console.error("❌ Voice reject call failed:", error)
+        toaster.error("Failed to reject call via voice")
+      }
+    }
+
+    eventEmitter.on(EInternalEvents.VOICE_ACCEPT_CALL_COMMAND, handleVoiceAcceptCall)
+    eventEmitter.on(EInternalEvents.VOICE_REJECT_CALL_COMMAND, handleVoiceRejectCall)
+
+    return () => {
+      eventEmitter.off(EInternalEvents.VOICE_ACCEPT_CALL_COMMAND, handleVoiceAcceptCall)
+      eventEmitter.off(EInternalEvents.VOICE_REJECT_CALL_COMMAND, handleVoiceRejectCall)
+    }
+  }, [acceptCall, rejectCall])
+
+  useEffect(() => {
     const handlePeerAccepted = (data: { directChatId?: number | string }) => {
       if (callContext?.directChat?.id != null && callContext.directChat.id === data.directChatId) {
         console.log(">>> Peer accepted call")
@@ -171,7 +256,10 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
     }
 
     const handlePeerRejected = (data: { directChatId?: number | string }) => {
-      if (callContext?.directChat?.id != null && callContext.directChat.id === data.directChatId) {
+      if (
+        callContext?.directChat?.id != null &&
+        (data.directChatId == null || callContext.directChat.id === data.directChatId)
+      ) {
         console.log(">>> Peer rejected call")
         setIsCallUiOpen(false)
         setCallContext(null)
@@ -180,11 +268,14 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
     }
 
     const handlePeerCancelled = (data: { directChatId?: number | string }) => {
-      if (callContext?.directChat?.id != null && callContext.directChat.id === data.directChatId) {
+      if (
+        callContext?.directChat?.id != null &&
+        (data.directChatId == null || callContext.directChat.id === data.directChatId)
+      ) {
         console.log(">>> Peer cancelled call")
         setIsCallUiOpen(false)
         setCallContext(null)
-        setIsOutgoingCall(false) // ⭐ Reset flag
+        setIsOutgoingCall(false)
       }
     }
 

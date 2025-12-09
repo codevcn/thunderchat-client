@@ -11,6 +11,10 @@ import { groupChatService } from "@/services/group-chat.service"
 import { useUser } from "@/hooks/user"
 import { toaster } from "@/utils/toaster"
 import { CallBox } from "@/app/conversations/direct-chat/call"
+import { updateCallSession } from "@/redux/call/layout.slice"
+import { EVoiceCallStatus } from "@/utils/enums"
+
+const CALL_TIMEOUT_SECONDS = 10
 
 type TCallContext = {
   directChat?: TDirectChat
@@ -25,6 +29,7 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
   const [callContext, setCallContext] = useState<TCallContext | null>(null)
 
   const [isOutgoingCall, setIsOutgoingCall] = useState(false)
+  const [callStartTime, setCallStartTime] = useState<number | null>(null)
 
   const incomingCallSession = useAppSelector((state) => state["voice-call"]?.incomingCallSession)
   const callSession = useAppSelector((state) => state["voice-call"].callSession)
@@ -215,6 +220,44 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
       setCallContext(null)
     }
   }, [callSession, incomingCallSession, isOutgoingCall, isCallUiOpen])
+
+  // 📞 Auto-hangup after 30 seconds
+  useEffect(() => {
+    if (callSession && !callStartTime) {
+      // Call just started - record the start time
+      console.log("📞 Call started - setting 30s auto-hangup timer")
+      setCallStartTime(Date.now())
+    }
+
+    if (!callSession) {
+      // Call ended - reset timer
+      setCallStartTime(null)
+      return
+    }
+
+    if (!callStartTime) {
+      return
+    }
+
+    const timer = setInterval(() => {
+      const elapsedSeconds = Math.floor((Date.now() - callStartTime) / 1000)
+      console.log(`⏱️ Call duration: ${elapsedSeconds}s`)
+
+      if (elapsedSeconds >= CALL_TIMEOUT_SECONDS) {
+        console.log("⏱️ 30 seconds elapsed - Auto-hanging up call")
+        clearInterval(timer)
+        setCallStartTime(null)
+        dispatch(updateCallSession({ status: EVoiceCallStatus.CANCELLED }))
+        hangupCall()
+        setIsCallUiOpen(false)
+        setCallContext(null)
+        setIsOutgoingCall(false)
+        toaster.info("Call ended (30 second limit)")
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [callSession, callStartTime, hangupCall])
 
   useEffect(() => {
     const handleVoiceAcceptCall = async () => {

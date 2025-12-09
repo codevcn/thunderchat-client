@@ -27,7 +27,14 @@ export const handleVoiceMessage = async ({
   speakText,
   restartWakeWordDetection,
 }: HandleVoiceMessageParams): Promise<void> => {
-  const { contactName, contactId, groupId, directChatId, chatType, audioBase64 } = pendingAction
+  const { contactName, groupId, directChatId, chatType, audioBase64 } = pendingAction
+
+  // ⚠️ IMPORTANT: Backend sends:
+  // - targetId = directChatId (for direct) or groupId (for group)
+  // - recipientUserId = the other user's ID (for direct chat payload)
+  const recipientUserId = (pendingAction as any).recipientUserId
+  const targetDirectChatId = (pendingAction as any).targetId || directChatId
+  const targetGroupId = (pendingAction as any).targetId || groupId
 
   if (!audioBase64) {
     console.error("❌ No audio data in pending action!")
@@ -72,69 +79,90 @@ export const handleVoiceMessage = async ({
     if (chatType === "group") {
       // GROUP: Use sendGroupMessage with groupChatId
       const groupPayload = {
-        groupChatId: groupId!,
-        content: `${uploadResult.id}`,
-        token: messageToken,
-        timestamp: new Date(),
+        groupChatId: Number(targetGroupId!), // ✅ Use targetGroupId from backend
+        content: `${uploadResult.id}`, // ✅ String type
+        token: messageToken, // ✅ String type
+        timestamp: new Date(), // ✅ Date object
       }
-      console.log("📤 SENDING GROUP voice message - Payload:", {
-        messageType: "AUDIO",
-        groupChatId: groupPayload.groupChatId,
-        mediaId: uploadResult.id,
-        chatType: chatType,
-        contactName: contactName,
-      })
+      console.log("📤 SENDING GROUP voice message - Full details:")
+      console.log("   - Type:", EMessageTypeAllTypes.AUDIO)
+      console.log("   - Payload:", JSON.stringify(groupPayload, null, 2))
+      console.log("   - groupChatId type:", typeof groupPayload.groupChatId)
+      console.log("   - content type:", typeof groupPayload.content)
+      console.log("   - token type:", typeof groupPayload.token)
 
-      chattingService.sendGroupMessage(EMessageTypeAllTypes.AUDIO, groupPayload, (ack) => {
-        console.log("📤 Group voice message send callback:", ack)
-        if ("success" in ack && ack.success) {
-          console.log("✅ Group voice message sent successfully!")
-          eventEmitter.emit(EInternalEvents.FETCH_GROUP_CHAT, groupId!)
-          // ✅ Không gọi restartWakeWordDetection vì stream vẫn đang chạy
-          speakText(`Đã gửi voice message cho ${contactName} thành công.`, rate, false)
-        } else {
-          console.error("❌ Group voice message send failed", ack)
-          // ✅ Chỉ restart khi có lỗi
-          speakText(`Có lỗi xảy ra khi gửi voice message.`, rate, false).then(() => {
-            restartWakeWordDetection()
-          })
-        }
-        pendingActionRef.current = null
-        isWaitingForConfirmationRef.current = false
+      // ✅ Wrap callback trong Promise để wait
+      await new Promise<void>((resolve) => {
+        chattingService.sendGroupMessage(EMessageTypeAllTypes.AUDIO, groupPayload, (ack) => {
+          console.log("📤 Group voice message send callback:", ack)
+          if ("success" in ack && ack.success) {
+            console.log("✅ Group voice message sent successfully!")
+            eventEmitter.emit(EInternalEvents.FETCH_GROUP_CHAT, targetGroupId!)
+            speakText(`Đã gửi voice message cho ${contactName} thành công.`, rate, false)
+          } else {
+            console.error("❌ Group voice message send failed", ack)
+            speakText(`Có lỗi xảy ra khi gửi voice message.`, rate, false).then(() => {
+              restartWakeWordDetection()
+            })
+          }
+          pendingActionRef.current = null
+          isWaitingForConfirmationRef.current = false
+          resolve()
+        })
       })
     } else {
       // DIRECT: Use sendMessage with receiverId
+      // ✅ receiverId = recipientUserId from backend (the other user's ID, NOT directChatId!)
+      // ✅ Use EXACT same field order as UI (type-message-bar.tsx line 445)
       const directPayload = {
-        receiverId: contactId!,
-        content: `${uploadResult.id}`,
-        token: messageToken,
-        timestamp: new Date(),
+        content: `${uploadResult.id}`, // ✅ String type - FIRST (same as UI)
+        receiverId: Number(recipientUserId!), // ✅ Use recipientUserId from backend!
+        token: messageToken, // ✅ String type - THIRD (same as UI)
+        timestamp: new Date(), // ✅ Date object - FOURTH (same as UI)
       }
-      console.log("📤 SENDING DIRECT voice message - Payload:", {
-        messageType: "AUDIO",
-        receiverId: directPayload.receiverId,
-        mediaId: uploadResult.id,
-        chatType: chatType,
-        directChatId: directChatId,
-        contactName: contactName,
-      })
 
-      chattingService.sendMessage(EMessageTypeAllTypes.AUDIO, directPayload, (ack) => {
-        console.log("📤 Direct voice message send callback:", ack)
-        if ("success" in ack && ack.success) {
-          console.log("✅ Direct voice message sent successfully!")
-          eventEmitter.emit(EInternalEvents.FETCH_DIRECT_CHAT, directChatId!)
-          // ✅ Không gọi restartWakeWordDetection vì stream vẫn đang chạy
-          speakText(`Đã gửi voice message cho ${contactName} thành công.`, rate, false)
-        } else {
-          console.error("❌ Direct voice message send failed", ack)
-          // ✅ Chỉ restart khi có lỗi
-          speakText(`Có lỗi xảy ra khi gửi voice message.`, rate, false).then(() => {
-            restartWakeWordDetection()
-          })
-        }
-        pendingActionRef.current = null
-        isWaitingForConfirmationRef.current = false
+      console.log("📤 SENDING DIRECT voice message:")
+      console.log("   Type:", EMessageTypeAllTypes.AUDIO)
+      console.log("   Payload stringified:", JSON.stringify(directPayload))
+      console.log(
+        "   - receiverId:",
+        directPayload.receiverId,
+        "type:",
+        typeof directPayload.receiverId
+      )
+      console.log("   - content:", directPayload.content, "type:", typeof directPayload.content)
+      console.log("   - token:", directPayload.token, "type:", typeof directPayload.token)
+      console.log(
+        "   - timestamp:",
+        directPayload.timestamp,
+        "type:",
+        typeof directPayload.timestamp
+      )
+      console.log("   Validation:")
+      console.log("   - receiverId is number?", typeof directPayload.receiverId === "number")
+      console.log("   - content is string?", typeof directPayload.content === "string")
+      console.log("   - token is string?", typeof directPayload.token === "string")
+      console.log("   - timestamp is Date?", directPayload.timestamp instanceof Date)
+      console.log("   - directpayload:", directPayload)
+      // ✅ Wrap callback trong Promise để wait
+      await new Promise<void>((resolve) => {
+        chattingService.sendMessage(EMessageTypeAllTypes.AUDIO, directPayload, (ack) => {
+          console.log("📤 Direct voice message send callback:", ack)
+          console.log("📤 Callback details:", JSON.stringify(ack, null, 2))
+          if ("success" in ack && ack.success) {
+            console.log("✅ Direct voice message sent successfully!")
+            eventEmitter.emit(EInternalEvents.FETCH_DIRECT_CHAT, targetDirectChatId!)
+            speakText(`Đã gửi voice message cho ${contactName} thành công.`, rate, false)
+          } else {
+            console.error("❌ Direct voice message send failed", ack)
+            speakText(`Có lỗi xảy ra khi gửi voice message.`, rate, false).then(() => {
+              restartWakeWordDetection()
+            })
+          }
+          pendingActionRef.current = null
+          isWaitingForConfirmationRef.current = false
+          resolve()
+        })
       })
     }
   } catch (err) {

@@ -25,6 +25,7 @@ import {
   handleSendMessage,
   handleSendSticker,
   handleMakeCall,
+  handleVoiceMessage,
 } from "../handlers"
 
 export function useVoiceAssistant() {
@@ -603,6 +604,45 @@ export function useVoiceAssistant() {
         return false
       }
 
+      // Send voice message
+      if (pendingAction.type === "send_voice_message" && isConfirmed) {
+        console.log("🎤 send_voice_message validation:", {
+          chatType,
+          directChatId,
+          groupId,
+          audioBase64: !!pendingAction.audioBase64,
+          hasAudioData: !!pendingAction.audioBase64,
+        })
+
+        if (!pendingAction.audioBase64) {
+          console.error("❌ Không có dữ liệu âm thanh để gửi")
+          await speakText("Không có dữ liệu âm thanh để gửi", rate, false)
+          return false
+        }
+
+        if (chatType === "direct" && !directChatId) {
+          console.error("❌ Không tìm thấy directChatId để gửi voice message")
+          await speakText("Không tìm thấy thông tin cuộc trò chuyện", rate, false)
+          return false
+        }
+
+        if (chatType === "group" && !groupId) {
+          console.error("❌ Không tìm thấy groupId để gửi voice message")
+          await speakText("Không tìm thấy thông tin nhóm", rate, false)
+          return false
+        }
+
+        await handleVoiceMessage({
+          pendingAction: pendingActionForHandlers as any,
+          pendingActionRef,
+          isWaitingForConfirmationRef,
+          rate,
+          speakText,
+          restartWakeWordDetection,
+        })
+        return false
+      }
+
       // Invite to group
       if (pendingAction.type === "invite_to_group" && isConfirmed) {
         console.log("👥 [CONFIRMATION] Handling invite_to_group confirmation:", {
@@ -796,7 +836,13 @@ export function useVoiceAssistant() {
               isWaitingForConfirmationRef.current = false
             } else {
               console.log("📝 Backend updated pending:", (response as any).pending)
-              pendingActionRef.current = (response as any).pending
+              // ✅ Thêm audioBase64 từ lastAudioDataRef vào pending action nếu là send_voice_message
+              const pendingFromBackend = (response as any).pending
+              if (pendingFromBackend?.type === "send_voice_message" && lastAudioDataRef.current) {
+                console.log("🎤 Thêm audioBase64 vào send_voice_message pending action")
+                pendingFromBackend.audioBase64 = lastAudioDataRef.current
+              }
+              pendingActionRef.current = pendingFromBackend
             }
           } // Handle clientAction from backend
           if ((response as any).clientAction) {

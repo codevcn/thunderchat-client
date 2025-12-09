@@ -124,15 +124,16 @@ export type TCallOfferAnswerEmitPayload = {
 }
 
 export type TCallAcceptEmitPayload = {
-  sessionId: string
+  session: TActiveVoiceCallSession
 }
 
 export type TCallRejectEmitPayload = {
-  sessionId: string
+  session: TActiveVoiceCallSession
+  reason?: string
 }
 
 export type TCallHangupEmitPayload = {
-  sessionId: string
+  session: TActiveVoiceCallSession
   reason: EHangupReason
 }
 

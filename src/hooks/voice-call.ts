@@ -25,6 +25,8 @@ import AgoraRTC, {
 } from "agora-rtc-sdk-ng"
 import AgoraRTM from "agora-rtm-sdk" // v1.5.1
 import { chattingService } from "@/services/chatting.service"
+import { clientSocket } from "@/utils/socket/client-socket"
+import { EVoiceCallEvents } from "@/utils/socket/events"
 
 const APP_ID = "bf206a5c93854a8591320eb085bfd71f"
 
@@ -475,6 +477,15 @@ export function useAgoraCall() {
       // Clear incoming call session to close the modal
       dispatch(resetIncomingCallSession())
 
+      // ✅ Emit socket event to backend to save call status as ACCEPTED
+      const acceptPayload = {
+        session: session,
+      }
+      console.log("📞 📤 Emitting call_accept socket event to backend")
+      console.log("   📋 Payload:", JSON.stringify(acceptPayload, null, 2))
+      console.log("   🔍 Full callSession:", JSON.stringify(session, null, 2))
+      clientSocket.callSocket.emit(EVoiceCallEvents.call_accept, acceptPayload)
+
       // ✅ HỦY TIMEOUT khi accept - cuộc gọi đã được bắt máy
       console.log("📞 ✅ ACCEPT SUCCESS - clearing timeout")
       clearCallTimeout()
@@ -485,29 +496,61 @@ export function useAgoraCall() {
     if (!incomingCallSession) return
     // ✅ Gửi CALL_REJECTED - backend sẽ lưu status = REJECTED
     await publishRtmMessage(String(incomingCallSession.callerUserId), { type: "CALL_REJECTED" })
+
+    // ✅ Emit socket event to backend to save call status as REJECTED
+    const rejectPayload = {
+      session: incomingCallSession,
+    }
+    console.log("📞 📤 Emitting call_reject socket event to backend")
+    console.log("   📋 Payload:", JSON.stringify(rejectPayload, null, 2))
+    console.log("   🔍 Full incomingCallSession:", JSON.stringify(incomingCallSession, null, 2))
+    clientSocket.callSocket.emit(EVoiceCallEvents.call_reject, rejectPayload)
+
     dispatch(resetIncomingCallSession())
   }
 
   async function hangupCall(_reason: EHangupReason = EHangupReason.NORMAL) {
     // ✅ HỦY TIMEOUT khi hangup
-    console.log("📞 ☎️ HANGUP CALL - clearing timeout")
+    console.log("📞 ☎️ HANGUP CALL - clearing timeout", callSessionRef.current)
     clearCallTimeout()
 
-    if (callSession && !callSession.isGroupCall && currentUser) {
+    // ✅ Use callSessionRef to avoid stale closure
+    const currentSession = callSessionRef.current
+
+    // ✅ Update Redux state to CANCEL BEFORE cleanup
+    if (currentSession?.id) {
+      dispatch(updateCallSession({ status: "CANCEL" }))
+      console.log("📞 📝 Updated callSession status to CANCEL")
+    }
+
+    if (currentSession && !currentSession.isGroupCall && currentUser) {
       const otherId =
-        callSession.callerUserId === currentUser.id
-          ? callSession.calleeUserId
-          : callSession.callerUserId
+        currentSession.callerUserId === currentUser.id
+          ? currentSession.calleeUserId
+          : currentSession.callerUserId
       // ✅ Gửi CALL_HUNGUP với hangup reason
       await publishRtmMessage(String(otherId), { type: "CALL_HUNGUP" })
-      sendPhoneIconMessage(callSession.directChatId, otherId, "end")
+      sendPhoneIconMessage(currentSession.directChatId, otherId, "end")
 
       // ✅ Emit event để notify cuộc gọi đã kết thúc
       console.log("📞 📢 EMIT CALL_CANCELLED_BY_PEER event")
       eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {
-        directChatId: callSession.directChatId,
+        directChatId: currentSession.directChatId,
       })
     }
+
+    // ✅ Emit socket event to backend to save call status
+    if (currentSession?.id) {
+      const hangupPayload = {
+        session: currentSession,
+        reason: _reason,
+      }
+      console.log("📞 📤 Emitting call_hangup socket event to backend")
+      console.log("   📋 Payload:", JSON.stringify(hangupPayload, null, 2))
+      console.log("   🔍 Full callSession:", JSON.stringify(currentSession, null, 2))
+      clientSocket.callSocket.emit(EVoiceCallEvents.call_hangup, hangupPayload)
+    }
+
     await cleanup()
   }
 

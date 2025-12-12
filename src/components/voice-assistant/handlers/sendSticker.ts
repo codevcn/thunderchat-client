@@ -2,8 +2,7 @@ import { chattingService } from "@/services/chatting.service"
 import { EMessageTypeAllTypes } from "@/utils/enums"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-
-import type { SpeakFn } from "../types/speakFn"
+import { SpeakFn } from "@/utils/types/global"
 
 export interface SendStickerArgs {
   contactId: number
@@ -111,8 +110,6 @@ export const handleSendSticker = async (args: SendStickerArgs) => {
             console.log("[sendSticker] DIRECT - Event emitted successfully")
           }
         } else {
-          console.error("[sendSticker] Sticker send failed")
-          console.error("[sendSticker] Error details:", ack)
           speakText(
             `Có lỗi xảy ra khi gửi sticker. ${(ack as any)?.message || "Server error"}`,
             rate,

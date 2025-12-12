@@ -1,4 +1,4 @@
-import type { SpeakFn } from "../types/speakFn"
+import { SpeakFn } from "@/utils/types/global"
 
 export interface ReadLatestMessagesArgs {
   responseText: string

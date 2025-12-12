@@ -149,9 +149,7 @@ export const CallBox = ({
       return toaster.error("Cannot start call: Direct chat not found")
     }
     console.log(">>> Peer cancelled call", data)
-    console.log(
-      "📞 ✅ HANDLE PEER CANCELLED - setShowIncomingModal(false), setCallState(CANCELLED)"
-    )
+    console.log("📞  HANDLE PEER CANCELLED - setShowIncomingModal(false), setCallState(CANCELLED)")
     if (!data.directChatId || data.directChatId === directChat.id) {
       setCallState(EVoiceCallStatus.CANCELLED)
       setShowIncomingModal(false)
@@ -274,7 +272,7 @@ export const CallBox = ({
   useEffect(() => {
     eventEmitter.on(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED, listenCallRequestReceived)
 
-    // ✅ ALWAYS listen to CALL_CANCELLED_BY_PEER & CALL_REJECTED_BY_PEER (dù isIncoming hay isOutgoing)
+    //  ALWAYS listen to CALL_CANCELLED_BY_PEER & CALL_REJECTED_BY_PEER (dù isIncoming hay isOutgoing)
     // để modal tự động đóng khi bên kia tắt hoặc từ chối cuộc gọi
     eventEmitter.on(EInternalEvents.CALL_CANCELLED_BY_PEER, handlePeerCancelled)
     eventEmitter.on(EInternalEvents.CALL_REJECTED_BY_PEER, handlePeerRejected)

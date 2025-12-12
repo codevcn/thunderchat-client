@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useAppSelector } from "@/hooks/redux"
-import { useVoiceAssistant } from "./hooks/useVoiceAssistant"
+import { useVoiceAssistant } from "@/hooks/use-voice-assistant"
 
 export default function VoiceAssistantWeb() {
   const voiceAssistantEnabled = useAppSelector(

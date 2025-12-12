@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useRef, useState } from "react"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import {
@@ -60,10 +62,9 @@ export function useAgoraCall() {
   const [isVideoEnabled, setIsVideoEnabled] = useState(false)
   const [isMicEnabled, setIsMicEnabled] = useState(true)
   const isJoiningRef = useRef(false)
-  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null) // ✅ Timeout timer ref
-  const callSessionRef = useRef<TActiveVoiceCallSession | null>(null) // ✅ Track current callSession to avoid closure stale values
+  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null) //  Timeout timer ref
+  const callSessionRef = useRef<TActiveVoiceCallSession | null>(null) //  Track current callSession to avoid closure stale values
 
-  // XỬ LÝ CẢ TEXT (Web) & RAW (Mobile)
   const handleRtmMessage = (message: any, peerId: string) => {
     console.log("check message >>>>", message)
 
@@ -143,10 +144,10 @@ export function useAgoraCall() {
     }
   }
 
-  // ✅ SYNC callSessionRef với Redux state để avoid closure stale values
+  //  SYNC callSessionRef với Redux state để avoid closure stale values
   useEffect(() => {
     callSessionRef.current = callSession
-    console.log("📞 🔄 SYNC callSessionRef:", callSession)
+    console.log("SYNC callSessionRef:", callSession)
   }, [callSession])
 
   // KHỞI TẠO RTM (Web v1) – DÙNG UID DUY NHẤT
@@ -244,7 +245,7 @@ export function useAgoraCall() {
 
   // JOIN RTC
   const joinRtcChannel = async (roomId: string, isVideo: boolean): Promise<boolean> => {
-    console.log("🔍 joinRtcChannel called")
+    console.log("joinRtcChannel called")
     console.log("  - currentUser:", currentUser)
     console.log("  - currentUser?.id:", currentUser?.id)
     console.log("  - typeof currentUser?.id:", typeof currentUser?.id)
@@ -253,7 +254,7 @@ export function useAgoraCall() {
     console.log("  - uid after assignment:", uid)
 
     if (!uid) {
-      console.error("❌ UID is falsy:", uid)
+      console.error("UID is falsy:", uid)
       // KHÔNG return, để xem Agora SDK nhận được gì
     }
     if (isJoiningRef.current || rtcClient) return false
@@ -264,7 +265,7 @@ export function useAgoraCall() {
       rtcClient = client
 
       client.on("user-joined", (user) => {
-        console.log("✅ Web detected user:", user.uid)
+        console.log(" Web detected user:", user.uid)
         dispatch(updateCallSession({ status: EVoiceCallStatus.CONNECTED }))
       })
 
@@ -274,7 +275,7 @@ export function useAgoraCall() {
 
       client.on("user-published", async (user, mediaType) => {
         console.log("user sub", user)
-        console.log("📡 User published:", user.uid, mediaType)
+        console.log("User published:", user.uid, mediaType)
         await client.subscribe(user, mediaType)
         if (mediaType === "audio") user.audioTrack?.play()
 
@@ -314,7 +315,7 @@ export function useAgoraCall() {
     }
   }
 
-  // ✅ TỰ ĐỘNG HỦY CUỘC GỌI SAU TIMEOUT
+  // TỰ ĐỘNG HỦY CUỘC GỌI SAU TIMEOUT
   const startCallTimeout = (timeoutMs: number = 30000) => {
     // 30 giây mặc định
     if (callTimeoutRef.current) {
@@ -322,15 +323,15 @@ export function useAgoraCall() {
     }
 
     console.log(
-      `📞 🕐 BẮT ĐẦU TIMEOUT: ${timeoutMs}ms (${Math.round(timeoutMs / 1000)}s), callSessionRef:`,
+      `BẮT ĐẦU TIMEOUT: ${timeoutMs}ms (${Math.round(timeoutMs / 1000)}s), callSessionRef:`,
       callSessionRef.current
     )
 
-    // ✅ Log kiểm tra trạng thái mỗi 10 giây
+    // Log kiểm tra trạng thái mỗi 10 giây
     const checkIntervalId = setInterval(() => {
       const elapsed = Math.floor(Date.now() / 1000) % 60
       console.log(
-        `📞 ✅ KIỂM TRA TIMEOUT (elapsed ~${elapsed}s): callSessionRef?.status = ${callSessionRef.current?.status}`,
+        `KIỂM TRA TIMEOUT (elapsed ~${elapsed}s): callSessionRef?.status = ${callSessionRef.current?.status}`,
         { callSession: callSessionRef.current }
       )
     }, 10000)
@@ -338,38 +339,38 @@ export function useAgoraCall() {
     callTimeoutRef.current = setTimeout(() => {
       clearInterval(checkIntervalId)
       console.log(
-        `📞 ⏰ TIMEOUT FIRED SAU ${timeoutMs}ms, callSessionRef status: ${callSessionRef.current?.status}`
+        `TIMEOUT FIRED SAU ${timeoutMs}ms, callSessionRef status: ${callSessionRef.current?.status}`
       )
       console.log(
-        `📞 Check: callSessionRef exists? ${!!callSessionRef.current}`,
+        `Check: callSessionRef exists? ${!!callSessionRef.current}`,
         callSessionRef.current
       )
       console.log(
-        `📞 Check: status === REQUESTING? ${callSessionRef.current?.status === EVoiceCallStatus.REQUESTING}`
+        `Check: status === REQUESTING? ${callSessionRef.current?.status === EVoiceCallStatus.REQUESTING}`
       )
 
       if (callSessionRef.current && callSessionRef.current.status === EVoiceCallStatus.REQUESTING) {
-        console.log("📞 ✅ CONDITION TRUE - gọi hangupCall(EHangupReason.NORMAL)")
+        console.log("CONDITION TRUE - gọi hangupCall(EHangupReason.NORMAL)")
         toaster.info("Cuộc gọi hết thời gian chờ. Tự động hủy bỏ.")
-        hangupCall(EHangupReason.NORMAL) // ✅ Sử dụng NORMAL reason cho timeout
+        hangupCall(EHangupReason.NORMAL) //  Sử dụng NORMAL reason cho timeout
       } else {
-        console.log("📞 ❌ CONDITION FALSE - không tắt cuộc gọi")
-        console.log(`📞   - callSessionRef exists: ${!!callSessionRef.current}`)
-        console.log(`📞   - status value: '${callSessionRef.current?.status}'`)
-        console.log(`📞   - REQUESTING value: '${EVoiceCallStatus.REQUESTING}'`)
+        console.log("CONDITION FALSE - không tắt cuộc gọi")
+        console.log(`- callSessionRef exists: ${!!callSessionRef.current}`)
+        console.log(`- status value: '${callSessionRef.current?.status}'`)
+        console.log(`- REQUESTING value: '${EVoiceCallStatus.REQUESTING}'`)
       }
     }, timeoutMs)
   }
 
-  // ✅ HỦY TIMEOUT TIMER
+  // HỦY TIMEOUT TIMER
   const clearCallTimeout = () => {
-    console.log("📞 🛑 CLEAR TIMEOUT - hủy timer")
+    console.log("CLEAR TIMEOUT - hủy timer")
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current)
       callTimeoutRef.current = null
-      console.log("📞 ✅ Timeout timer đã hủy thành công")
+      console.log("Timeout timer đã hủy thành công")
     } else {
-      console.log("📞 ℹ️ Timeout timer không tồn tại hoặc đã clear rồi")
+      console.log("Timeout timer không tồn tại hoặc đã clear rồi")
     }
   }
 
@@ -386,7 +387,6 @@ export function useAgoraCall() {
     const success = await joinRtcChannel(roomId, isVideoCall)
     if (!success) return
 
-    // ✅ Gửi CALL_REQUEST với status REQUESTING
     await publishRtmMessage(String(calleeUserId), {
       type: "CALL_REQUEST",
       roomId,
@@ -402,14 +402,13 @@ export function useAgoraCall() {
       calleeUserId,
       directChatId,
       isVideoCall,
-      status: EVoiceCallStatus.REQUESTING, // ✅ Frontend state
+      status: EVoiceCallStatus.REQUESTING,
       isGroupCall: false,
     }
     dispatch(setCallSession(session))
     sendPhoneIconMessage(directChatId, calleeUserId, "start")
 
-    // ✅ BẮT ĐẦU TIMEOUT - nếu 30 giây không bắt máy tự động hủy
-    console.log("📞 🎬 PEER CALL STARTED - start timeout in 30s")
+    console.log("PEER CALL STARTED - start timeout in 30s")
     startCallTimeout(30000) // 30 seconds
   }
 
@@ -439,7 +438,6 @@ export function useAgoraCall() {
       await publishRtmMessage(String(memberId), rtmMessage)
     }
 
-    // ✅ Group call là CONNECTED ngay khi tạo (vì caller đã join RTC)
     dispatch(
       setCallSession({
         id: roomId,
@@ -447,7 +445,7 @@ export function useAgoraCall() {
         calleeUserId: -1,
         directChatId: groupChatId,
         isVideoCall,
-        status: EVoiceCallStatus.CONNECTED, // ✅ Group call connected immediately
+        status: EVoiceCallStatus.CONNECTED,
         isGroupCall: true,
       })
     )
@@ -455,72 +453,67 @@ export function useAgoraCall() {
 
   // CHẤP NHẬN / TỪ CHỐI / KẾT THÚC
   async function acceptCall() {
-    console.log("📞 📥 ACCEPT CALL - clearing timeout")
+    console.log("ACCEPT CALL - clearing timeout")
     if (!incomingCallSession) return toaster.error("Không có cuộc gọi đến.")
     const { id: roomId, isVideoCall, callerUserId, directChatId, isGroupCall } = incomingCallSession
 
     const success = await joinRtcChannel(roomId, isVideoCall)
 
     if (success) {
-      // ✅ Khi accept, cập nhật status từ RINGING → ACCEPTED → CONNECTED
       const session: TActiveVoiceCallSession = {
         id: roomId,
         callerUserId: callerUserId,
         calleeUserId: currentUser!.id,
         directChatId: directChatId,
         isVideoCall: isVideoCall,
-        status: EVoiceCallStatus.ACCEPTED, // ✅ Set to ACCEPTED when accepting
+        status: EVoiceCallStatus.ACCEPTED,
         isGroupCall: isGroupCall || false,
       }
       dispatch(setCallSession(session))
 
-      // Clear incoming call session to close the modal
       dispatch(resetIncomingCallSession())
 
-      // ✅ Emit socket event to backend to save call status as ACCEPTED
       const acceptPayload = {
         session: session,
       }
-      console.log("📞 📤 Emitting call_accept socket event to backend")
-      console.log("   📋 Payload:", JSON.stringify(acceptPayload, null, 2))
-      console.log("   🔍 Full callSession:", JSON.stringify(session, null, 2))
+      console.log("Emitting call_accept socket event to backend")
+      console.log("   Payload:", JSON.stringify(acceptPayload, null, 2))
+      console.log("   Full callSession:", JSON.stringify(session, null, 2))
       clientSocket.callSocket.emit(EVoiceCallEvents.call_accept, acceptPayload)
 
-      // ✅ HỦY TIMEOUT khi accept - cuộc gọi đã được bắt máy
-      console.log("📞 ✅ ACCEPT SUCCESS - clearing timeout")
+      console.log("ACCEPT SUCCESS - clearing timeout")
       clearCallTimeout()
     }
   }
 
   async function rejectCall() {
     if (!incomingCallSession) return
-    // ✅ Gửi CALL_REJECTED - backend sẽ lưu status = REJECTED
+
     await publishRtmMessage(String(incomingCallSession.callerUserId), { type: "CALL_REJECTED" })
 
-    // ✅ Emit socket event to backend to save call status as REJECTED
     const rejectPayload = {
       session: incomingCallSession,
     }
-    console.log("📞 📤 Emitting call_reject socket event to backend")
-    console.log("   📋 Payload:", JSON.stringify(rejectPayload, null, 2))
-    console.log("   🔍 Full incomingCallSession:", JSON.stringify(incomingCallSession, null, 2))
+    console.log("Emitting call_reject socket event to backend")
+    console.log("   Payload:", JSON.stringify(rejectPayload, null, 2))
+    console.log("   Full incomingCallSession:", JSON.stringify(incomingCallSession, null, 2))
     clientSocket.callSocket.emit(EVoiceCallEvents.call_reject, rejectPayload)
 
     dispatch(resetIncomingCallSession())
   }
 
   async function hangupCall(_reason: EHangupReason = EHangupReason.NORMAL) {
-    // ✅ HỦY TIMEOUT khi hangup
-    console.log("📞 ☎️ HANGUP CALL - clearing timeout", callSessionRef.current)
+    //  HỦY TIMEOUT khi hangup
+    console.log("HANGUP CALL - clearing timeout", callSessionRef.current)
     clearCallTimeout()
 
-    // ✅ Use callSessionRef to avoid stale closure
+    //  Use callSessionRef to avoid stale closure
     const currentSession = callSessionRef.current
 
-    // ✅ Update Redux state to CANCEL BEFORE cleanup
+    // Update Redux state to CANCEL BEFORE cleanup
     if (currentSession?.id) {
       dispatch(updateCallSession({ status: "CANCEL" }))
-      console.log("📞 📝 Updated callSession status to CANCEL")
+      console.log("Updated callSession status to CANCEL")
     }
 
     if (currentSession && !currentSession.isGroupCall && currentUser) {
@@ -528,26 +521,26 @@ export function useAgoraCall() {
         currentSession.callerUserId === currentUser.id
           ? currentSession.calleeUserId
           : currentSession.callerUserId
-      // ✅ Gửi CALL_HUNGUP với hangup reason
+      //  Gửi CALL_HUNGUP với hangup reason
       await publishRtmMessage(String(otherId), { type: "CALL_HUNGUP" })
       sendPhoneIconMessage(currentSession.directChatId, otherId, "end")
 
-      // ✅ Emit event để notify cuộc gọi đã kết thúc
-      console.log("📞 📢 EMIT CALL_CANCELLED_BY_PEER event")
+      // Emit event để notify cuộc gọi đã kết thúc
+      console.log("EMIT CALL_CANCELLED_BY_PEER event")
       eventEmitter.emit(EInternalEvents.CALL_CANCELLED_BY_PEER, {
         directChatId: currentSession.directChatId,
       })
     }
 
-    // ✅ Emit socket event to backend to save call status
+    // Emit socket event to backend to save call status
     if (currentSession?.id) {
       const hangupPayload = {
         session: currentSession,
         reason: _reason,
       }
-      console.log("📞 📤 Emitting call_hangup socket event to backend")
-      console.log("   📋 Payload:", JSON.stringify(hangupPayload, null, 2))
-      console.log("   🔍 Full callSession:", JSON.stringify(currentSession, null, 2))
+      console.log("Emitting call_hangup socket event to backend")
+      console.log("   Payload:", JSON.stringify(hangupPayload, null, 2))
+      console.log("   Full callSession:", JSON.stringify(currentSession, null, 2))
       clientSocket.callSocket.emit(EVoiceCallEvents.call_hangup, hangupPayload)
     }
 
@@ -555,8 +548,8 @@ export function useAgoraCall() {
   }
 
   async function cleanup() {
-    console.log("📞 🧹 CLEANUP - clearing timeout and resources")
-    // ✅ HỦY TIMEOUT trong cleanup
+    console.log("CLEANUP - clearing timeout and resources")
+    //  HỦY TIMEOUT trong cleanup
     clearCallTimeout()
 
     localAudioTrackRef.current?.close()
@@ -573,7 +566,7 @@ export function useAgoraCall() {
     isJoiningRef.current = false
     dispatch(resetCallSession())
     dispatch(resetIncomingCallSession())
-    console.log("📞 ✅ CLEANUP COMPLETE")
+    console.log("CLEANUP COMPLETE")
   }
 
   // ĐIỀU KHIỂN MIC / VIDEO / CAMERA

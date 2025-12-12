@@ -6,7 +6,8 @@
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
 import { groupChatService } from "@/services/group-chat.service"
 import { groupMemberService } from "@/services/group-member.service"
-import type { PendingAction } from "../types"
+import type { PendingAction } from "../components/voice-assistant/types"
+import { getCancelMessage } from "./confirmation"
 
 export interface ClientActionContext {
   speakText: (text: string, rate?: number, waitForConfirmation?: boolean) => Promise<void>
@@ -25,7 +26,7 @@ export async function handleCreateGroupAction(
   context: ClientActionContext
 ): Promise<boolean> {
   try {
-    const { handleCreateGroup } = await import("../handlers/createGroup")
+    const { handleCreateGroup } = await import("../components/voice-assistant/handlers/createGroup")
     const { speakText, restartWakeWordDetection, router, settings, pendingActionRef } = context
 
     const groupName =
@@ -171,11 +172,11 @@ export async function handleInviteToGroupAction(
     return true
   } catch (err) {
     console.error("❌ [INVITE_TO_GROUP] Error executing clientAction.invite_to_group:", err)
-    await context.speakText(
-      "Lỗi khi mời vào nhóm. Vui lòng thử lại.",
-      context.settings.speechRate,
-      false
-    )
+    // await context.speakText(
+    //   "Lỗi khi mời vào nhóm. Vui lòng thử lại.",
+    //   context.settings.speechRate,
+    //   false
+    // )
     return false
   }
 }
@@ -234,8 +235,7 @@ export async function handleClientAction(
 
   // Handle CANCEL action
   if (payload.action === "cancel") {
-    const { getCancelMessage } = await import("./confirmation")
-    console.log(`❌ Hủy lệnh ${clientAction.type}:`, payload.cancelledType)
+    console.log(`Hủy lệnh ${clientAction.type}:`, payload.cancelledType)
 
     context.pendingActionRef.current = null
     context.isWaitingForConfirmationRef.current = false

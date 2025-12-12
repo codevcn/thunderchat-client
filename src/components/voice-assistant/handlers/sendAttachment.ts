@@ -3,7 +3,7 @@ import { FileService } from "@/services/file.service"
 import { EMessageTypeAllTypes } from "@/utils/enums"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
 import { EInternalEvents } from "@/utils/event-emitter/events"
-import type { SpeakFn } from "../types/speakFn"
+import { SpeakFn } from "@/utils/types/global"
 
 export type TAttachmentKind = "IMAGE" | "DOCUMENT" | "VIDEO"
 

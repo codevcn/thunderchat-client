@@ -71,7 +71,7 @@ export const handleVoiceMessage = async ({
       throw new Error("Upload failed - no media ID returned")
     }
 
-    console.log("✅ Upload thành công, mediaId:", uploadResult.id)
+    console.log("Upload thành công, mediaId:", uploadResult.id)
 
     // Send message with audio media type
     const messageToken = chattingService.getMessageToken()
@@ -79,10 +79,10 @@ export const handleVoiceMessage = async ({
     if (chatType === "group") {
       // GROUP: Use sendGroupMessage with groupChatId
       const groupPayload = {
-        groupChatId: Number(targetGroupId!), // ✅ Use targetGroupId from backend
-        content: `${uploadResult.id}`, // ✅ String type
-        token: messageToken, // ✅ String type
-        timestamp: new Date(), // ✅ Date object
+        groupChatId: Number(targetGroupId!), // Use targetGroupId from backend
+        content: `${uploadResult.id}`, //  String type
+        token: messageToken,
+        timestamp: new Date(),
       }
       console.log("📤 SENDING GROUP voice message - Full details:")
       console.log("   - Type:", EMessageTypeAllTypes.AUDIO)
@@ -91,16 +91,15 @@ export const handleVoiceMessage = async ({
       console.log("   - content type:", typeof groupPayload.content)
       console.log("   - token type:", typeof groupPayload.token)
 
-      // ✅ Wrap callback trong Promise để wait
       await new Promise<void>((resolve) => {
         chattingService.sendGroupMessage(EMessageTypeAllTypes.AUDIO, groupPayload, (ack) => {
           console.log("📤 Group voice message send callback:", ack)
           if ("success" in ack && ack.success) {
-            console.log("✅ Group voice message sent successfully!")
+            console.log(" Group voice message sent successfully!")
             eventEmitter.emit(EInternalEvents.FETCH_GROUP_CHAT, targetGroupId!)
             speakText(`Đã gửi voice message cho ${contactName} thành công.`, rate, false)
           } else {
-            console.error("❌ Group voice message send failed", ack)
+            console.error(" Group voice message send failed", ack)
             speakText(`Có lỗi xảy ra khi gửi voice message.`, rate, false).then(() => {
               restartWakeWordDetection()
             })
@@ -111,14 +110,11 @@ export const handleVoiceMessage = async ({
         })
       })
     } else {
-      // DIRECT: Use sendMessage with receiverId
-      // ✅ receiverId = recipientUserId from backend (the other user's ID, NOT directChatId!)
-      // ✅ Use EXACT same field order as UI (type-message-bar.tsx line 445)
       const directPayload = {
-        content: `${uploadResult.id}`, // ✅ String type - FIRST (same as UI)
-        receiverId: Number(recipientUserId!), // ✅ Use recipientUserId from backend!
-        token: messageToken, // ✅ String type - THIRD (same as UI)
-        timestamp: new Date(), // ✅ Date object - FOURTH (same as UI)
+        content: `${uploadResult.id}`,
+        receiverId: Number(recipientUserId!),
+        token: messageToken,
+        timestamp: new Date(),
       }
 
       console.log("📤 SENDING DIRECT voice message:")
@@ -150,11 +146,11 @@ export const handleVoiceMessage = async ({
           console.log("📤 Direct voice message send callback:", ack)
           console.log("📤 Callback details:", JSON.stringify(ack, null, 2))
           if ("success" in ack && ack.success) {
-            console.log("✅ Direct voice message sent successfully!")
+            console.log(" Direct voice message sent successfully!")
             eventEmitter.emit(EInternalEvents.FETCH_DIRECT_CHAT, targetDirectChatId!)
             speakText(`Đã gửi voice message cho ${contactName} thành công.`, rate, false)
           } else {
-            console.error("❌ Direct voice message send failed", ack)
+            console.error("Direct voice message send failed", ack)
             speakText(`Có lỗi xảy ra khi gửi voice message.`, rate, false).then(() => {
               restartWakeWordDetection()
             })

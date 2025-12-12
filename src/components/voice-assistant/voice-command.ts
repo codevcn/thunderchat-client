@@ -1,5 +1,5 @@
 import { pushNotificationService } from "@/services/push-notification.service"
-import { RETRY_CONFIG } from "../constants"
+import { RETRY_CONFIG } from "./constants"
 
 interface VoiceCommandResponse {
   transcript: string

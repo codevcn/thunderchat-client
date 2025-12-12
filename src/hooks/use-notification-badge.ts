@@ -1,4 +1,6 @@
 // hooks/useNotificationBadge.ts
+"use client"
+
 import { useEffect, useRef } from "react"
 import { useAppSelector } from "@/hooks/redux"
 

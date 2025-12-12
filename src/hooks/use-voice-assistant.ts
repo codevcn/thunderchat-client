@@ -3,9 +3,13 @@ import { useRouter } from "next/navigation"
 import { PorcupineWorker } from "@picovoice/porcupine-web"
 import type { PorcupineWorker as PorcupineWorkerType } from "@picovoice/porcupine-web"
 
-import { VoiceSettings, PendingAction, PorcupineDetection } from "../types"
+import {
+  VoiceSettings,
+  PendingAction,
+  PorcupineDetection,
+} from "../components/voice-assistant/types"
 import { blobToBase64, playBeep } from "../utils/audio"
-import { sendVoiceCommand } from "../services/voiceCommandService"
+import { sendVoiceCommand } from "../components/voice-assistant/voice-command"
 import { pushNotificationService } from "@/services/push-notification.service"
 import { groupMemberService } from "@/services/group-member.service"
 import { eventEmitter } from "@/utils/event-emitter/event-emitter"
@@ -26,7 +30,7 @@ import {
   handleSendSticker,
   handleMakeCall,
   handleVoiceMessage,
-} from "../handlers"
+} from "../components/voice-assistant/handlers"
 
 export function useVoiceAssistant() {
   const router = useRouter()
@@ -78,11 +82,11 @@ export function useVoiceAssistant() {
             speechRate: userSettings.accessibility?.speechRate ?? 1.0,
           })
 
-          console.log("✅ Settings loaded")
-          setStatus("✅ Đã tải cài đặt")
+          console.log(" Settings loaded")
+          setStatus("Đã tải cài đặt")
         }
       } catch (err) {
-        console.error("❌ Không tải được settings:", err)
+        console.error(" Không tải được settings:", err)
         if (mounted) {
           setSettings({
             sttEnabled: true,
@@ -145,7 +149,7 @@ export function useVoiceAssistant() {
         utterance.volume = 1.0
 
         utterance.onend = () => {
-          console.log("✅ Phát TTS xong hoàn toàn")
+          console.log(" Phát TTS xong hoàn toàn")
           if (waitForConfirmation) {
             console.log("⏳ Chờ xác nhận từ user...")
             setStatus('⏳ Chờ xác nhận... Nói "có" hoặc "không"')
@@ -156,7 +160,7 @@ export function useVoiceAssistant() {
               startRecordingAndSend()
             }, 500)
           } else {
-            console.log("✅ Phát TTS xong - Tiếp tục wake word detection")
+            console.log(" Phát TTS xong - Tiếp tục wake word detection")
             setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
             isWaitingForConfirmationRef.current = false
             console.log("🎤 Gọi resumeWakeWordDetection() từ TTS onend")
@@ -221,11 +225,11 @@ export function useVoiceAssistant() {
       })
 
       micStreamRef.current = stream
-      console.log("✅ Microphone stream đã được cấp")
+      console.log(" Microphone stream đã được cấp")
 
       const audioContext = new AudioContext({ sampleRate: 16000 })
       audioContextRef.current = audioContext
-      console.log("✅ AudioContext đã được khởi tạo")
+      console.log(" AudioContext đã được khởi tạo")
 
       const source = audioContext.createMediaStreamSource(stream)
       const processor = audioContext.createScriptProcessor(512, 1, 1)
@@ -264,7 +268,7 @@ export function useVoiceAssistant() {
 
       setIsListening(true)
       setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
-      console.log("✅ 🎧 Wake word detection đang hoạt động")
+      console.log(" 🎧 Wake word detection đang hoạt động")
     } catch (err) {
       console.error("❌ Không thể truy cập microphone:", err)
       setStatus("❌ Không truy cập được mic")
@@ -290,13 +294,13 @@ export function useVoiceAssistant() {
 
         console.log("🔄 Khởi động stream microphone mới")
         await startMicrophoneForWakeWord(workerRef.current)
-        console.log("🔄 ✅ Khởi động detection thành công")
+        console.log("🔄 Khởi động detection thành công")
         setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
       } else {
-        console.log("🔄 ❌ workerRef.current không tồn tại!")
+        console.log("🔄 workerRef.current không tồn tại!")
       }
     } catch (err) {
-      console.error("❌ Lỗi khởi động lại:", err)
+      console.error("Lỗi khởi động lại:", err)
     }
   }
 
@@ -305,7 +309,7 @@ export function useVoiceAssistant() {
     try {
       console.log("▶️ Tiếp tục lắng nghe wake word...")
       if (workerRef.current && audioContextRef.current && micStreamRef.current) {
-        console.log("▶️ ✅ Stream vẫn còn hoạt động, tiếp tục lắng nghe")
+        console.log("▶️ Stream vẫn còn hoạt động, tiếp tục lắng nghe")
         setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
       } else {
         console.log("▶️ ⚠️ Stream không hoạt động, khởi động lại...")
@@ -476,7 +480,7 @@ export function useVoiceAssistant() {
         // Backend sends recipientUserId (the actual recipient's userId for direct chat)
         const finalRecipientId = recipientUserId || contactId
 
-        console.log("✅ Điều kiện send_sticker thỏa mãn - Gọi handleSendSticker", {
+        console.log("Điều kiện send_sticker thỏa mãn - Gọi handleSendSticker", {
           contactId,
           recipientUserId,
           finalRecipientId,
@@ -667,7 +671,7 @@ export function useVoiceAssistant() {
         try {
           console.log("🔄 [CONFIRMATION] Calling groupMemberService.addMembersToGroupChat...")
           const result = await groupMemberService.addMembersToGroupChat(groupId, memberIds)
-          console.log("✅ [CONFIRMATION] API Response:", result)
+          console.log(" [CONFIRMATION] API Response:", result)
 
           const memberNamesStr =
             memberNames.length > 0 ? memberNames.join(", ") : `${memberIds.length} thành viên`
@@ -675,10 +679,10 @@ export function useVoiceAssistant() {
           console.log("🎤 [CONFIRMATION] Speaking:", successMsg)
 
           await speakText(successMsg, rate, false)
-          console.log("✅ [CONFIRMATION] Invite to group completed")
+          console.log("[CONFIRMATION] Invite to group completed")
         } catch (err) {
           console.error("❌ [CONFIRMATION] Error inviting to group:", err)
-          await speakText("Lỗi khi mời vào nhóm. Vui lòng thử lại.", rate, false)
+          //   await speakText("Lỗi khi mời vào nhóm. Vui lòng thử lại.", rate, false)
         }
         return true
       }
@@ -815,7 +819,7 @@ export function useVoiceAssistant() {
             )
 
             if (confirmationHandled) {
-              console.log("✅ Confirmation handled successfully")
+              console.log(" Confirmation handled successfully")
               // Clear pending after successful handling
               pendingActionRef.current = null
               isWaitingForConfirmationRef.current = false
@@ -831,12 +835,12 @@ export function useVoiceAssistant() {
           // Update pending state from backend response AFTER handling
           if ((response as any).pending !== undefined) {
             if ((response as any).pending === null) {
-              console.log("✅ Backend cleared pending")
+              console.log(" Backend cleared pending")
               pendingActionRef.current = null
               isWaitingForConfirmationRef.current = false
             } else {
               console.log("📝 Backend updated pending:", (response as any).pending)
-              // ✅ Thêm audioBase64 từ lastAudioDataRef vào pending action nếu là send_voice_message
+              //  Thêm audioBase64 từ lastAudioDataRef vào pending action nếu là send_voice_message
               const pendingFromBackend = (response as any).pending
               if (pendingFromBackend?.type === "send_voice_message" && lastAudioDataRef.current) {
                 console.log("🎤 Thêm audioBase64 vào send_voice_message pending action")
@@ -856,7 +860,7 @@ export function useVoiceAssistant() {
               isWaitingForConfirmationRef,
             })
             if (handled) {
-              console.log("✅ [MAIN] clientAction handled successfully, unlocking wake word...")
+              console.log("[MAIN] clientAction handled successfully, unlocking wake word...")
               isWakeWordProcessingRef.current = false // 🔓 Unlock after clientAction
               return
             }
@@ -963,7 +967,7 @@ export function useVoiceAssistant() {
         // Check if should stop
         const stopResult = shouldStopRecording(vadState, thresholds)
         if (stopResult.shouldStop) {
-          console.log(`✅ Dừng ghi âm: ${stopResult.reason}`)
+          console.log(` Dừng ghi âm: ${stopResult.reason}`)
           mediaRecorder.stop()
           audioContext.close()
           if (silenceTimerRef.current) {
@@ -983,6 +987,8 @@ export function useVoiceAssistant() {
       mediaRecorder.start()
       setStatus("🔴 Đang chờ bạn nói...")
       console.log("🎙️ Bắt đầu ghi âm với VAD")
+      // 🔊 Phát tiếng beep để thông báo bắt đầu ghi âm
+      await playBeep()
       checkAudioLevel()
 
       maxRecordingTimerRef.current = setTimeout(() => {

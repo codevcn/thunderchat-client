@@ -1,4 +1,4 @@
-import { TIMING } from "../constants"
+import { TIMING } from "../components/voice-assistant/constants"
 
 /**
  * Convert Blob to Base64 string

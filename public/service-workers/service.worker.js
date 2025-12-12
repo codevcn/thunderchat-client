@@ -161,9 +161,9 @@ self.addEventListener("push", (event) => {
         console.log(">>> [Service Worker] show notification")
         await self.registration.showNotification(data.conversation.title, {
           body: notificationBody,
-          icon: iconToShow, // ✅ SỬ DỤNG iconToShow thay vì name
+          icon: iconToShow,
           badge: "../icons/icon-128.png",
-          image: notificationImage, // ✅ THÊM image cho media messages
+          image: notificationImage,
           vibrate: [100, 50, 100],
           data,
         })

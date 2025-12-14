@@ -63,7 +63,10 @@ export function useAgoraCall() {
   const [isMicEnabled, setIsMicEnabled] = useState(true)
   const isJoiningRef = useRef(false)
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null) //  Timeout timer ref
+  const incomingCallTimeoutRef = useRef<NodeJS.Timeout | null>(null) //  Timeout for incoming call (RINGING)
   const callSessionRef = useRef<TActiveVoiceCallSession | null>(null) //  Track current callSession to avoid closure stale values
+  const incomingCallSessionRef = useRef<TActiveVoiceCallSession | null>(null) //  Track incoming call to avoid closure stale values
+  const hasEmittedHangupRef = useRef<boolean>(false) // Flag để chỉ emit socket event lần đầu
 
   const handleRtmMessage = (message: any, peerId: string) => {
     console.log("check message >>>>", message)
@@ -121,6 +124,8 @@ export function useAgoraCall() {
           }
           dispatch(setIncomingCallSession(session))
           eventEmitter.emit(EInternalEvents.VOICE_CALL_REQUEST_RECEIVED)
+          // START TIMEOUT FOR INCOMING CALL - 30 seconds
+          startIncomingCallTimeout(session, 30000)
           break
 
         case "CALL_REJECTED":
@@ -149,6 +154,12 @@ export function useAgoraCall() {
     callSessionRef.current = callSession
     console.log("SYNC callSessionRef:", callSession)
   }, [callSession])
+
+  //  SYNC incomingCallSessionRef với Redux state
+  useEffect(() => {
+    incomingCallSessionRef.current = incomingCallSession
+    console.log("SYNC incomingCallSessionRef:", incomingCallSession)
+  }, [incomingCallSession])
 
   // KHỞI TẠO RTM (Web v1) – DÙNG UID DUY NHẤT
   useEffect(() => {
@@ -316,14 +327,15 @@ export function useAgoraCall() {
   }
 
   // TỰ ĐỘNG HỦY CUỘC GỌI SAU TIMEOUT
-  const startCallTimeout = (timeoutMs: number = 30000) => {
+  const startCallTimeout = (timeoutMs: number = 10000) => {
     // 30 giây mặc định
+    console.log("🔴 startCallTimeout() entered, setting up timeout...")
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current)
     }
 
     console.log(
-      `BẮT ĐẦU TIMEOUT: ${timeoutMs}ms (${Math.round(timeoutMs / 1000)}s), callSessionRef:`,
+      `🔴 BẮT ĐẦU TIMEOUT: ${timeoutMs}ms (${Math.round(timeoutMs / 1000)}s), callSessionRef:`,
       callSessionRef.current
     )
 
@@ -339,7 +351,7 @@ export function useAgoraCall() {
     callTimeoutRef.current = setTimeout(() => {
       clearInterval(checkIntervalId)
       console.log(
-        `TIMEOUT FIRED SAU ${timeoutMs}ms, callSessionRef status: ${callSessionRef.current?.status}`
+        `🔴 TIMEOUT FIRED SAU ${timeoutMs}ms, callSessionRef status: ${callSessionRef.current?.status}`
       )
       console.log(
         `Check: callSessionRef exists? ${!!callSessionRef.current}`,
@@ -350,11 +362,11 @@ export function useAgoraCall() {
       )
 
       if (callSessionRef.current && callSessionRef.current.status === EVoiceCallStatus.REQUESTING) {
-        console.log("CONDITION TRUE - gọi hangupCall(EHangupReason.NORMAL)")
+        console.log("🔴 CONDITION TRUE - gọi hangupCall với isTimeout: true")
         toaster.info("Cuộc gọi hết thời gian chờ. Tự động hủy bỏ.")
-        hangupCall(EHangupReason.NORMAL) //  Sử dụng NORMAL reason cho timeout
+        hangupCall(EHangupReason.NORMAL, true) //  Truyền true để mark as TIMEOUT
       } else {
-        console.log("CONDITION FALSE - không tắt cuộc gọi")
+        console.log("🔴 CONDITION FALSE - không tắt cuộc gọi")
         console.log(`- callSessionRef exists: ${!!callSessionRef.current}`)
         console.log(`- status value: '${callSessionRef.current?.status}'`)
         console.log(`- REQUESTING value: '${EVoiceCallStatus.REQUESTING}'`)
@@ -374,6 +386,57 @@ export function useAgoraCall() {
     }
   }
 
+  // HỦY INCOMING CALL TIMEOUT TIMER
+  const clearIncomingCallTimeout = () => {
+    console.log("CLEAR INCOMING CALL TIMEOUT - hủy timer")
+    if (incomingCallTimeoutRef.current) {
+      clearTimeout(incomingCallTimeoutRef.current)
+      incomingCallTimeoutRef.current = null
+      console.log("Incoming call timeout timer đã hủy thành công")
+    } else {
+      console.log("Incoming call timeout timer không tồn tại hoặc đã clear rồi")
+    }
+  }
+
+  // START TIMEOUT FOR INCOMING CALL
+  const startIncomingCallTimeout = (
+    session: TActiveVoiceCallSession,
+    timeoutMs: number = 30000
+  ) => {
+    if (incomingCallTimeoutRef.current) {
+      clearTimeout(incomingCallTimeoutRef.current)
+    }
+
+    console.log(
+      `⏱️ START INCOMING CALL TIMEOUT: ${timeoutMs}ms (${Math.round(timeoutMs / 1000)}s), sessionId: ${session.id}`
+    )
+
+    incomingCallTimeoutRef.current = setTimeout(() => {
+      console.log(
+        `⏱️ INCOMING CALL TIMEOUT FIRED - sessionId: ${incomingCallSessionRef.current?.id}`
+      )
+
+      const currentIncomingSession = incomingCallSessionRef.current
+
+      if (currentIncomingSession && currentIncomingSession.status === EVoiceCallStatus.RINGING) {
+        console.log("🔔 Incoming call timeout - auto rejecting")
+        toaster.info("Cuộc gọi đã hết thời gian chờ. Tự động từ chối.")
+
+        // Emit socket event to backend to cancel/save as CANCELLED status
+        const cancelPayload = {
+          session: currentIncomingSession,
+          reason: EHangupReason.NORMAL,
+        }
+        console.log("Emitting call_cancel socket event to backend")
+        console.log("   Payload:", JSON.stringify(cancelPayload, null, 2))
+        clientSocket.callSocket.emit(EVoiceCallEvents.call_cancel, cancelPayload)
+
+        // Update local state
+        dispatch(resetIncomingCallSession())
+      }
+    }, timeoutMs)
+  }
+
   // GỌI 1-1
   async function startPeerCall(
     calleeUserId: number,
@@ -381,6 +444,10 @@ export function useAgoraCall() {
     callback: TUnknownFunction<TCallRequestEmitRes, void>,
     isVideoCall: boolean = false
   ) {
+    console.log("🔴 startPeerCall() START")
+    // Reset flag when starting a NEW call
+    hasEmittedHangupRef.current = false
+
     if (!rtmClient || !currentUser?.id) return toaster.error("Hệ thống chưa sẵn sàng.")
 
     const roomId = `call_1on1_${currentUser.id}_${calleeUserId}_${Date.now()}`
@@ -408,8 +475,9 @@ export function useAgoraCall() {
     dispatch(setCallSession(session))
     sendPhoneIconMessage(directChatId, calleeUserId, "start")
 
-    console.log("PEER CALL STARTED - start timeout in 30s")
+    console.log("🔴 PEER CALL STARTED - start timeout in 30s", { sessionId: session.id })
     startCallTimeout(30000) // 30 seconds
+    console.log("🔴 startCallTimeout() called")
   }
 
   // GỌI NHÓM
@@ -453,7 +521,11 @@ export function useAgoraCall() {
 
   // CHẤP NHẬN / TỪ CHỐI / KẾT THÚC
   async function acceptCall() {
-    console.log("ACCEPT CALL - clearing timeout")
+    console.log("ACCEPT CALL - clearing incoming call timeout")
+    // Reset flag when accepting an incoming call (transitioning to active call)
+    hasEmittedHangupRef.current = false
+
+    clearIncomingCallTimeout()
     if (!incomingCallSession) return toaster.error("Không có cuộc gọi đến.")
     const { id: roomId, isVideoCall, callerUserId, directChatId, isGroupCall } = incomingCallSession
 
@@ -487,6 +559,8 @@ export function useAgoraCall() {
   }
 
   async function rejectCall() {
+    console.log("REJECT CALL - clearing incoming call timeout")
+    clearIncomingCallTimeout()
     if (!incomingCallSession) return
 
     await publishRtmMessage(String(incomingCallSession.callerUserId), { type: "CALL_REJECTED" })
@@ -502,7 +576,10 @@ export function useAgoraCall() {
     dispatch(resetIncomingCallSession())
   }
 
-  async function hangupCall(_reason: EHangupReason = EHangupReason.NORMAL) {
+  async function hangupCall(
+    _reason: EHangupReason = EHangupReason.NORMAL,
+    isTimeout: boolean = false
+  ) {
     //  HỦY TIMEOUT khi hangup
     console.log("HANGUP CALL - clearing timeout", callSessionRef.current)
     clearCallTimeout()
@@ -537,20 +614,31 @@ export function useAgoraCall() {
       const hangupPayload = {
         session: currentSession,
         reason: _reason,
+        isTimeout: isTimeout,
       }
-      console.log("Emitting call_hangup socket event to backend")
-      console.log("   Payload:", JSON.stringify(hangupPayload, null, 2))
-      console.log("   Full callSession:", JSON.stringify(currentSession, null, 2))
-      clientSocket.callSocket.emit(EVoiceCallEvents.call_hangup, hangupPayload)
+      // Chỉ emit socket event lần đầu tiên (tránh emit lại từ cleanup)
+      if (!hasEmittedHangupRef.current) {
+        console.log(`Emitting call_hangup socket event to backend (isTimeout: ${isTimeout})`)
+        console.log("   Payload:", JSON.stringify(hangupPayload, null, 2))
+        console.log("   Full callSession:", JSON.stringify(currentSession, null, 2))
+        clientSocket.callSocket.emit(EVoiceCallEvents.call_hangup, hangupPayload)
+        hasEmittedHangupRef.current = true // Mark as emitted
+      } else {
+        console.log(`⏭️ Skipping second hangup emit (already emitted once)`)
+      }
     }
 
     await cleanup()
   }
 
   async function cleanup() {
-    console.log("CLEANUP - clearing timeout and resources")
-    //  HỦY TIMEOUT trong cleanup
+    console.log("CLEANUP - clearing all timeouts and resources")
+    //  HỦY CẢ HAI TIMEOUT trong cleanup
     clearCallTimeout()
+    clearIncomingCallTimeout()
+
+    // ⚠️ DON'T reset hasEmittedHangupRef here - keep it true to prevent duplicate emissions
+    // The flag will be reset only when starting a new call
 
     localAudioTrackRef.current?.close()
     localVideoTrackRef.current?.close()

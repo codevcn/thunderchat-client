@@ -293,3 +293,4 @@ export type TRemoteUser = {
 }
 
 export type TVoiceActivationMode = "WAKE_WORD" | "LONG_PRESS"
+export type SpeakFn = (text: string, rate?: number, waitForConfirmation?: boolean) => Promise<void>

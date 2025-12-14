@@ -36,6 +36,7 @@ import type {
   TCallRequestEmitRes,
   TCallAcceptEmitPayload,
   TCallRejectEmitPayload,
+  TCallCancelEmitPayload,
   TCallHangupEmitPayload,
   TCallIceEmitPayload,
 } from "../types/socket"
@@ -149,6 +150,7 @@ export interface IVoiceCallEmitSocketEvents {
   [EVoiceCallEvents.call_offer_answer]: (payload: TCallOfferAnswerEmitPayload) => void
   [EVoiceCallEvents.call_accept]: (payload: TCallAcceptEmitPayload) => void
   [EVoiceCallEvents.call_reject]: (payload: TCallRejectEmitPayload) => void
+  [EVoiceCallEvents.call_cancel]: (payload: TCallCancelEmitPayload) => void
   [EVoiceCallEvents.call_hangup]: (payload: TCallHangupEmitPayload) => void
   [EVoiceCallEvents.call_ice]: (payload: TCallIceEmitPayload) => void
 }

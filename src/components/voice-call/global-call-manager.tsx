@@ -12,7 +12,7 @@ import { useUser } from "@/hooks/user"
 import { toaster } from "@/utils/toaster"
 import { CallBox } from "@/app/conversations/direct-chat/call"
 import { updateCallSession } from "@/redux/call/layout.slice"
-import { EVoiceCallStatus } from "@/utils/enums"
+import { EVoiceCallStatus, EHangupReason } from "@/utils/enums"
 
 const CALL_TIMEOUT_SECONDS = 10
 
@@ -221,11 +221,26 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
     }
   }, [callSession, incomingCallSession, isOutgoingCall, isCallUiOpen])
 
-  // 📞 Auto-hangup after 30 seconds
+  // 📞 Auto-hangup after CALL_TIMEOUT_SECONDS (chỉ cho CONNECTED calls, REQUESTING calls đã có timeout ở voice-call.ts)
   useEffect(() => {
-    if (callSession && !callStartTime) {
-      // Call just started - record the start time
-      console.log("📞 Call started - setting 30s auto-hangup timer")
+    // SKIP timer nếu call đang ở REQUESTING state (voice-call.ts đã handle)
+    if (callSession?.status === EVoiceCallStatus.REQUESTING) {
+      console.log(
+        "⏱️ Call REQUESTING - skipping global-call-manager timeout (voice-call.ts handles it)",
+        {
+          callStatus: callSession?.status,
+          isRequesting: callSession?.status === EVoiceCallStatus.REQUESTING,
+        }
+      )
+      setCallStartTime(null)
+      return
+    }
+
+    if (callSession && !callStartTime && callSession.status === EVoiceCallStatus.CONNECTED) {
+      // Call just started (CONNECTED) - record the start time
+      console.log("📞 Call CONNECTED - setting auto-hangup timer", {
+        callStatus: callSession?.status,
+      })
       setCallStartTime(Date.now())
     }
 
@@ -241,14 +256,14 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
 
     const timer = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - callStartTime) / 1000)
-      console.log(`⏱️ Call duration: ${elapsedSeconds}s`)
+      console.log(`⏱️ Connected call duration: ${elapsedSeconds}s`)
 
       if (elapsedSeconds >= CALL_TIMEOUT_SECONDS) {
-        console.log("⏱️ 30 seconds elapsed - Auto-hanging up call")
+        console.log("Connected call duration: 30 seconds elapsed - Auto-hanging up call")
         clearInterval(timer)
         setCallStartTime(null)
         dispatch(updateCallSession({ status: EVoiceCallStatus.CANCELLED }))
-        hangupCall()
+        hangupCall(EHangupReason.NORMAL, false) // Normal hangup, không timeout
         setIsCallUiOpen(false)
         setCallContext(null)
         setIsOutgoingCall(false)

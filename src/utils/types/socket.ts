@@ -132,6 +132,11 @@ export type TCallRejectEmitPayload = {
   reason?: string
 }
 
+export type TCallCancelEmitPayload = {
+  session: TActiveVoiceCallSession
+  reason?: EHangupReason
+}
+
 export type TCallHangupEmitPayload = {
   session: TActiveVoiceCallSession
   reason: EHangupReason

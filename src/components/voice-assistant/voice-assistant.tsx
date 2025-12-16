@@ -27,7 +27,7 @@ function VoiceAssistantCore() {
         style={{
           position: "fixed",
           bottom: 20,
-          left: 20,
+          left: 40,
           background: "#999",
           color: "white",
           padding: "12px 24px",
@@ -57,7 +57,7 @@ function VoiceAssistantCore() {
         style={{
           position: "fixed",
           bottom: 30,
-          right: 30,
+          left: 50,
           width: 80,
           height: 80,
           borderRadius: 40,
@@ -85,7 +85,7 @@ function VoiceAssistantCore() {
       style={{
         position: "fixed",
         bottom: 20,
-        left: 20,
+        left: 50,
         background: isListening ? (isRecording ? "#ff9800" : "#4caf50") : "#f44336",
         color: "white",
         padding: "12px 24px",

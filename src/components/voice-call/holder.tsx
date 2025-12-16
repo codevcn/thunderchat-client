@@ -174,11 +174,30 @@ const HolderUI = ({
     const audio = ringtoneRef.current
     if (!audio) return
 
-    if (callState === EVoiceCallStatus.RINGING) {
-      audio.load()
-      audio.play().catch(console.warn)
+    // Stop ringtone for any state other than RINGING
+    const shouldPlay = callState === EVoiceCallStatus.RINGING
+
+    console.log(
+      "🔊 OUTGOING RINGTONE - callState:",
+      callState,
+      "shouldPlay:",
+      shouldPlay,
+      "paused:",
+      audio.paused
+    )
+
+    if (shouldPlay) {
+      console.log("🔊 OUTGOING RINGTONE - PLAYING")
+      audio.currentTime = 0
+      audio.play().catch((e) => {
+        console.warn("🔊 OUTGOING RINGTONE - PLAY FAILED:", e)
+      })
     } else {
-      audio.pause()
+      console.log("🔊 OUTGOING RINGTONE - STOPPING (callState:", callState, "!== RINGING)")
+      // Aggressively stop all ringtone playback
+      if (!audio.paused) {
+        audio.pause()
+      }
       audio.currentTime = 0
     }
   }, [callState])

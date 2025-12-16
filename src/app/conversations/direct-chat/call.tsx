@@ -126,6 +126,14 @@ export const CallBox = ({
     }
   }, [callSession?.status])
 
+  // Update callState to CONNECTED when remote user joins (call actually connected)
+  useEffect(() => {
+    if (remoteUsers.length > 0 && callState === EVoiceCallStatus.RINGING) {
+      console.log("📞 Remote user joined - updating callState from RINGING to CONNECTED")
+      setCallState(EVoiceCallStatus.CONNECTED)
+    }
+  }, [remoteUsers.length, callState])
+
   const handleAcceptFromModal = () => {
     acceptCall()
     setShowIncomingModal(false)

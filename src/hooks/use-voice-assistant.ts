@@ -1109,7 +1109,7 @@ export function useVoiceAssistant() {
       } catch (err: unknown) {
         const error = err as Error
         console.error("❌ Khởi động Porcupine thất bại:", error)
-        setStatus(`❌ Lỗi: ${error.message}`)
+        // setStatus(`❌ Lỗi: ${error.message}`)
       }
     }
 

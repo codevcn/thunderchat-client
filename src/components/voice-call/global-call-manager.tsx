@@ -222,57 +222,57 @@ export const GlobalCallManager = ({ children }: { children: React.ReactNode }) =
   }, [callSession, incomingCallSession, isOutgoingCall, isCallUiOpen])
 
   // 📞 Auto-hangup after CALL_TIMEOUT_SECONDS (chỉ cho CONNECTED calls, REQUESTING calls đã có timeout ở voice-call.ts)
-  useEffect(() => {
-    // SKIP timer nếu call đang ở REQUESTING state (voice-call.ts đã handle)
-    if (callSession?.status === EVoiceCallStatus.REQUESTING) {
-      console.log(
-        "⏱️ Call REQUESTING - skipping global-call-manager timeout (voice-call.ts handles it)",
-        {
-          callStatus: callSession?.status,
-          isRequesting: callSession?.status === EVoiceCallStatus.REQUESTING,
-        }
-      )
-      setCallStartTime(null)
-      return
-    }
+  // useEffect(() => {
+  //   // SKIP timer nếu call đang ở REQUESTING state (voice-call.ts đã handle)
+  //   if (callSession?.status === EVoiceCallStatus.REQUESTING) {
+  //     console.log(
+  //       "⏱️ Call REQUESTING - skipping global-call-manager timeout (voice-call.ts handles it)",
+  //       {
+  //         callStatus: callSession?.status,
+  //         isRequesting: callSession?.status === EVoiceCallStatus.REQUESTING,
+  //       }
+  //     )
+  //     setCallStartTime(null)
+  //     return
+  //   }
 
-    if (callSession && !callStartTime && callSession.status === EVoiceCallStatus.CONNECTED) {
-      // Call just started (CONNECTED) - record the start time
-      console.log("📞 Call CONNECTED - setting auto-hangup timer", {
-        callStatus: callSession?.status,
-      })
-      setCallStartTime(Date.now())
-    }
+  //   if (callSession && !callStartTime && callSession.status === EVoiceCallStatus.CONNECTED) {
+  //     // Call just started (CONNECTED) - record the start time
+  //     console.log("📞 Call CONNECTED - setting auto-hangup timer", {
+  //       callStatus: callSession?.status,
+  //     })
+  //     setCallStartTime(Date.now())
+  //   }
 
-    if (!callSession) {
-      // Call ended - reset timer
-      setCallStartTime(null)
-      return
-    }
+  //   if (!callSession) {
+  //     // Call ended - reset timer
+  //     setCallStartTime(null)
+  //     return
+  //   }
 
-    if (!callStartTime) {
-      return
-    }
+  //   if (!callStartTime) {
+  //     return
+  //   }
 
-    const timer = setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - callStartTime) / 1000)
-      console.log(`⏱️ Connected call duration: ${elapsedSeconds}s`)
+  //   const timer = setInterval(() => {
+  //     const elapsedSeconds = Math.floor((Date.now() - callStartTime) / 1000)
+  //     console.log(`⏱️ Connected call duration: ${elapsedSeconds}s`)
 
-      if (elapsedSeconds >= CALL_TIMEOUT_SECONDS) {
-        console.log("Connected call duration: 30 seconds elapsed - Auto-hanging up call")
-        clearInterval(timer)
-        setCallStartTime(null)
-        dispatch(updateCallSession({ status: EVoiceCallStatus.CANCELLED }))
-        hangupCall(EHangupReason.NORMAL, false) // Normal hangup, không timeout
-        setIsCallUiOpen(false)
-        setCallContext(null)
-        setIsOutgoingCall(false)
-        toaster.info("Call ended (30 second limit)")
-      }
-    }, 1000)
+  //     if (elapsedSeconds >= CALL_TIMEOUT_SECONDS) {
+  //       console.log("Connected call duration: 30 seconds elapsed - Auto-hanging up call")
+  //       clearInterval(timer)
+  //       setCallStartTime(null)
+  //       dispatch(updateCallSession({ status: EVoiceCallStatus.CANCELLED }))
+  //       hangupCall(EHangupReason.NORMAL, false) // Normal hangup, không timeout
+  //       setIsCallUiOpen(false)
+  //       setCallContext(null)
+  //       setIsOutgoingCall(false)
+  //       toaster.info("Call ended (30 second limit)")
+  //     }
+  //   }, 1000)
 
-    return () => clearInterval(timer)
-  }, [callSession, callStartTime, hangupCall])
+  //   return () => clearInterval(timer)
+  // }, [callSession, callStartTime, hangupCall])
 
   useEffect(() => {
     const handleVoiceAcceptCall = async () => {

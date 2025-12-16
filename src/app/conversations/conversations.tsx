@@ -332,7 +332,8 @@ const ConversationCards = () => {
   const handleUpdateLastSentMessage = (newMessage: TGetMessagesMessage) => {
     dispatch(
       updateSingleConversation({
-        id: newMessage.directChatId,
+        id: newMessage.directChatId || newMessage.groupChatId,
+        type: newMessage.directChatId ? EChatType.DIRECT : EChatType.GROUP,
         lastMessageTime: new Date().toISOString(),
         "subtitle.content": newMessage.content,
         "subtitle.type": newMessage.type,

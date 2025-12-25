@@ -64,7 +64,7 @@ function FileTypeMenu({ onSelect, onClose }: TFileTypeMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-12 left-0 z-50 bg-regular-dark-gray-cl shadow-lg rounded-lg p-2 w-56 border border-gray-700"
+      className="absolute bottom-12 right-0 left-auto z-50 bg-regular-dark-gray-cl shadow-lg rounded-lg p-2 w-56 border border-gray-700"
     >
       {fileOptions.map((opt) => (
         <button

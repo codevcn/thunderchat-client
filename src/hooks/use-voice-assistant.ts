@@ -155,13 +155,16 @@ export function useVoiceAssistant() {
             setStatus('⏳ Chờ xác nhận... Nói "có" hoặc "không"')
             isWaitingForConfirmationRef.current = true
 
+            // Fix #1: Start recording immediately after TTS completes
+            // Use small delay (200ms) to ensure audio system is ready
+            // This avoids race condition where user speaks before recording starts
             setTimeout(() => {
-              console.log("🎤 Bắt đầu ghi âm xác nhận")
+              console.log("🎤 Bắt đầu ghi âm xác nhận (TTS đã xong)")
               startRecordingAndSend()
-            }, 500)
+            }, 800)
           } else {
             console.log(" Phát TTS xong - Tiếp tục wake word detection")
-            setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
+            setStatus(`🎧 Đang nghe `)
             isWaitingForConfirmationRef.current = false
             console.log("🎤 Gọi resumeWakeWordDetection() từ TTS onend")
             resumeWakeWordDetection().catch((err) => {
@@ -267,7 +270,7 @@ export function useVoiceAssistant() {
       processor.connect(audioContext.destination)
 
       setIsListening(true)
-      setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
+      setStatus(`🎧 Đang nghe `)
       console.log(" 🎧 Wake word detection đang hoạt động")
     } catch (err) {
       console.error("❌ Không thể truy cập microphone:", err)
@@ -295,7 +298,7 @@ export function useVoiceAssistant() {
         console.log("🔄 Khởi động stream microphone mới")
         await startMicrophoneForWakeWord(workerRef.current)
         console.log("🔄 Khởi động detection thành công")
-        setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
+        setStatus(`🎧 Đang nghe `)
       } else {
         console.log("🔄 workerRef.current không tồn tại!")
       }
@@ -310,7 +313,7 @@ export function useVoiceAssistant() {
       console.log("▶️ Tiếp tục lắng nghe wake word...")
       if (workerRef.current && audioContextRef.current && micStreamRef.current) {
         console.log("▶️ Stream vẫn còn hoạt động, tiếp tục lắng nghe")
-        setStatus(`🎧 Đang nghe "${settings?.wakeWordPhrase}"...`)
+        setStatus(`🎧 Đang nghe `)
       } else {
         console.log("▶️ ⚠️ Stream không hoạt động, khởi động lại...")
         await restartWakeWordDetection()
@@ -342,30 +345,8 @@ export function useVoiceAssistant() {
     // Backend sends 'targetName', frontend may have 'contactName'
     const finalContactName = contactName || (pendingAction as any).targetName || ""
 
-    console.log("🔍 handlePendingActionConfirmation START:", {
-      transcript,
-      isConfirmed,
-      isRejected,
-      pendingActionType: pendingAction.type,
-      contactId,
-      recipientUserId,
-      contactName,
-      targetName: (pendingAction as any).targetName,
-      finalContactName,
-      message,
-      content,
-      messageContent,
-      stickerId: (pendingAction as any).stickerId,
-      stickerDescription: (pendingAction as any).stickerDescription,
-      chatType,
-      directChatId,
-      groupId,
-      fullPendingAction: pendingAction,
-    })
-
     // Handle incoming call
     if (pendingAction.type === "incoming_call") {
-      console.log("📞 Cuộc gọi đến được xử lý bởi backend")
       return true
     }
 
@@ -409,19 +390,10 @@ export function useVoiceAssistant() {
 
     // Handle unclear response
     if (!isConfirmed && !isRejected) {
-      console.log("⚠️ Người dùng nói cái khác - backend sẽ hỏi lại, giữ lại pending state")
-      console.log("⚠️ isConfirmed:", isConfirmed, "isRejected:", isRejected)
       return true
     }
 
     const pendingActionForHandlers = pendingActionRef.current
-
-    console.log(
-      "📍 Preparing to handle action, isConfirmed:",
-      isConfirmed,
-      "isRejected:",
-      isRejected
-    )
 
     // Handle confirmations for different action types
     if (isConfirmed) {
@@ -430,23 +402,12 @@ export function useVoiceAssistant() {
         // Backend sends recipientUserId (the actual recipient's userId for direct chat)
         const finalRecipientId = recipientUserId || contactId
 
-        console.log("🔍 send_message validation:", {
-          recipientUserId,
-          contactId,
-          finalRecipientId,
-          chatType,
-          messageContent,
-          hasContent: !!messageContent,
-        })
-
         if (!finalRecipientId && chatType !== "group") {
-          console.error("❌ Không tìm thấy recipientUserId để gửi message")
           await speakText("Không tìm thấy thông tin người nhận", rate, false)
           return false
         }
 
         if (!messageContent || messageContent.trim() === "") {
-          console.error("❌ Nội dung tin nhắn trống")
           await speakText("Không có nội dung tin nhắn để gửi", rate, false)
           return false
         }
@@ -466,35 +427,11 @@ export function useVoiceAssistant() {
       }
 
       // Send sticker
-      console.log("🔍 Checking send_sticker conditions:", {
-        type: pendingAction.type,
-        typeMatch: pendingAction.type === "send_sticker",
-        isConfirmed,
-        stickerId: pendingAction.stickerId,
-        hasStickerIdFromPending: !!pendingAction.stickerId,
-        allConditions:
-          pendingAction.type === "send_sticker" && isConfirmed && pendingAction.stickerId,
-      })
-
       if (pendingAction.type === "send_sticker" && isConfirmed && pendingAction.stickerId) {
         // Backend sends recipientUserId (the actual recipient's userId for direct chat)
         const finalRecipientId = recipientUserId || contactId
 
-        console.log("Điều kiện send_sticker thỏa mãn - Gọi handleSendSticker", {
-          contactId,
-          recipientUserId,
-          finalRecipientId,
-          contactUserId: (pendingAction as any).contactUserId,
-          targetId: (pendingAction as any).targetId,
-          chatType,
-          directChatId,
-          groupId,
-          stickerId: pendingAction.stickerId,
-          fullPending: pendingAction,
-        })
-
         if (!finalRecipientId && chatType !== "group") {
-          console.error("❌ Không tìm thấy recipientUserId để gửi sticker")
           await speakText("Không tìm thấy thông tin người nhận", rate, false)
           return false
         }
@@ -519,16 +456,7 @@ export function useVoiceAssistant() {
         // Backend sends recipientUserId (the actual recipient's userId for direct chat)
         const finalRecipientId = recipientUserId || contactId
 
-        console.log("🔍 send_emoji validation:", {
-          recipientUserId,
-          contactId,
-          finalRecipientId,
-          chatType,
-          emoji: pendingAction.emoji,
-        })
-
         if (!finalRecipientId && chatType !== "group") {
-          console.error("❌ Không tìm thấy recipientUserId để gửi emoji")
           await speakText("Không tìm thấy thông tin người nhận", rate, false)
           return false
         }
@@ -571,25 +499,13 @@ export function useVoiceAssistant() {
       if (pendingAction.type === "make_call" && isConfirmed) {
         const finalRecipientId = recipientUserId || contactId
 
-        console.log("🔍 make_call validation:", {
-          recipientUserId,
-          contactId,
-          finalRecipientId,
-          chatType,
-          directChatId,
-          groupId,
-          isVideoCall: (pendingAction as any).isVideo,
-        })
-
         // Kiểm tra: nếu là direct call cần recipientId, nếu là group call cần groupId
         if (chatType === "direct" && !finalRecipientId) {
-          console.error("❌ Không tìm thấy recipientUserId để gọi trực tiếp")
           await speakText("Không tìm thấy thông tin người nhận", rate, false)
           return false
         }
 
         if (chatType === "group" && !groupId) {
-          console.error("❌ Không tìm thấy groupId để gọi nhóm")
           await speakText("Không tìm thấy thông tin nhóm", rate, false)
           return false
         }
@@ -610,28 +526,17 @@ export function useVoiceAssistant() {
 
       // Send voice message
       if (pendingAction.type === "send_voice_message" && isConfirmed) {
-        console.log("🎤 send_voice_message validation:", {
-          chatType,
-          directChatId,
-          groupId,
-          audioBase64: !!pendingAction.audioBase64,
-          hasAudioData: !!pendingAction.audioBase64,
-        })
-
         if (!pendingAction.audioBase64) {
-          console.error("❌ Không có dữ liệu âm thanh để gửi")
           await speakText("Không có dữ liệu âm thanh để gửi", rate, false)
           return false
         }
 
         if (chatType === "direct" && !directChatId) {
-          console.error("❌ Không tìm thấy directChatId để gửi voice message")
           await speakText("Không tìm thấy thông tin cuộc trò chuyện", rate, false)
           return false
         }
 
         if (chatType === "group" && !groupId) {
-          console.error("❌ Không tìm thấy groupId để gửi voice message")
           await speakText("Không tìm thấy thông tin nhóm", rate, false)
           return false
         }
@@ -738,9 +643,17 @@ export function useVoiceAssistant() {
       console.log("🔴 Bắt đầu ghi âm...")
       setIsRecording(true)
 
-      if (audioContextRef.current && !isWaitingForConfirmationRef.current) {
+      // FIX: Luôn suspend Porcupine và dừng micStreamRef để giải phóng mic
+      if (audioContextRef.current) {
         await audioContextRef.current.suspend()
-        console.log("⏸️ Đã tạm dừng Porcupine")
+        console.log("⏸️ Đã tạm dừng Porcupine audioContext")
+      }
+
+      // FIX: Dừng micStreamRef của Porcupine để giải phóng mic hoàn toàn
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((t) => t.stop())
+        micStreamRef.current = null
+        console.log("🔇 Đã dừng micStream của Porcupine để giải phóng mic")
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -769,88 +682,64 @@ export function useVoiceAssistant() {
 
       mediaRecorder.onstop = async () => {
         const blob = new Blob(chunks, { type: "audio/webm" })
-        console.log("📦 mediaRecorder.onstop called, blob size:", blob.size)
-
-        if (blob.size === 0) {
-          console.warn("⚠️ Audio blob rỗng!")
-        }
 
         const base64 = await blobToBase64(blob)
         setStatus("⏳ Đang xử lý lệnh...")
 
         try {
           const audioData = base64.split(",")[1]
-          console.log("📤 Gửi audio data, length:", audioData.length)
 
           if (!isWaitingForConfirmationRef.current) {
-            console.log("💾 Lưu audio vào lastAudioDataRef")
             lastAudioDataRef.current = audioData
           }
 
           const response = await sendVoiceCommand(audioData)
-          console.log("📥 Response từ backend:", response)
-          console.log("📥 Response.pending:", (response as any).pending)
-          console.log("📥 Response.needsConfirmation:", response.needsConfirmation)
-          console.log("📥 Response.transcript:", response.transcript)
 
           // Store pending action before backend might clear it
           const hadPendingAction = pendingActionRef.current
           const wasWaitingForConfirmation = isWaitingForConfirmationRef.current
-          console.log("📥 Current state:", {
-            hadPendingAction: !!hadPendingAction,
-            pendingActionType: hadPendingAction?.type,
-            wasWaitingForConfirmation,
-            isWaitingForConfirmationRefCurrent: isWaitingForConfirmationRef.current,
-          })
-
-          console.log("🔍 Kiểm tra confirmation:", {
-            hadPendingAction: !!hadPendingAction,
-            wasWaitingForConfirmation,
-            needsConfirmation: response.needsConfirmation,
-            transcript: response.transcript,
-          })
 
           // Handle pending action confirmation FIRST (before updating pending state)
           // If we were waiting for confirmation, always handle it regardless of backend response
           if (hadPendingAction && wasWaitingForConfirmation) {
-            console.log("📋 Đang chờ xác nhận, xử lý xác nhận từ user...")
-            const confirmationHandled = await handlePendingActionConfirmation(
-              response.transcript || ""
-            )
-
-            if (confirmationHandled) {
-              console.log(" Confirmation handled successfully")
-              // Clear pending after successful handling
+            // FIX: Nếu transcript empty → backend đã cancel pending, clear state ở client
+            if (!response.transcript || response.transcript.trim() === "") {
               pendingActionRef.current = null
               isWaitingForConfirmationRef.current = false
-              isWakeWordProcessingRef.current = false // 🔓 Unlock - có thể nhận wake word tiếp
-
-              // ⚠️ DON'T return yet! Backend may send clientAction after confirmation
-              // Continue to check for clientAction below
+              isWakeWordProcessingRef.current = false // Unlock
+              // Continue để process backend response (speak "Đã hủy thao tác...")
             } else {
-              console.log("⚠️ Confirmation not handled - continuing with normal flow")
+              const confirmationHandled = await handlePendingActionConfirmation(
+                response.transcript || ""
+              )
+
+              if (confirmationHandled) {
+                // Clear pending after successful handling
+                pendingActionRef.current = null
+                isWaitingForConfirmationRef.current = false
+                isWakeWordProcessingRef.current = false // 🔓 Unlock - có thể nhận wake word tiếp
+
+                // ⚠️ DON'T return yet! Backend may send clientAction after confirmation
+                // Continue to check for clientAction below
+              }
             }
           }
 
           // Update pending state from backend response AFTER handling
           if ((response as any).pending !== undefined) {
             if ((response as any).pending === null) {
-              console.log(" Backend cleared pending")
               pendingActionRef.current = null
               isWaitingForConfirmationRef.current = false
             } else {
-              console.log("📝 Backend updated pending:", (response as any).pending)
               //  Thêm audioBase64 từ lastAudioDataRef vào pending action nếu là send_voice_message
               const pendingFromBackend = (response as any).pending
               if (pendingFromBackend?.type === "send_voice_message" && lastAudioDataRef.current) {
-                console.log("🎤 Thêm audioBase64 vào send_voice_message pending action")
                 pendingFromBackend.audioBase64 = lastAudioDataRef.current
               }
               pendingActionRef.current = pendingFromBackend
             }
           } // Handle clientAction from backend
           if ((response as any).clientAction) {
-            console.log("📋 [MAIN] clientAction detected, calling handleClientAction...")
             const handled = await handleClientAction((response as any).clientAction, {
               speakText,
               restartWakeWordDetection,
@@ -860,7 +749,6 @@ export function useVoiceAssistant() {
               isWaitingForConfirmationRef,
             })
             if (handled) {
-              console.log("[MAIN] clientAction handled successfully, unlocking wake word...")
               isWakeWordProcessingRef.current = false // 🔓 Unlock after clientAction
               return
             }
@@ -868,7 +756,6 @@ export function useVoiceAssistant() {
 
           // Handle response text
           if (response.response) {
-            console.log("🤖 Trợ lý:", response.response)
             setStatus(`💬 ${response.response.substring(0, 50)}...`)
 
             const isUserTranscript =
@@ -928,12 +815,14 @@ export function useVoiceAssistant() {
       const vadState = createVADState()
       const thresholds = getVADThresholds(isConfirmationMode)
 
+      let checkCount = 0
       const checkAudioLevel = () => {
         if (mediaRecorder.state !== "recording") {
-          console.log("⚠️ mediaRecorder không còn recording state")
           audioContext.close()
           return
         }
+
+        checkCount++
 
         const vadResult = calculateSpeechProbability(
           { isConfirmationMode, audioContext, analyser },
@@ -945,12 +834,6 @@ export function useVoiceAssistant() {
 
         // Grace period
         if (now - vadState.recordingStartTime < thresholds.STARTUP_GRACE_PERIOD) {
-          if (
-            Math.floor((now - vadState.recordingStartTime) / 500) !==
-            Math.floor((now - vadState.recordingStartTime - 50) / 500)
-          ) {
-            console.log(`⏳ Grace period: ${now - vadState.recordingStartTime}ms`)
-          }
           silenceTimerRef.current = setTimeout(checkAudioLevel, 50)
           return
         }
@@ -960,14 +843,12 @@ export function useVoiceAssistant() {
 
         // Log speech detection
         if (vadResult.isSpeech && !vadState.hasSpoken) {
-          console.log(`🗣️ Phát hiện giọng nói (năng lượng: ${vadResult.energy.toFixed(1)})`)
           setStatus("🎤 Đang nghe...")
         }
 
         // Check if should stop
         const stopResult = shouldStopRecording(vadState, thresholds)
         if (stopResult.shouldStop) {
-          console.log(` Dừng ghi âm: ${stopResult.reason}`)
           mediaRecorder.stop()
           audioContext.close()
           if (silenceTimerRef.current) {
@@ -986,14 +867,12 @@ export function useVoiceAssistant() {
 
       mediaRecorder.start()
       setStatus("🔴 Đang chờ bạn nói...")
-      console.log("🎙️ Bắt đầu ghi âm với VAD")
       // 🔊 Phát tiếng beep để thông báo bắt đầu ghi âm
       await playBeep()
       checkAudioLevel()
 
       maxRecordingTimerRef.current = setTimeout(() => {
         if (mediaRecorder.state === "recording") {
-          console.log(`⏱️ ĐẠT TIMEOUT - Dừng ghi âm`)
           mediaRecorder.stop()
           audioContext.close()
           if (silenceTimerRef.current) {
@@ -1038,13 +917,14 @@ export function useVoiceAssistant() {
         setStatus("⏳ Đang tải wake word model...")
 
         const accessKey = process.env.NEXT_PUBLIC_PICOVOICE_ACCESS_KEY || "YOUR_ACCESS_KEY"
+        console.log(">>> [acc]:", accessKey)
         if (!accessKey || accessKey === "YOUR_ACCESS_KEY") {
           throw new Error("Thiếu NEXT_PUBLIC_PICOVOICE_ACCESS_KEY")
         }
 
         const keywords = [
           {
-            publicPath: "/models/hey-chat_en_wasm_v3_0_0.ppn",
+            publicPath: "/models/hey-chat_en_wasm_v4_0_0.ppn",
             label: "hey-chat",
             sensitivity: 0.9,
           },
@@ -1099,7 +979,7 @@ export function useVoiceAssistant() {
               startRecordingAndSend()
             }, 800)
           },
-          { publicPath: "/models/porcupine_params.pv" }
+          { publicPath: "/models/porcupine_params_v4.pv" }
         )
 
         console.log("✅ Porcupine worker tạo thành công")

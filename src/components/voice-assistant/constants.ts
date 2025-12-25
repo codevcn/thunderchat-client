@@ -19,8 +19,8 @@ export const AUDIO_CONFIG = {
 // Porcupine Wake Word Configuration
 export const PORCUPINE_CONFIG = {
   SENSITIVITY: 0.9, // 0.0-1.0, mặc định 0.5
-  MODEL_PATH: "/models/hey-chat_en_wasm_v3_0_0.ppn",
-  PARAMS_PATH: "/models/porcupine_params.pv",
+  MODEL_PATH: "/models/hey-chat_en_wasm_v4_0_0.ppn",
+  PARAMS_PATH: "/models/porcupine_params_v4.pv",
   LABEL: "hey-chat",
 } as const
 
